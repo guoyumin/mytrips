@@ -1,16 +1,19 @@
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
+# Core FastAPI dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Gmail API dependencies
 google-auth==2.26.2
 google-auth-oauthlib==1.2.0
 google-auth-httplib2==0.2.0
 google-api-python-client==2.114.0
+
+# Utility dependencies
 python-dateutil==2.8.2
-pydantic==2.5.3
 python-dotenv==1.0.0
-beautifulsoup4==4.12.3
-lxml==5.1.0
-pandas==2.1.4
-openpyxl==3.1.2
+
+# Development dependencies (optional)
 pytest==7.4.4
 black==23.12.1
 flake8==7.0.0

@@ -11,8 +11,13 @@ class GmailService:
     
     def _build_service(self):
         creds = None
-        if os.path.exists('token.json'):
-            with open('token.json', 'r') as token:
+        
+        # Look for token.json in config directory
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        token_path = os.path.join(project_root, 'config', 'token.json')
+        
+        if os.path.exists(token_path):
+            with open(token_path, 'r') as token:
                 token_data = json.load(token)
                 creds = Credentials(
                     token=token_data['token'],
@@ -24,7 +29,7 @@ class GmailService:
                 )
         
         if not creds:
-            raise Exception("No valid credentials found. Please authenticate first.")
+            raise Exception(f"No valid credentials found. Please run 'python setup_gmail_auth.py' first. Looking for token at: {token_path}")
         
         return build('gmail', 'v1', credentials=creds)
     
@@ -78,10 +83,10 @@ class GmailService:
         
         if 'parts' in payload:
             for part in payload['parts']:
-                if part['mimeType'] == 'text/plain':
+                if part['mimeType'] == 'text/plain' and part['body'].get('data'):
                     data = part['body']['data']
                     body += self._decode_base64(data)
-                elif part['mimeType'] == 'text/html':
+                elif part['mimeType'] == 'text/html' and part['body'].get('data'):
                     data = part['body']['data']
                     body += self._decode_base64(data)
         elif payload['body'].get('data'):

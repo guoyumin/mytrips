@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTrips - Email Import</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+    <div class="container">
+        <h1>MyTrips - Email Import</h1>
+        <p>Import emails from the last year to build your travel history database.</p>
+        
+        <div class="controls">
+            <div class="time-range-selector">
+                <label for="timeRange">Import Range:</label>
+                <select id="timeRange">
+                    <option value="30">Last month</option>
+                    <option value="90">Last 3 months</option>
+                    <option value="180">Last 6 months</option>
+                    <option value="365" selected>Last 1 year</option>
+                    <option value="730">Last 2 years</option>
+                    <option value="1095">Last 3 years</option>
+                </select>
+            </div>
+            
+            <button id="importBtn" onclick="importEmails()">Import Emails</button>
+            <button id="stopBtn" onclick="stopImport()" class="stop-btn" style="display:none;">Stop Import</button>
+            <button onclick="viewCacheStats()">View Cache Stats</button>
+        </div>
+        
+        <div id="progress" class="progress" style="display:none;">
+            <div id="progressBar" class="progress-bar"></div>
+        </div>
+        
+        <div id="progressText" class="progress-text" style="display:none;">
+            <span id="progressCount">0/0</span> emails processed
+        </div>
+        
+        <div id="status" class="status" style="display:none;"></div>
+        
+        <div id="stats" class="stats" style="display:none;">
+            <div class="stat-box">
+                <div class="stat-number" id="newEmails">0</div>
+                <div class="stat-label">New Emails Imported</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="skippedEmails">0</div>
+                <div class="stat-label">Already Cached (Skipped)</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="totalCached">0</div>
+                <div class="stat-label">Total Emails in Cache</div>
+            </div>
+        </div>
+        
+        <div id="dateRange" class="date-range" style="display:none;">
+            <strong>Date Range:</strong> <span id="dateRangeText"></span>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

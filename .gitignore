@@ -12,9 +12,9 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Credentials and tokens
-credentials.json
-token.json
-client_secret*.json
+config/credentials.json
+config/token.json
+config/client_secret*.json
 *.key
 *.pem
 
@@ -55,7 +55,7 @@ logs/
 # Output files
 exports/
 *.xlsx
-*.csv
+data/*.csv
 *.pdf
 
 # Temporary files
