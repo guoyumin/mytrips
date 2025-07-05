@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTrips Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-800">MyTrips Dashboard</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="syncEmails" class="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded">
+                        Sync Emails
+                    </button>
+                    <button id="exportTrips" class="bg-green-500 hover:bg-green-700 text-white px-4 py-2 rounded">
+                        Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Stats Cards -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-semibold text-gray-700">Total Trips</h3>
+                <p class="text-3xl font-bold text-blue-600" id="totalTrips">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-semibold text-gray-700">Countries Visited</h3>
+                <p class="text-3xl font-bold text-green-600" id="countriesVisited">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-semibold text-gray-700">Total Distance</h3>
+                <p class="text-3xl font-bold text-purple-600" id="totalDistance">0 km</p>
+            </div>
+        </div>
+
+        <!-- Map Section -->
+        <div class="mt-8 bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4">Your Travel Map</h2>
+            <div id="map" style="height: 400px;"></div>
+        </div>
+
+        <!-- Trips Timeline -->
+        <div class="mt-8 bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4">Upcoming & Past Trips</h2>
+            <div id="tripsList" class="space-y-4">
+                <!-- Trips will be loaded here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
