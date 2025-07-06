@@ -32,10 +32,17 @@ class EmailClassificationService:
             logger.warning(f"Email classifier not available: {e}")
             self.email_classifier = None
         
-        # Classification progress tracking
-        self.classification_progress = {}
+        # Classification progress tracking with thread safety
+        self.classification_progress = {
+            'is_running': False,
+            'total': 0,
+            'processed': 0,
+            'finished': False,
+            'error': None
+        }
         self._stop_flag = threading.Event()
         self._classification_thread = None
+        self._lock = threading.Lock()  # Add thread lock for safety
         
         # Keep Gemini service for backward compatibility
         try:
@@ -50,48 +57,61 @@ class EmailClassificationService:
         """Start test classification of emails in background"""
         logger.debug(f"Starting test classification with limit: {limit}")
         
-        if self._classification_thread and self._classification_thread.is_alive():
-            logger.warning("Classification already in progress")
-            raise Exception("Classification already in progress")
+        with self._lock:
+            # Check if classification is already running
+            if self.classification_progress.get('is_running', False):
+                logger.warning("Classification already in progress")
+                return {"started": False, "message": "Classification already in progress"}
+            
+            # Double-check thread status
+            if self._classification_thread and self._classification_thread.is_alive():
+                logger.warning("Classification thread already running")
+                return {"started": False, "message": "Classification already in progress"}
+            
+            if not self.email_classifier and not self.gemini_service:
+                logger.error("No classification service available")
+                raise Exception("No classification service available. Please configure Gemini API key.")
+            
+            # Reset stop flag
+            self._stop_flag.clear()
+            
+            # Initialize progress tracking
+            self.classification_progress = {
+                'is_running': True,
+                'total': 0,
+                'processed': 0,
+                'classified_count': 0,
+                'skipped_count': 0,
+                'current_batch': 0,
+                'total_batches': 0,
+                'batch_size': config_manager.get_batch_size(),
+                'finished': False,
+                'error': None,
+                'start_time': datetime.now(),
+                'estimated_cost': None
+            }
         
-        if not self.email_classifier and not self.gemini_service:
-            logger.error("No classification service available")
-            raise Exception("No classification service available. Please configure Gemini API key.")
-        
-        # Reset stop flag
-        self._stop_flag.clear()
-        
-        # Initialize progress tracking
-        self.classification_progress = {
-            'total': 0,
-            'processed': 0,
-            'classified_count': 0,
-            'skipped_count': 0,
-            'current_batch': 0,
-            'total_batches': 0,
-            'batch_size': config_manager.get_batch_size(),
-            'finished': False,
-            'error': None,
-            'start_time': datetime.now(),
-            'estimated_cost': None
-        }
-        
-        # Start classification thread
-        logger.debug("Starting classification thread")
-        self._classification_thread = threading.Thread(
-            target=self._background_classification,
-            args=(limit,),
-            daemon=True
-        )
-        self._classification_thread.start()
-        
-        limit_msg = f"up to {limit} emails" if limit else "all unclassified emails"
-        logger.info(f"Classification thread started for {limit_msg}")
-        return {"started": True, "message": f"Starting test classification of {limit_msg}"}
+            # Start classification thread
+            logger.debug("Starting classification thread")
+            self._classification_thread = threading.Thread(
+                target=self._background_classification,
+                args=(limit,),
+                daemon=True
+            )
+            self._classification_thread.start()
+            
+            limit_msg = f"up to {limit} emails" if limit else "all unclassified emails"
+            logger.info(f"Classification thread started for {limit_msg}")
+            return {"started": True, "message": f"Starting test classification of {limit_msg}"}
     
     def stop_classification(self) -> str:
         """Stop ongoing classification process"""
-        self._stop_flag.set()
+        with self._lock:
+            self._stop_flag.set()
+            if self.classification_progress.get('is_running', False):
+                self.classification_progress['is_running'] = False
+                self.classification_progress['finished'] = True
+                self.classification_progress['message'] = 'Classification stopped by user'
         return "Stop signal sent"
     
     def get_classification_progress(self) -> Dict:
@@ -128,10 +148,12 @@ class EmailClassificationService:
             
             if not unclassified_emails:
                 logger.info("No unclassified emails found")
-                self.classification_progress.update({
-                    'finished': True,
-                    'message': 'No unclassified emails found'
-                })
+                with self._lock:
+                    self.classification_progress.update({
+                        'is_running': False,
+                        'finished': True,
+                        'message': 'No unclassified emails found'
+                    })
                 return
             
             # Update progress
@@ -222,21 +244,25 @@ class EmailClassificationService:
             travel_categories = {'flight', 'hotel', 'car_rental', 'train', 'cruise', 'tour', 'travel_insurance', 'flight_change', 'hotel_change', 'other_travel'}
             travel_count = sum(1 for r in all_results if r['classification'] in travel_categories)
             
-            self.classification_progress.update({
-                'finished': True,
-                'classified_count': len(all_results),
-                'message': f'Classification completed. {travel_count} travel-related emails found.'
-            })
+            with self._lock:
+                self.classification_progress.update({
+                    'is_running': False,
+                    'finished': True,
+                    'classified_count': len(all_results),
+                    'message': f'Classification completed. {travel_count} travel-related emails found.'
+                })
             
             print(f"Classification completed. {travel_count} travel-related emails found.")
             
         except Exception as e:
             print(f"Classification error: {e}")
-            self.classification_progress.update({
-                'finished': True,
-                'error': str(e),
-                'message': f'Classification failed: {str(e)}'
-            })
+            with self._lock:
+                self.classification_progress.update({
+                    'is_running': False,
+                    'finished': True,
+                    'error': str(e),
+                    'message': f'Classification failed: {str(e)}'
+                })
     
     
     def get_classification_stats(self) -> Dict:

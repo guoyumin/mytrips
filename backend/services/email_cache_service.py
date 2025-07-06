@@ -34,7 +34,7 @@ class EmailCacheService:
             logger.error(traceback.format_exc())
             self.gmail_client = None
         
-        # Initialize progress tracking
+        # Initialize progress tracking with thread safety
         self.import_progress = {
             'is_running': False,
             'current': 0,
@@ -46,6 +46,8 @@ class EmailCacheService:
             'skip_count': 0
         }
         self._stop_flag = threading.Event()
+        self._import_thread = None
+        self._lock = threading.Lock()  # Add thread lock for safety
     
     def get_cache_stats(self) -> Dict:
         """Get statistics about the email cache"""
@@ -53,32 +55,39 @@ class EmailCacheService:
     
     def start_import(self, days: int = 365) -> str:
         """Start importing emails from Gmail"""
-        if self.import_progress.get('is_running'):
-            return "Import is already running"
-        
-        if not self.gmail_client:
-            return "Gmail client not initialized. Please check configuration."
-        
-        # Reset stop flag and progress
-        self._stop_flag.clear()
-        self.import_progress = {
-            'is_running': True,
-            'current': 0,
-            'total': 0,
-            'finished': False,
-            'message': 'Starting import...',
-            'error': None
-        }
-        
-        # Start background import
-        import_thread = threading.Thread(
-            target=self._background_import,
-            args=(days,),
-            daemon=True
-        )
-        import_thread.start()
-        
-        return f"Started importing emails from the last {days} days"
+        with self._lock:
+            if self.import_progress.get('is_running'):
+                return "Import is already running"
+            
+            # Double-check thread status
+            if self._import_thread and self._import_thread.is_alive():
+                return "Import thread already running"
+            
+            if not self.gmail_client:
+                return "Gmail client not initialized. Please check configuration."
+            
+            # Reset stop flag and progress
+            self._stop_flag.clear()
+            self.import_progress = {
+                'is_running': True,
+                'current': 0,
+                'total': 0,
+                'finished': False,
+                'message': 'Starting import...',
+                'error': None,
+                'new_count': 0,
+                'skip_count': 0
+            }
+            
+            # Start background import
+            self._import_thread = threading.Thread(
+                target=self._background_import,
+                args=(days,),
+                daemon=True
+            )
+            self._import_thread.start()
+            
+            return f"Started importing emails from the last {days} days"
     
     def get_import_progress(self) -> Dict:
         """Get current import progress"""
@@ -96,8 +105,12 @@ class EmailCacheService:
     
     def stop_import(self) -> str:
         """Stop the ongoing import process"""
-        self._stop_flag.set()
-        self.import_progress['message'] = 'Stopping import...'
+        with self._lock:
+            self._stop_flag.set()
+            if self.import_progress.get('is_running'):
+                self.import_progress['is_running'] = False
+                self.import_progress['finished'] = True
+                self.import_progress['message'] = 'Import stopped by user'
         return "Import stop requested"
     
     def _background_import(self, days: int):
@@ -121,11 +134,12 @@ class EmailCacheService:
             logger.info(f"Got {len(messages) if messages else 0} messages from Gmail")
             
             if not messages:
-                self.import_progress.update({
-                    'finished': True,
-                    'message': 'No emails found for the specified date range',
-                    'is_running': False
-                })
+                with self._lock:
+                    self.import_progress.update({
+                        'finished': True,
+                        'message': 'No emails found for the specified date range',
+                        'is_running': False
+                    })
                 return
             
             self.import_progress.update({
@@ -152,11 +166,12 @@ class EmailCacheService:
             for i, message in enumerate(messages):
                 # Check stop flag
                 if self._stop_flag.is_set():
-                    self.import_progress.update({
-                        'finished': True,
-                        'is_running': False,
-                        'message': f'Import stopped by user. Processed {i} emails.'
-                    })
+                    with self._lock:
+                        self.import_progress.update({
+                            'finished': True,
+                            'is_running': False,
+                            'message': f'Import stopped by user. Processed {i} emails.'
+                        })
                     return
                 
                 if message['id'] not in existing_ids:
@@ -192,26 +207,28 @@ class EmailCacheService:
             final_stats = self.email_cache.get_statistics()
             
             # Mark as finished
-            self.import_progress.update({
-                'finished': True,
-                'is_running': False,
-                'message': f'Import completed. Total emails processed: {self.import_progress["current"]}',
-                'final_results': {
-                    'new_emails': new_count,
-                    'skipped_emails': skip_count,
-                    'total_cached': final_stats.get('total_emails', 0),
-                    'date_range': final_stats.get('date_range')
-                }
-            })
+            with self._lock:
+                self.import_progress.update({
+                    'finished': True,
+                    'is_running': False,
+                    'message': f'Import completed. Total emails processed: {self.import_progress["current"]}',
+                    'final_results': {
+                        'new_emails': new_count,
+                        'skipped_emails': skip_count,
+                        'total_cached': final_stats.get('total_emails', 0),
+                        'date_range': final_stats.get('date_range')
+                    }
+                })
             
         except Exception as e:
             logger.error(f"Import failed: {e}")
             import traceback
             logger.error(traceback.format_exc())
             
-            self.import_progress.update({
-                'finished': True,
-                'is_running': False,
-                'error': str(e),
-                'message': f'Import failed: {str(e)}'
-            })
+            with self._lock:
+                self.import_progress.update({
+                    'finished': True,
+                    'is_running': False,
+                    'error': str(e),
+                    'message': f'Import failed: {str(e)}'
+                })

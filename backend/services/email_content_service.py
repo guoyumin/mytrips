@@ -56,6 +56,7 @@ class EmailContentService:
         }
         self._stop_flag = threading.Event()
         self._extraction_thread = None
+        self._lock = threading.Lock()  # Add thread lock for safety
         
     def get_travel_emails_for_extraction(self) -> List[Dict]:
         """获取需要提取内容的旅行相关邮件"""
@@ -92,39 +93,49 @@ class EmailContentService:
             
     def start_extraction(self, limit: Optional[int] = None) -> Dict:
         """开始提取邮件内容"""
-        if self.extraction_progress.get('is_running'):
-            return {"started": False, "message": "Extraction already in progress"}
+        with self._lock:
+            if self.extraction_progress.get('is_running'):
+                return {"started": False, "message": "Extraction already in progress"}
+                
+            # Double-check thread status
+            if self._extraction_thread and self._extraction_thread.is_alive():
+                return {"started": False, "message": "Extraction thread already running"}
+                
+            if not self.gmail_client or not self.extractor:
+                return {"started": False, "message": "Gmail client not initialized"}
+                
+            # 重置进度
+            self._stop_flag.clear()
+            self.extraction_progress = {
+                'is_running': True,
+                'current': 0,
+                'total': 0,
+                'finished': False,
+                'message': 'Starting extraction...',
+                'error': None,
+                'extracted_count': 0,
+                'failed_count': 0,
+                'start_time': datetime.now()
+            }
             
-        if not self.gmail_client or not self.extractor:
-            return {"started": False, "message": "Gmail client not initialized"}
+            # 启动后台线程
+            self._extraction_thread = threading.Thread(
+                target=self._background_extraction,
+                args=(limit,),
+                daemon=True
+            )
+            self._extraction_thread.start()
             
-        # 重置进度
-        self._stop_flag.clear()
-        self.extraction_progress = {
-            'is_running': True,
-            'current': 0,
-            'total': 0,
-            'finished': False,
-            'message': 'Starting extraction...',
-            'error': None,
-            'extracted_count': 0,
-            'failed_count': 0,
-            'start_time': datetime.now()
-        }
-        
-        # 启动后台线程
-        self._extraction_thread = threading.Thread(
-            target=self._background_extraction,
-            args=(limit,),
-            daemon=True
-        )
-        self._extraction_thread.start()
-        
-        return {"started": True, "message": f"Started extracting content for travel emails"}
+            return {"started": True, "message": f"Started extracting content for travel emails"}
         
     def stop_extraction(self) -> str:
         """停止提取进程"""
-        self._stop_flag.set()
+        with self._lock:
+            self._stop_flag.set()
+            if self.extraction_progress.get('is_running'):
+                self.extraction_progress['is_running'] = False
+                self.extraction_progress['finished'] = True
+                self.extraction_progress['message'] = 'Extraction stopped by user'
         return "Stop signal sent"
         
     def get_extraction_progress(self) -> Dict:
@@ -150,11 +161,12 @@ class EmailContentService:
             emails = self.get_travel_emails_for_extraction()
             
             if not emails:
-                self.extraction_progress.update({
-                    'finished': True,
-                    'is_running': False,
-                    'message': 'No travel emails found for extraction'
-                })
+                with self._lock:
+                    self.extraction_progress.update({
+                        'finished': True,
+                        'is_running': False,
+                        'message': 'No travel emails found for extraction'
+                    })
                 return
                 
             # 应用限制
@@ -188,22 +200,24 @@ class EmailContentService:
                     self.extraction_progress['failed_count'] += 1
                     
             # 完成
-            self.extraction_progress.update({
-                'finished': True,
-                'is_running': False,
-                'message': f'Completed: {self.extraction_progress["extracted_count"]} extracted, {self.extraction_progress["failed_count"]} failed'
-            })
+            with self._lock:
+                self.extraction_progress.update({
+                    'finished': True,
+                    'is_running': False,
+                    'message': f'Completed: {self.extraction_progress["extracted_count"]} extracted, {self.extraction_progress["failed_count"]} failed'
+                })
             
             logger.info(f"Extraction completed. Extracted: {self.extraction_progress['extracted_count']}, Failed: {self.extraction_progress['failed_count']}")
             
         except Exception as e:
             logger.error(f"Extraction failed: {e}")
-            self.extraction_progress.update({
-                'finished': True,
-                'is_running': False,
-                'error': str(e),
-                'message': f'Extraction failed: {str(e)}'
-            })
+            with self._lock:
+                self.extraction_progress.update({
+                    'finished': True,
+                    'is_running': False,
+                    'error': str(e),
+                    'message': f'Extraction failed: {str(e)}'
+                })
             
     def _extract_single_email(self, email_info: Dict) -> bool:
         """提取单个邮件的内容"""

@@ -27,7 +27,6 @@ class Email(Base):
     
     # 邮件内容（为下一步内容提取准备）
     content = Column(Text, nullable=True)  # 邮件正文内容
-    content_extracted = Column(Boolean, default=False, index=True)  # 是否已提取内容
     
     # 元数据
     created_at = Column(DateTime, default=func.now())  # 创建时间
@@ -37,7 +36,6 @@ class Email(Base):
     __table_args__ = (
         Index('idx_emails_date_classified', 'timestamp', 'is_classified'),
         Index('idx_emails_classification', 'classification'),
-        Index('idx_emails_content_extracted', 'content_extracted'),
     )
     
     def __repr__(self):

@@ -109,7 +109,10 @@ class EmailImportApp {
     }
 
     async importEmails() {
-        if (this.isImporting) return;
+        if (this.isImporting) {
+            console.log('Import already in progress, ignoring click');
+            return;
+        }
 
         this.isImporting = true;
         this.updateUIForImporting(true);
@@ -138,7 +141,14 @@ class EmailImportApp {
             }
 
             if (!data.started) {
-                throw new Error('Import failed to start');
+                // Check if it's because import is already running
+                if (data.message && data.message.includes('already')) {
+                    this.displayStatus('⚠️ ' + data.message, 'loading');
+                    this.startProgressMonitoring(); // Monitor existing progress
+                    return;
+                } else {
+                    throw new Error(data.message || 'Import failed to start');
+                }
             }
 
             // Start progress monitoring - this will handle completion automatically
@@ -373,7 +383,10 @@ class EmailImportApp {
 
     // Classification methods
     async testClassification() {
-        if (this.isClassifying) return;
+        if (this.isClassifying) {
+            console.log('Classification already in progress, ignoring click');
+            return;
+        }
 
         this.isClassifying = true;
         this.updateUIForClassification(true);
@@ -391,6 +404,10 @@ class EmailImportApp {
 
             if (!response.ok) {
                 throw new Error(data.detail || 'Failed to start classification');
+            }
+
+            if (!data.started) {
+                throw new Error(data.message || 'Classification failed to start');
             }
 
             this.displayStatus('🤖 Starting AI classification of emails...', 'loading');
@@ -546,7 +563,10 @@ class EmailImportApp {
 
     // Content extraction methods
     async extractTravelContent() {
-        if (this.isExtracting) return;
+        if (this.isExtracting) {
+            console.log('Extraction already in progress, ignoring click');
+            return;
+        }
 
         this.isExtracting = true;
         this.updateUIForExtraction(true);
@@ -564,6 +584,17 @@ class EmailImportApp {
 
             if (!response.ok) {
                 throw new Error(data.detail || 'Failed to start content extraction');
+            }
+
+            if (!data.started) {
+                // Check if it's because extraction is already running
+                if (data.message && data.message.includes('already')) {
+                    this.displayStatus('⚠️ ' + data.message, 'loading');
+                    this.startExtractionMonitoring(); // Monitor existing progress
+                    return;
+                } else {
+                    throw new Error(data.message || 'Content extraction failed to start');
+                }
             }
 
             this.displayStatus('📄 Starting travel email content extraction...', 'loading');
@@ -746,7 +777,7 @@ class EmailImportApp {
         // Format date
         const date = new Date(email.date || email.timestamp).toLocaleDateString();
         
-        // Determine if content is available
+        // Determine if content is available (from EmailContent table)
         const hasContent = email.content_extracted || false;
         const hasAttachments = email.has_attachments || false;
         
@@ -857,6 +888,10 @@ class EmailImportApp {
                         <div class="extraction-item error">
                             <span class="extraction-number">${stats.content_extraction.failed}</span>
                             <span class="extraction-label">Failed</span>
+                        </div>
+                        <div class="extraction-item extracting">
+                            <span class="extraction-number">${stats.content_extraction.extracting || 0}</span>
+                            <span class="extraction-label">Extracting</span>
                         </div>
                         <div class="extraction-item pending">
                             <span class="extraction-number">${stats.content_extraction.pending}</span>

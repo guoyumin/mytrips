@@ -163,7 +163,7 @@ def main():
     
     try:
         # 获取CSV文件路径
-        csv_file = config_manager.get_cache_file_path()
+        csv_file = config_manager.get_absolute_path('data/email_cache.csv')
         logger.info(f"CSV file: {csv_file}")
         
         # 检查CSV文件是否存在

@@ -184,7 +184,7 @@ async def list_emails(
                 'date': email.date,
                 'timestamp': email.timestamp.isoformat() if email.timestamp else None,
                 'classification': email.classification,
-                'content_extracted': content_info is not None,
+                'content_extracted': content_info is not None,  # Based on EmailContent table existence
                 'has_attachments': content_info.has_attachments if content_info else False,
                 'attachments_count': content_info.attachments_count if content_info else 0
             }
@@ -258,16 +258,32 @@ async def get_detailed_email_stats() -> Dict:
             travel_stats[category] = count
             total_travel_emails += count
         
-        # 内容提取统计
+        # 内容提取统计 - 只统计旅行相关邮件的提取状态
+        # 首先获取所有旅行相关邮件的ID
+        travel_email_ids = db.query(Email.email_id).filter(
+            Email.classification.in_(travel_categories)
+        ).subquery()
+        
+        # 统计旅行邮件中已完成提取的数量
         content_extracted_count = db.query(EmailContent).filter(
-            EmailContent.extraction_status == 'completed'
+            EmailContent.extraction_status == 'completed',
+            EmailContent.email_id.in_(travel_email_ids)
         ).count()
         
+        # 统计旅行邮件中提取失败的数量
         content_failed_count = db.query(EmailContent).filter(
-            EmailContent.extraction_status == 'failed'
+            EmailContent.extraction_status == 'failed',
+            EmailContent.email_id.in_(travel_email_ids)
         ).count()
         
-        content_pending_count = total_travel_emails - content_extracted_count - content_failed_count
+        # 统计旅行邮件中正在提取的数量
+        content_extracting_count = db.query(EmailContent).filter(
+            EmailContent.extraction_status == 'extracting',
+            EmailContent.email_id.in_(travel_email_ids)
+        ).count()
+        
+        # 统计旅行邮件中待提取的数量（还没有EmailContent记录的）
+        content_pending_count = total_travel_emails - content_extracted_count - content_failed_count - content_extracting_count
         
         return {
             'total_emails': total_emails,
@@ -285,6 +301,7 @@ async def get_detailed_email_stats() -> Dict:
             'content_extraction': {
                 'extracted': content_extracted_count,
                 'failed': content_failed_count,
+                'extracting': content_extracting_count,
                 'pending': content_pending_count if content_pending_count > 0 else 0,
                 'extraction_rate': round(content_extracted_count / total_travel_emails * 100, 1) if total_travel_emails > 0 else 0
             }

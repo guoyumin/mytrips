@@ -145,9 +145,11 @@ button:hover {
 }
 
 button:disabled {
-    background-color: #bdc3c7;
-    cursor: not-allowed;
-    transform: none;
+    background-color: #bdc3c7 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    opacity: 0.6 !important;
+    pointer-events: none !important;
 }
 
 .stop-btn {
@@ -649,7 +651,7 @@ button:disabled {
 
 .extraction-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 15px;
 }
 
@@ -672,6 +674,11 @@ button:disabled {
     border-color: #e74c3c;
 }
 
+.extraction-item.extracting {
+    background: #d1ecf1;
+    border-color: #17a2b8;
+}
+
 .extraction-item.pending {
     background: #fff3cd;
     border-color: #f39c12;
@@ -689,6 +696,10 @@ button:disabled {
 
 .extraction-item.error .extraction-number {
     color: #e74c3c;
+}
+
+.extraction-item.extracting .extraction-number {
+    color: #17a2b8;
 }
 
 .extraction-item.pending .extraction-number {
