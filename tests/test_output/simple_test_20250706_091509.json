@@ -1,0 +1,46 @@
+{
+  "timestamp": "2025-07-06T09:15:23.046184",
+  "emails_tested": 5,
+  "results": [
+    {
+      "email_id": "197de35be04bc080",
+      "subject": "Your New Social Security Statement is now available",
+      "from": "no-reply@ssa.gov",
+      "classification": "not_travel",
+      "is_travel_related": false
+    },
+    {
+      "email_id": "197ddebf0474b0e3",
+      "subject": "扬缨 - 上任半年“惊吓”不断，美股缘何七创新高？",
+      "from": "\"Esther Yang from Esther’s Newsletter\" <esthery@substack.com>",
+      "classification": "not_travel",
+      "is_travel_related": false
+    },
+    {
+      "email_id": "197dc8eb56ab38f2",
+      "subject": "IVV: Elon Musk says 'America Party' is formed after Trump fallout",
+      "from": "SA Breaking News <account@seekingalpha.com>",
+      "classification": "not_travel",
+      "is_travel_related": false
+    },
+    {
+      "email_id": "197dc755d7822f05",
+      "subject": "AMZN: Deutsche Bank's top sector picks for Q3 ranked by their SA Quant ratings (part 3)",
+      "from": "SA Breaking News <account@seekingalpha.com>",
+      "classification": "not_travel",
+      "is_travel_related": false
+    },
+    {
+      "email_id": "197dbec021e91d7a",
+      "subject": "Appointment was cancelled, July 16, 2025 6:00 PM, Besichtigung - Moderne, helle und ruhige 3.5 Zimmer-Wohnung im schönen Seefeld - oarwk.dq2nl",
+      "from": "\"Homegate 1681894 (via timum)\" <service@timum.de>",
+      "classification": "not_travel",
+      "is_travel_related": false
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "travel_related": 0,
+    "not_travel_related": 5
+  }
+}

@@ -3,10 +3,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 import uvicorn
+import logging
 from pathlib import Path
 
 from api.email_router import router as email_router
 from api.auth_router import router as auth_router
+from lib.config_manager import config_manager
+
+# Configure logging from config
+log_level = getattr(logging, config_manager.get_log_level().upper(), logging.INFO)
+logging.basicConfig(
+    level=log_level,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 app = FastAPI(
     title="MyTrips - Gmail Travel Analyzer",

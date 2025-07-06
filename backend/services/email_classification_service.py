@@ -1,48 +1,73 @@
-import csv
 import os
 from typing import List, Dict, Optional
 from datetime import datetime
 import threading
 import time
+import logging
 
 from services.gemini_service import GeminiService
+from lib.email_cache import EmailCache
+from lib.email_classifier import EmailClassifier
+from lib.config_manager import config_manager
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 class EmailClassificationService:
     """Service for classifying emails using Gemini AI"""
     
-    def __init__(self, cache_file: str = None, test_file: str = None):
-        # Data directory paths
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        data_dir = os.path.join(project_root, 'data')
-        
+    def __init__(self, cache_file: str = None, test_file: str = None, gemini_config_path: str = None):
+        # Use config manager for paths
         if cache_file is None:
-            cache_file = os.path.join(data_dir, 'email_cache.csv')
+            cache_file = config_manager.get_cache_file_path()
+        else:
+            # Convert relative path to absolute if needed
+            if not os.path.isabs(cache_file):
+                cache_file = config_manager.get_absolute_path(cache_file)
+        
         if test_file is None:
-            test_file = os.path.join(data_dir, 'email_classification_test.csv')
+            test_file = config_manager.get_classification_test_file_path()
+        if gemini_config_path is None:
+            gemini_config_path = config_manager.get_gemini_config_path()
             
-        self.cache_file = cache_file
+        # Initialize libraries
+        self.email_cache = EmailCache(cache_file)
         self.test_file = test_file
-        self.csv_headers = ['email_id', 'subject', 'from', 'date', 'timestamp', 'is_classified', 'classification']
+        
+        # Try to initialize email classifier
+        try:
+            logger.debug(f"Initializing email classifier with config: {gemini_config_path}")
+            self.email_classifier = EmailClassifier(gemini_config_path)
+            logger.debug("Email classifier initialized successfully")
+        except Exception as e:
+            logger.warning(f"Email classifier not available: {e}")
+            self.email_classifier = None
         
         # Classification progress tracking
         self.classification_progress = {}
         self._stop_flag = threading.Event()
         self._classification_thread = None
         
-        # Initialize Gemini service
+        # Keep Gemini service for backward compatibility
         try:
+            logger.debug("Initializing Gemini service for backward compatibility")
             self.gemini_service = GeminiService()
+            logger.debug("Gemini service initialized successfully")
         except Exception as e:
-            print(f"Warning: Gemini service not available: {e}")
+            logger.warning(f"Gemini service not available: {e}")
             self.gemini_service = None
     
     def start_test_classification(self, limit: int = 1000) -> Dict:
         """Start test classification of emails in background"""
+        logger.debug(f"Starting test classification with limit: {limit}")
+        
         if self._classification_thread and self._classification_thread.is_alive():
+            logger.warning("Classification already in progress")
             raise Exception("Classification already in progress")
         
-        if not self.gemini_service:
-            raise Exception("Gemini service not available. Please configure Gemini API key.")
+        if not self.email_classifier and not self.gemini_service:
+            logger.error("No classification service available")
+            raise Exception("No classification service available. Please configure Gemini API key.")
         
         # Reset stop flag
         self._stop_flag.clear()
@@ -55,7 +80,7 @@ class EmailClassificationService:
             'skipped_count': 0,
             'current_batch': 0,
             'total_batches': 0,
-            'batch_size': 20,
+            'batch_size': config_manager.get_batch_size(),
             'finished': False,
             'error': None,
             'start_time': datetime.now(),
@@ -63,6 +88,7 @@ class EmailClassificationService:
         }
         
         # Start classification thread
+        logger.debug("Starting classification thread")
         self._classification_thread = threading.Thread(
             target=self._background_classification,
             args=(limit,),
@@ -71,6 +97,7 @@ class EmailClassificationService:
         self._classification_thread.start()
         
         limit_msg = f"up to {limit} emails" if limit else "all unclassified emails"
+        logger.info(f"Classification thread started for {limit_msg}")
         return {"started": True, "message": f"Starting test classification of {limit_msg}"}
     
     def stop_classification(self) -> str:
@@ -93,138 +120,149 @@ class EmailClassificationService:
         return progress
     
     def _background_classification(self, limit: int):
-        """Background classification process"""
+        """Background classification process using new lib"""
         try:
-            # Load unclassified emails
-            unclassified_emails = self._load_unclassified_emails(limit)
+            logger.info(f"Starting classification of emails (limit: {limit})")
+            
+            # Reset any previously failed classifications so they can be retried
+            reset_count = self.email_cache.reset_failed_classifications()
+            if reset_count > 0:
+                logger.info(f"Reset {reset_count} previously failed classifications for retry")
+            
+            # Get unclassified emails using email_cache
+            logger.debug(f"Getting unclassified emails with limit: {limit}")
+            unclassified_emails = self.email_cache.get_emails(
+                limit=limit, 
+                filter_classified=False
+            )
+            logger.debug(f"Found {len(unclassified_emails) if unclassified_emails else 0} unclassified emails")
             
             if not unclassified_emails:
-                self.classification_progress['error'] = "No unclassified emails found"
+                logger.info("No unclassified emails found")
+                self.classification_progress.update({
+                    'finished': True,
+                    'message': 'No unclassified emails found'
+                })
                 return
             
-            self.classification_progress['total'] = len(unclassified_emails)
-            
-            # Calculate batches
+            # Update progress
             batch_size = self.classification_progress['batch_size']
             total_batches = (len(unclassified_emails) + batch_size - 1) // batch_size
-            self.classification_progress['total_batches'] = total_batches
             
-            # Estimate cost
-            cost_estimate = self.gemini_service.estimate_token_cost(len(unclassified_emails))
-            self.classification_progress['estimated_cost'] = cost_estimate
+            self.classification_progress.update({
+                'total': len(unclassified_emails),
+                'total_batches': total_batches
+            })
             
-            print(f"Starting classification of {len(unclassified_emails)} emails")
-            print(f"Processing in {total_batches} batches of {batch_size} emails each")
-            print(f"Estimated cost: ${cost_estimate['estimated_cost_usd']:.6f}")
+            logger.info(f"Processing {len(unclassified_emails)} emails in {total_batches} batches of {batch_size} each")
             
-            # Process emails in batches to optimize API calls
-            classified_results = []
-            save_frequency = 10  # Save every 10 batches (200 emails)
+            # Estimate cost if using new classifier
+            if self.email_classifier:
+                cost_info = self.email_classifier.estimate_cost(len(unclassified_emails))
+                self.classification_progress['estimated_cost'] = cost_info['estimated_cost_usd']
+                logger.info(f"Estimated cost: ${cost_info['estimated_cost_usd']}")
             
-            for i in range(0, len(unclassified_emails), batch_size):
+            # Process in batches
+            all_results = []
+            
+            for batch_num in range(total_batches):
                 if self._stop_flag.is_set():
                     print("Classification stopped by user")
                     break
                 
-                current_batch = (i // batch_size) + 1
-                batch = unclassified_emails[i:i + batch_size]
+                start_idx = batch_num * batch_size
+                end_idx = min(start_idx + batch_size, len(unclassified_emails))
+                batch_emails = unclassified_emails[start_idx:end_idx]
                 
-                # Update current batch number
-                self.classification_progress['current_batch'] = current_batch
+                self.classification_progress.update({
+                    'current_batch': batch_num + 1,
+                    'message': f'Processing batch {batch_num + 1}/{total_batches} ({len(batch_emails)} emails)...'
+                })
                 
-                try:
-                    print(f"Processing batch {current_batch}/{total_batches} ({len(batch)} emails)...")
-                    
-                    # Classify batch
-                    batch_results = self.gemini_service.classify_emails_batch(batch)
-                    classified_results.extend(batch_results)
-                    
-                    # Update progress
-                    self.classification_progress['processed'] = min(i + batch_size, len(unclassified_emails))
-                    self.classification_progress['classified_count'] = len(classified_results)
-                    
-                    print(f"Completed batch {current_batch}/{total_batches}, processed {self.classification_progress['processed']}/{len(unclassified_emails)} emails")
-                    
-                    # Save results incrementally every 5 batches
-                    if current_batch % save_frequency == 0:
-                        print(f"Saving incremental results after batch {current_batch}...")
-                        self._save_incremental_results(classified_results)
-                    
-                    # Small delay to respect API rate limits
-                    time.sleep(1)
-                    
-                except Exception as e:
-                    print(f"Error classifying batch {i//batch_size + 1}: {e}")
-                    # Add default classifications for failed batch
-                    for email in batch:
-                        classified_results.append({
-                            'email_id': email.get('email_id', ''),
-                            'subject': email.get('subject', ''),
-                            'from': email.get('from', ''),
-                            'date': email.get('date', ''),
-                            'timestamp': email.get('timestamp', ''),
-                            'is_classified': 'true',
-                            'classification': 'classification_failed',
-                            'is_travel_related': False
-                        })
-                    
-                    self.classification_progress['processed'] = min(i + batch_size, len(unclassified_emails))
+                print(f"Processing batch {batch_num + 1}/{total_batches} ({len(batch_emails)} emails)...")
+                
+                # Classify batch
+                if self.email_classifier:
+                    # Use new email classifier
+                    batch_results = self.email_classifier.classify_batch(batch_emails)
+                else:
+                    # Fallback to old gemini service
+                    batch_results = self.gemini_service.classify_emails_batch(batch_emails)
+                
+                # Process results
+                for email, result in zip(batch_emails, batch_results):
+                    processed_result = {
+                        'email_id': email['email_id'],
+                        'subject': email.get('subject', ''),
+                        'from': email.get('from', ''),
+                        'classification': result.get('classification', 'classification_failed')
+                    }
+                    all_results.append(processed_result)
+                
+                # Update progress
+                self.classification_progress['processed'] = len(all_results)
+                print(f"Completed batch {batch_num + 1}/{total_batches}, processed {len(all_results)}/{len(unclassified_emails)} emails")
+                
+                # Save incremental results every 10 batches
+                if (batch_num + 1) % 10 == 0:
+                    self._save_results(all_results, incremental=True)
             
-            # Save final results or handle stop condition
-            if self._stop_flag.is_set():
-                print("Saving partial results due to stop...")
-                self._save_incremental_results(classified_results)
-            else:
-                print("Saving final results...")
-                self._save_classification_results(classified_results, incremental=False)
+            # Save final results
+            print("Saving final results...")
+            self._save_results(all_results, incremental=False)
             
-            # Store final results
-            travel_count = sum(1 for r in classified_results if r.get('is_travel_related', False))
-            self.classification_progress['final_results'] = {
-                'total_classified': len(classified_results),
-                'travel_related': travel_count,
-                'not_travel_related': len(classified_results) - travel_count,
-                'test_file': self.test_file
-            }
+            # Update email cache with classifications
+            # Separate successful and failed classifications
+            successful_classifications = {}
+            failed_count = 0
+            
+            for r in all_results:
+                if r['classification'] == 'classification_failed':
+                    failed_count += 1
+                    logger.debug(f"Classification failed for email {r['email_id'][:10]}...")
+                else:
+                    successful_classifications[r['email_id']] = r['classification']
+            
+            # Update successful classifications as classified
+            if successful_classifications:
+                updated_count = self.email_cache.update_classifications(successful_classifications)
+                logger.info(f"Updated {updated_count} emails as successfully classified")
+            
+            # Log failed classifications
+            if failed_count > 0:
+                logger.info(f"Found {failed_count} failed classifications - keeping as unclassified for retry")
+            
+            # Count travel-related emails
+            travel_categories = {'flight', 'hotel', 'car_rental', 'train', 'cruise', 'tour', 'travel_insurance', 'flight_change', 'hotel_change', 'other_travel'}
+            travel_count = sum(1 for r in all_results if r['classification'] in travel_categories)
+            
+            self.classification_progress.update({
+                'finished': True,
+                'classified_count': len(all_results),
+                'message': f'Classification completed. {travel_count} travel-related emails found.'
+            })
             
             print(f"Classification completed. {travel_count} travel-related emails found.")
             
         except Exception as e:
             print(f"Classification error: {e}")
-            self.classification_progress['error'] = str(e)
-        finally:
-            self.classification_progress['finished'] = True
+            self.classification_progress.update({
+                'finished': True,
+                'error': str(e),
+                'message': f'Classification failed: {str(e)}'
+            })
     
-    def _load_unclassified_emails(self, limit: int) -> List[Dict]:
-        """Load unclassified emails from cache"""
-        if not os.path.exists(self.cache_file):
-            return []
-        
-        unclassified = []
-        with open(self.cache_file, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                # Skip already classified emails
-                if row.get('is_classified', 'false').lower() == 'true':
-                    continue
-                
-                unclassified.append(row)
-                
-                # Limit number of emails if specified
-                if limit and len(unclassified) >= limit:
-                    break
-        
-        return unclassified
-    
-    def _save_classification_results(self, results: List[Dict], incremental: bool = False):
-        """Save classification results to test file and update original cache"""
+    def _save_results(self, results: List[Dict], incremental: bool = False):
+        """Save classification results to test file"""
         if not results:
             return
             
         # Ensure data directory exists
         os.makedirs(os.path.dirname(self.test_file), exist_ok=True)
         
-        # 1. Save simplified results to test file (ID, subject, classification only)
+        # Save simplified results to test file (ID, subject, classification only)
+        import csv
+        
         file_mode = 'a' if incremental and os.path.exists(self.test_file) else 'w'
         write_header = file_mode == 'w' or not os.path.exists(self.test_file)
         
@@ -244,83 +282,7 @@ class EmailClassificationService:
         
         save_type = "incremental" if incremental else "final"
         print(f"Classification results ({save_type}) saved to: {self.test_file}")
-        
-        # 2. Update the original cache file to mark emails as classified
-        if os.path.exists(self.cache_file):
-            # Read all emails from cache
-            all_emails = []
-            with open(self.cache_file, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                all_emails = list(reader)
-            
-            # Create a map of classified results
-            classified_map = {r['email_id']: r['classification'] for r in results}
-            
-            # Update classified status and classification
-            for email in all_emails:
-                if email['email_id'] in classified_map:
-                    email['is_classified'] = 'true'
-                    email['classification'] = classified_map[email['email_id']]
-            
-            # Write back updated cache
-            with open(self.cache_file, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=self.csv_headers)
-                writer.writeheader()
-                writer.writerows(all_emails)
-            
-            print(f"Updated {len(classified_map)} emails as classified in cache file")
-    
-    def _save_incremental_results(self, all_results: List[Dict]):
-        """Save incremental results - only saves newly classified emails since last save"""
-        if not all_results:
-            return
-            
-        # Determine which results are new since last save
-        existing_ids = set()
-        if os.path.exists(self.test_file):
-            with open(self.test_file, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                existing_ids = {row['email_id'] for row in reader if 'email_id' in row}
-        
-        # Only save new results
-        new_results = [r for r in all_results if r['email_id'] not in existing_ids]
-        
-        if new_results:
-            self._save_classification_results(new_results, incremental=True)
-            print(f"Saved {len(new_results)} new results incrementally")
     
     def get_classification_stats(self) -> Dict:
-        """Get statistics from classification test results"""
-        if not os.path.exists(self.test_file):
-            return {'total': 0, 'travel_related': 0, 'categories': {}}
-        
-        total = 0
-        travel_related = 0
-        categories = {}
-        
-        # Define travel-related categories
-        travel_categories = {
-            'flight', 'hotel', 'car_rental', 'train', 'cruise', 
-            'tour', 'travel_insurance', 'flight_change', 
-            'hotel_change', 'other_travel'
-        }
-        
-        with open(self.test_file, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                total += 1
-                
-                classification = row.get('classification', 'unknown')
-                categories[classification] = categories.get(classification, 0) + 1
-                
-                # Count as travel-related if it's in travel categories
-                if classification in travel_categories:
-                    travel_related += 1
-        
-        return {
-            'total': total,
-            'travel_related': travel_related,
-            'not_travel_related': total - travel_related,
-            'categories': categories,
-            'test_file': self.test_file
-        }
+        """Get statistics from email cache"""
+        return self.email_cache.get_statistics()

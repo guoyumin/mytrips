@@ -263,6 +263,9 @@ class EmailImportApp {
     
     getTimeRangeLabel(days) {
         const ranges = {
+            1: 'last 1 day',
+            3: 'last 3 days',
+            10: 'last 10 days',
             30: 'last month',
             90: 'last 3 months', 
             180: 'last 6 months',
@@ -326,20 +329,29 @@ class EmailImportApp {
     }
 
     startClassificationMonitoring() {
-        this.classificationInterval = setInterval(async () => {
+        // Clear any existing global timer first
+        if (window.globalClassificationInterval) {
+            clearInterval(window.globalClassificationInterval);
+        }
+        
+        window.globalClassificationInterval = setInterval(async () => {
             await this.updateClassificationProgress();
         }, 2000);
+        this.classificationInterval = window.globalClassificationInterval;
     }
 
     stopClassificationMonitoring() {
-        if (this.classificationInterval) {
-            clearInterval(this.classificationInterval);
+        if (window.globalClassificationInterval) {
+            clearInterval(window.globalClassificationInterval);
+            window.globalClassificationInterval = null;
             this.classificationInterval = null;
         }
     }
 
     async updateClassificationProgress() {
-        if (!this.isClassifying) return;
+        if (!this.isClassifying) {
+            return;
+        }
 
         try {
             const response = await fetch('/api/emails/classify/progress');
@@ -352,9 +364,11 @@ class EmailImportApp {
                     this.isClassifying = false;
                     this.stopClassificationMonitoring();
                     
-                    if (data.final_results) {
-                        this.displayClassificationResults(data.final_results);
-                    }
+                    // Display completion message
+                    this.displayStatus(
+                        `✅ ${data.message || 'Classification completed!'}`,
+                        'success'
+                    );
                     
                     this.updateUIForClassification(false);
                 }
@@ -367,15 +381,26 @@ class EmailImportApp {
     updateUIForClassification(classifying) {
         const classifyBtn = document.getElementById('classifyBtn');
         const stopClassifyBtn = document.getElementById('stopClassifyBtn');
+        const progress = document.getElementById('progress');
+        const progressText = document.getElementById('progressText');
 
         if (classifying) {
             classifyBtn.disabled = true;
             classifyBtn.textContent = 'Classifying...';
             stopClassifyBtn.style.display = 'inline-block';
+            progress.style.display = 'block';
+            progressText.style.display = 'block';
         } else {
             classifyBtn.disabled = false;
             classifyBtn.textContent = 'Classify Emails (Test 1000)';
             stopClassifyBtn.style.display = 'none';
+            
+            setTimeout(() => {
+                progress.style.display = 'none';
+                progressText.style.display = 'none';
+                document.getElementById('progressBar').style.width = '0%';
+                document.getElementById('progressCount').textContent = '0/0';
+            }, 2000);
         }
     }
 
@@ -397,7 +422,7 @@ class EmailImportApp {
             statusText += ` (${data.classified_count || 0} processed)`;
             
             if (data.estimated_cost) {
-                statusText += ` • Est. cost: $${data.estimated_cost.estimated_cost_usd.toFixed(6)}`;
+                statusText += ` • Est. cost: $${data.estimated_cost.toFixed(6)}`;
             }
             
             this.displayStatus(statusText, 'loading');
@@ -424,6 +449,12 @@ class EmailImportApp {
 
 // Global functions for button clicks
 let app;
+
+// Clear any existing classification timers globally
+if (window.globalClassificationInterval) {
+    clearInterval(window.globalClassificationInterval);
+    window.globalClassificationInterval = null;
+}
 
 function importEmails() {
     app.importEmails();

@@ -1,0 +1,32 @@
+{
+  "test_settings": {
+    "email_batch_size": 20,
+    "days_to_search": 7,
+    "classification_batch_size": 10,
+    "save_intermediate_results": true
+  },
+  "test_categories": {
+    "travel_categories": [
+      "flight",
+      "hotel", 
+      "train",
+      "car_rental",
+      "cruise",
+      "tour",
+      "travel_insurance",
+      "flight_change",
+      "hotel_change",
+      "other_travel"
+    ],
+    "non_travel_categories": [
+      "marketing",
+      "not_travel",
+      "classification_failed"
+    ]
+  },
+  "output_format": {
+    "include_email_content": false,
+    "include_timestamps": true,
+    "include_statistics": true
+  }
+}

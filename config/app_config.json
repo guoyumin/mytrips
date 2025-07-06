@@ -1,0 +1,23 @@
+{
+  "cache_files": {
+    "email_cache": "data/email_cache.csv",
+    "email_cache_test": "data/email_cache_test.csv",
+    "email_classification_test": "data/email_classification_test.csv"
+  },
+  "database": {
+    "sqlite_path": "data/mytrips.db"
+  },
+  "gmail": {
+    "credentials_path": "config/credentials.json",
+    "token_path": "config/token.json"
+  },
+  "gemini": {
+    "config_path": "config/gemini_config.json"
+  },
+  "settings": {
+    "use_test_cache": false,
+    "batch_size": 20,
+    "save_interval": 10,
+    "log_level": "DEBUG"
+  }
+}

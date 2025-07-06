@@ -1,278 +1,239 @@
-import csv
 import os
 from datetime import datetime
-from typing import Dict, List, Optional, Set
-from email.utils import parsedate_to_datetime
+from typing import Dict, List, Optional
 import threading
 import time
 
-from services.gmail_service import GmailService
+from lib.gmail_client import GmailClient
+from lib.email_cache import EmailCache
+from lib.config_manager import config_manager
 
 class EmailCacheService:
     """Service for managing email cache operations"""
     
-    def __init__(self, cache_file: str = None):
+    def __init__(self, cache_file: str = None, credentials_path: str = None, token_path: str = None):
+        # Use config manager for paths
         if cache_file is None:
-            # Use data directory for cache file
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            cache_file = os.path.join(project_root, 'data', 'email_cache.csv')
-        self.cache_file = cache_file
-        self.csv_headers = ['email_id', 'subject', 'from', 'date', 'timestamp', 'is_classified', 'classification']
-        self.import_progress = {}
-        self._stop_flag = threading.Event()
+            cache_file = config_manager.get_cache_file_path()
+        else:
+            # Convert relative path to absolute if needed
+            if not os.path.isabs(cache_file):
+                cache_file = config_manager.get_absolute_path(cache_file)
         
-    def get_cached_email_ids(self) -> Set[str]:
-        """Get set of email IDs already in cache"""
-        cached_ids = set()
-        if os.path.exists(self.cache_file):
-            with open(self.cache_file, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    cached_ids.add(row['email_id'])
-        return cached_ids
-    
-    def get_cache_stats(self) -> Dict:
-        """Get statistics about cached emails"""
-        if not os.path.exists(self.cache_file):
-            return {
-                'total_emails': 0,
-                'classified_emails': 0,
-                'date_range': None
-            }
-            
-        total = 0
-        classified = 0
-        dates = []
+        if credentials_path is None:
+            credentials_path = config_manager.get_gmail_credentials_path()
+        if token_path is None:
+            token_path = config_manager.get_gmail_token_path()
         
-        with open(self.cache_file, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                total += 1
-                if row.get('is_classified', 'false').lower() == 'true':
-                    classified += 1
-                    
-                # Parse date for range
-                try:
-                    date_str = row.get('date', '')
-                    if date_str:
-                        email_date = parsedate_to_datetime(date_str)
-                        # Convert to naive datetime if it has timezone info
-                        if email_date.tzinfo is not None:
-                            email_date = email_date.replace(tzinfo=None)
-                        dates.append(email_date)
-                except Exception as e:
-                    # Skip invalid dates
-                    pass
+        # Initialize libraries
+        self.email_cache = EmailCache(cache_file)
         
-        date_range = None
-        if dates:
-            dates.sort()
-            date_range = {
-                'oldest': dates[0].strftime('%Y-%m-%d'),
-                'newest': dates[-1].strftime('%Y-%m-%d')
-            }
-            
-        return {
-            'total_emails': total,
-            'classified_emails': classified,
-            'date_range': date_range
-        }
-    
-    def start_import(self, days: int = 365) -> str:
-        """Start email import process in background"""
-        if hasattr(self, '_import_thread') and self._import_thread.is_alive():
-            raise Exception("Import already in progress")
-            
-        # Reset stop flag
-        self._stop_flag.clear()
+        # Try to initialize Gmail client with error handling
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Initializing Gmail client with credentials: {credentials_path}, token: {token_path}")
+            self.gmail_client = GmailClient(credentials_path, token_path)
+            logger.info("Gmail client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Gmail client: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.gmail_client = None
         
         # Initialize progress tracking
         self.import_progress = {
+            'is_running': False,
+            'current': 0,
             'total': 0,
-            'processed': 0,
-            'new_count': 0,
-            'skip_count': 0,
             'finished': False,
+            'message': '',
             'error': None,
-            'start_time': datetime.now(),
-            'final_results': None
+            'new_count': 0,
+            'skip_count': 0
+        }
+        self._stop_flag = threading.Event()
+    
+    def get_cache_stats(self) -> Dict:
+        """Get statistics about the email cache"""
+        return self.email_cache.get_statistics()
+    
+    def start_import(self, days: int = 365) -> str:
+        """Start importing emails from Gmail"""
+        if self.import_progress.get('is_running'):
+            return "Import is already running"
+        
+        if not self.gmail_client:
+            return "Gmail client not initialized. Please check configuration."
+        
+        # Reset stop flag and progress
+        self._stop_flag.clear()
+        self.import_progress = {
+            'is_running': True,
+            'current': 0,
+            'total': 0,
+            'finished': False,
+            'message': 'Starting import...',
+            'error': None
         }
         
-        # Start import thread
-        self._import_thread = threading.Thread(
+        # Start background import
+        import_thread = threading.Thread(
             target=self._background_import,
             args=(days,),
             daemon=True
         )
-        self._import_thread.start()
+        import_thread.start()
         
-        return "Import started"
-    
-    def stop_import(self) -> str:
-        """Stop ongoing import process"""
-        self._stop_flag.set()
-        return "Stop signal sent"
+        return f"Started importing emails from the last {days} days"
     
     def get_import_progress(self) -> Dict:
         """Get current import progress"""
-        progress = self.import_progress.copy()
+        progress_data = self.import_progress.copy()
         
-        # Calculate percentage
-        if progress.get('total', 0) > 0:
-            progress['progress'] = round(
-                (progress.get('processed', 0) / progress['total']) * 100, 1
-            )
+        # Calculate progress percentage for frontend
+        if progress_data['total'] > 0:
+            progress_data['progress'] = (progress_data['current'] / progress_data['total']) * 100
+            progress_data['processed'] = progress_data['current']
         else:
-            progress['progress'] = 0
+            progress_data['progress'] = 0
+            progress_data['processed'] = 0
             
-        return progress
+        return progress_data
+    
+    def stop_import(self) -> str:
+        """Stop the ongoing import process"""
+        self._stop_flag.set()
+        self.import_progress['message'] = 'Stopping import...'
+        return "Import stop requested"
     
     def _background_import(self, days: int):
-        """Background import process"""
+        """Background thread for importing emails"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
-            gmail_service = GmailService()
-            cached_ids = self.get_cached_email_ids()
+            logger.info(f"Background import started for {days} days")
             
-            # Search for emails
-            query = f'newer_than:{days}d'
-            all_emails = self._fetch_all_emails(gmail_service, query)
+            self.import_progress.update({
+                'message': 'Connecting to Gmail...',
+                'current': 0,
+                'total': 0
+            })
             
-            self.import_progress['total'] = len(all_emails)
+            # Search for emails from the specified time period
+            self.import_progress['message'] = f'Searching for emails from the last {days} days...'
+            logger.info(f"Calling gmail_client.search_emails_by_date({days})")
+            messages = self.gmail_client.search_emails_by_date(days)
+            logger.info(f"Got {len(messages) if messages else 0} messages from Gmail")
             
-            # Ensure CSV file exists
-            self._ensure_csv_exists()
+            if not messages:
+                self.import_progress.update({
+                    'finished': True,
+                    'message': 'No emails found for the specified date range',
+                    'is_running': False
+                })
+                return
             
-            # Process emails
-            new_count, skip_count, date_range = self._process_emails(
-                gmail_service, all_emails, cached_ids
-            )
+            self.import_progress.update({
+                'total': len(messages),
+                'message': f'Found {len(messages)} emails. Processing...'
+            })
             
-            # Store final results
-            total_cached = len(cached_ids) + new_count
-            self.import_progress['final_results'] = {
-                'new_emails': new_count,
-                'skipped_emails': skip_count,
-                'total_cached': total_cached,
-                'date_range': date_range
-            }
+            # Get existing email IDs to avoid duplicates
+            logger.info("Getting existing email IDs from cache...")
+            existing_ids = self.email_cache.get_cached_ids()
+            logger.info(f"Found {len(existing_ids)} existing email IDs in cache")
+            
+            # Debug: print first few IDs from both sources
+            if existing_ids:
+                logger.debug(f"Sample existing IDs: {list(existing_ids)[:3]}")
+            if messages:
+                logger.debug(f"Sample message IDs from Gmail: {[msg['id'] for msg in messages[:3]]}")
+            
+            # Process emails in batches
+            batch_size = 50
+            new_emails = []
+            new_count = 0
+            skip_count = 0
+            
+            for i, message in enumerate(messages):
+                # Check stop flag
+                if self._stop_flag.is_set():
+                    self.import_progress.update({
+                        'finished': True,
+                        'is_running': False,
+                        'message': f'Import stopped by user. Processed {i} emails.'
+                    })
+                    return
+                
+                if message['id'] not in existing_ids:
+                    logger.debug(f"Processing new email: {message['id']}")
+                    # Get email headers
+                    headers = self.gmail_client.get_message_headers(message['id'])
+                    headers['email_id'] = message['id']
+                    new_emails.append(headers)
+                    new_count += 1
+                    logger.debug(f"Added email to batch: {headers.get('subject', 'No subject')[:50]}")
+                else:
+                    skip_count += 1
+                    logger.debug(f"Skipping existing email: {message['id']}")
+                
+                # Update progress
+                self.import_progress.update({
+                    'current': i + 1,
+                    'new_count': new_count,
+                    'skip_count': skip_count,
+                    'message': f'Processing email {i + 1}/{len(messages)}...'
+                })
+                
+                # Save in batches
+                if len(new_emails) >= batch_size:
+                    logger.info(f"Saving batch of {len(new_emails)} emails to cache...")
+                    try:
+                        added_count = self.email_cache.add_emails(new_emails)
+                        logger.info(f"Successfully added {added_count} emails to cache")
+                    except Exception as e:
+                        logger.error(f"Error saving emails to cache: {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+                    new_emails = []
+            
+            # Save any remaining emails
+            if new_emails:
+                logger.info(f"Saving final batch of {len(new_emails)} emails to cache...")
+                try:
+                    added_count = self.email_cache.add_emails(new_emails)
+                    logger.info(f"Successfully added {added_count} emails to cache")
+                except Exception as e:
+                    logger.error(f"Error saving final batch to cache: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+            
+            # Get final stats
+            final_stats = self.email_cache.get_statistics()
+            
+            # Mark as finished
+            self.import_progress.update({
+                'finished': True,
+                'is_running': False,
+                'message': f'Import completed. Total emails processed: {self.import_progress["current"]}',
+                'final_results': {
+                    'new_emails': new_count,
+                    'skipped_emails': skip_count,
+                    'total_cached': final_stats.get('total_emails', 0),
+                    'date_range': final_stats.get('date_range')
+                }
+            })
             
         except Exception as e:
-            self.import_progress['error'] = str(e)
-        finally:
-            self.import_progress['finished'] = True
-    
-    def _fetch_all_emails(self, gmail_service: GmailService, query: str) -> List[Dict]:
-        """Fetch all emails matching query with pagination"""
-        all_emails = []
-        page_token = None
-        
-        while True:
-            if self._stop_flag.is_set():
-                break
-                
-            try:
-                if page_token:
-                    results = gmail_service.service.users().messages().list(
-                        userId='me',
-                        q=query,
-                        pageToken=page_token,
-                        maxResults=500
-                    ).execute()
-                else:
-                    results = gmail_service.service.users().messages().list(
-                        userId='me',
-                        q=query,
-                        maxResults=500
-                    ).execute()
-                
-                messages = results.get('messages', [])
-                all_emails.extend(messages)
-                
-                page_token = results.get('nextPageToken')
-                if not page_token:
-                    break
-                    
-            except Exception as e:
-                print(f"Error fetching emails: {e}")
-                break
-        
-        return all_emails
-    
-    def _ensure_csv_exists(self):
-        """Ensure CSV file exists with proper headers"""
-        if not os.path.exists(self.cache_file):
-            with open(self.cache_file, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=self.csv_headers)
-                writer.writeheader()
-    
-    def _process_emails(self, gmail_service: GmailService, all_emails: List[Dict], 
-                       cached_ids: Set[str]) -> tuple:
-        """Process and cache emails"""
-        new_count = 0
-        skip_count = 0
-        dates = []
-        
-        with open(self.cache_file, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=self.csv_headers)
+            logger.error(f"Import failed: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             
-            for i, email in enumerate(all_emails):
-                if self._stop_flag.is_set():
-                    break
-                
-                email_id = email['id']
-                self.import_progress['processed'] = i + 1
-                
-                # Skip if already cached
-                if email_id in cached_ids:
-                    skip_count += 1
-                    self.import_progress['skip_count'] = skip_count
-                    continue
-                
-                try:
-                    # Fetch email details
-                    email_data = gmail_service.get_email(email_id)
-                    
-                    # Parse date for range tracking
-                    date_str = email_data.get('date', '')
-                    try:
-                        if date_str:
-                            email_date = parsedate_to_datetime(date_str)
-                            # Convert to naive datetime if it has timezone info
-                            if email_date.tzinfo is not None:
-                                email_date = email_date.replace(tzinfo=None)
-                            dates.append(email_date)
-                    except Exception as e:
-                        # Skip invalid dates
-                        pass
-                    
-                    # Write to CSV
-                    writer.writerow({
-                        'email_id': email_id,
-                        'subject': email_data.get('subject', ''),
-                        'from': email_data.get('from', ''),
-                        'date': date_str,
-                        'timestamp': datetime.now().isoformat(),
-                        'is_classified': 'false',
-                        'classification': ''
-                    })
-                    
-                    new_count += 1
-                    self.import_progress['new_count'] = new_count
-                    
-                    # Small delay to prevent rate limiting
-                    time.sleep(0.01)
-                    
-                except Exception as e:
-                    print(f"Error processing email {email_id}: {e}")
-                    continue
-        
-        # Calculate date range
-        date_range = None
-        if dates:
-            dates.sort()
-            date_range = {
-                'oldest': dates[0].strftime('%Y-%m-%d'),
-                'newest': dates[-1].strftime('%Y-%m-%d')
-            }
-        
-        return new_count, skip_count, date_range
+            self.import_progress.update({
+                'finished': True,
+                'is_running': False,
+                'error': str(e),
+                'message': f'Import failed: {str(e)}'
+            })

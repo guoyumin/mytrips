@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict
 from services.email_cache_service import EmailCacheService
 from services.email_classification_service import EmailClassificationService
+from lib.config_manager import config_manager
 
 router = APIRouter()
 
@@ -77,5 +78,62 @@ async def get_classification_stats() -> Dict:
     """Get classification test statistics"""
     try:
         return classification_service.get_classification_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Configuration management endpoints
+@router.get("/config")
+async def get_config() -> Dict:
+    """Get current configuration"""
+    try:
+        return {
+            "use_test_cache": config_manager.is_using_test_cache(),
+            "current_cache_file": config_manager.get_cache_file_path(),
+            "batch_size": config_manager.get_batch_size(),
+            "log_level": config_manager.get_log_level(),
+            "config": config_manager.get_config()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/config/use_test_cache")
+async def set_use_test_cache(request: dict) -> Dict:
+    """Set whether to use test cache"""
+    try:
+        use_test = request.get('use_test', False)
+        config_manager.set_use_test_cache(use_test)
+        
+        # Note: Services need to be recreated to use new cache file
+        cache_file = config_manager.get_cache_file_path()
+        
+        return {
+            "success": True,
+            "use_test_cache": use_test,
+            "current_cache_file": cache_file,
+            "message": "Configuration updated. Restart services to apply changes."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/config/log_level")
+async def set_log_level(request: dict) -> Dict:
+    """Set log level"""
+    try:
+        log_level = request.get('log_level', 'INFO')
+        
+        # Validate log level
+        valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        if log_level.upper() not in valid_levels:
+            raise HTTPException(status_code=400, detail=f"Invalid log level. Must be one of: {valid_levels}")
+        
+        config_manager.set_log_level(log_level)
+        
+        return {
+            "success": True,
+            "log_level": log_level.upper(),
+            "message": "Log level updated. Restart services to apply changes."
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
