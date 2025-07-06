@@ -12,7 +12,7 @@ from datetime import datetime
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
 from lib.gmail_client import GmailClient
-from lib.email_cache import EmailCache
+from lib.email_cache_db import EmailCacheDB
 from lib.email_classifier import EmailClassifier
 
 def run_integration_test():
