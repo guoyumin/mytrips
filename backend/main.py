@@ -8,6 +8,7 @@ from pathlib import Path
 
 from api.email_router import router as email_router
 from api.auth_router import router as auth_router
+from api.content_router import router as content_router
 from lib.config_manager import config_manager
 
 # Configure logging from config
@@ -38,6 +39,7 @@ app.mount("/static", StaticFiles(directory=str(frontend_path / "static")), name=
 # Include API routes
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(email_router, prefix="/api/emails", tags=["Email Management"])
+app.include_router(content_router, prefix="/api/content", tags=["Email Content"])
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():

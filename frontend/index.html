@@ -3,67 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyTrips - Email Import</title>
-    <link rel="stylesheet" href="/static/css/app.css">
+    <title>MyTrips - Travel Email Manager</title>
+    <link rel="stylesheet" href="/static/css/app.css?v=4">
+    <style>
+        /* Emergency CSS fix for layout */
+        .main-content { 
+            display: flex !important; 
+            flex-direction: row !important; 
+            height: calc(100vh - 120px) !important;
+        }
+        .sidebar { 
+            width: 250px !important; 
+            flex-shrink: 0 !important; 
+            background: white !important;
+            border-right: 1px solid #ddd !important;
+        }
+        .content-panel { 
+            flex: 1 !important; 
+            background: #fafbfc !important;
+            padding: 30px !important;
+            overflow-y: auto !important;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>MyTrips - Email Import</h1>
-        <p>Import emails from the last year to build your travel history database.</p>
-        
-        <div class="controls">
-            <div class="time-range-selector">
-                <label for="timeRange">Import Range:</label>
-                <select id="timeRange">
-                    <option value="1">Last 1 day</option>
-                    <option value="3">Last 3 days</option>
-                    <option value="10">Last 10 days</option>
-                    <option value="30" selected>Last month</option>
-                    <option value="90">Last 3 months</option>
-                    <option value="180">Last 6 months</option>
-                    <option value="365">Last 1 year</option>
-                    <option value="730">Last 2 years</option>
-                    <option value="1095">Last 3 years</option>
-                </select>
-            </div>
-            
-            <button id="importBtn" onclick="importEmails()">Import Emails</button>
-            <button id="stopBtn" onclick="stopImport()" class="stop-btn" style="display:none;">Stop Import</button>
-            <button onclick="viewCacheStats()">View Cache Stats</button>
-            <button id="classifyBtn" onclick="testClassification()" class="classify-btn">Classify Emails (Test 1000)</button>
-            <button id="stopClassifyBtn" onclick="stopClassification()" class="stop-btn" style="display:none;">Stop Classification</button>
-        </div>
-        
-        <div id="progress" class="progress" style="display:none;">
-            <div id="progressBar" class="progress-bar"></div>
-        </div>
-        
-        <div id="progressText" class="progress-text" style="display:none;">
-            <span id="progressCount">0/0</span> emails processed
-        </div>
-        
-        <div id="status" class="status" style="display:none;"></div>
-        
-        <div id="stats" class="stats" style="display:none;">
-            <div class="stat-box">
-                <div class="stat-number" id="newEmails">0</div>
-                <div class="stat-label">New Emails Imported</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-number" id="skippedEmails">0</div>
-                <div class="stat-label">Already Cached (Skipped)</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-number" id="totalCached">0</div>
-                <div class="stat-label">Total Emails in Cache</div>
-            </div>
-        </div>
-        
-        <div id="dateRange" class="date-range" style="display:none;">
-            <strong>Date Range:</strong> <span id="dateRangeText"></span>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>MyTrips - Travel Email Manager</h1>
+            <p>Manage your travel emails and extract trip information</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Sidebar -->
+            <nav class="sidebar">
+                <div class="function-group" data-function="import">
+                    <h3>📥 Import Emails</h3>
+                </div>
+
+                <div class="function-group" data-function="classify">
+                    <h3>🤖 Classify Emails</h3>
+                </div>
+
+                <div class="function-group" data-function="extract">
+                    <h3>📄 Extract Content</h3>
+                </div>
+
+                <div class="function-group" data-function="travel">
+                    <h3>✈️ Travel Emails</h3>
+                </div>
+
+                <div class="function-group active" data-function="status">
+                    <h3>📊 Status</h3>
+                </div>
+            </nav>
+
+            <!-- Right Panel -->
+            <main class="content-panel">
+                <!-- Progress Section -->
+                <div id="progress-section" style="display:none;">
+                    <div id="progress" class="progress">
+                        <div id="progressBar" class="progress-bar"></div>
+                    </div>
+                    <div id="progressText" class="progress-text">
+                        <span id="progressCount">0/0</span> emails processed
+                    </div>
+                </div>
+
+                <!-- Status Section -->
+                <div id="status" class="status" style="display:none;"></div>
+
+                <!-- Stats Section -->
+                <div id="stats" class="stats" style="display:none;">
+                    <div class="stat-box">
+                        <div class="stat-number" id="newEmails">0</div>
+                        <div class="stat-label">New Emails Imported</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="skippedEmails">0</div>
+                        <div class="stat-label">Already Cached (Skipped)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="totalCached">0</div>
+                        <div class="stat-label">Total Emails in Cache</div>
+                    </div>
+                </div>
+
+                <!-- Import Emails Section -->
+                <div id="import-section" class="function-section">
+                    <h2>📥 Import Emails</h2>
+                    <p>Import emails from Gmail to build your travel history database.</p>
+                    
+                    <div class="control-group">
+                        <div class="time-range-selector">
+                            <label for="timeRange">Import Range:</label>
+                            <select id="timeRange">
+                                <option value="1">Last 1 day</option>
+                                <option value="3">Last 3 days</option>
+                                <option value="10">Last 10 days</option>
+                                <option value="30" selected>Last month</option>
+                                <option value="90">Last 3 months</option>
+                                <option value="180">Last 6 months</option>
+                                <option value="365">Last 1 year</option>
+                                <option value="730">Last 2 years</option>
+                                <option value="1095">Last 3 years</option>
+                            </select>
+                        </div>
+                        
+                        <div class="button-group">
+                            <button id="importBtn" onclick="importEmails()">Import Emails</button>
+                            <button id="stopBtn" onclick="stopImport()" class="stop-btn" style="display:none;">Stop Import</button>
+                            <button onclick="viewCacheStats()" class="secondary-btn">View Stats</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Classify Emails Section -->
+                <div id="classify-section" class="function-section" style="display:none;">
+                    <h2>🤖 Classify Emails</h2>
+                    <p>Use AI to categorize emails by travel type (flight, hotel, car rental, etc.)</p>
+                    
+                    <div class="control-group">
+                        <div class="button-group">
+                            <button id="classifyBtn" onclick="testClassification()" class="classify-btn">Classify Emails</button>
+                            <button id="stopClassifyBtn" onclick="stopClassification()" class="stop-btn" style="display:none;">Stop Classification</button>
+                        </div>
+                        <div class="info-text">
+                            <small>Uses AI to categorize emails by travel type. This process may take a few minutes depending on the number of emails.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Extract Content Section -->
+                <div id="extract-section" class="function-section" style="display:none;">
+                    <h2>📄 Extract Content</h2>
+                    <p>Extract full content and attachments from travel-classified emails.</p>
+                    
+                    <div class="control-group">
+                        <div class="button-group">
+                            <button id="extractBtn" onclick="extractTravelContent()" class="extract-btn">Extract Travel Content</button>
+                            <button id="stopExtractBtn" onclick="stopExtraction()" class="stop-btn" style="display:none;">Stop Extraction</button>
+                        </div>
+                        <div class="info-text">
+                            <small>Extract full content and attachments from travel emails. This will download email content and attachments for offline analysis.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Travel Emails List -->
+                <div id="travel-emails-section" class="function-section" style="display:none;">
+                    <div class="section-header">
+                        <h2>✈️ Travel Emails</h2>
+                        <button onclick="refreshTravelEmails()" class="refresh-btn">🔄 Refresh</button>
+                    </div>
+                    <div id="travel-emails-list" class="emails-list">
+                        <!-- Travel emails will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Status Section -->
+                <div id="status-section" class="function-section" style="display:block;">
+                    <div class="section-header">
+                        <h2>📊 Email Status</h2>
+                        <button onclick="refreshStatus()" class="refresh-btn">🔄 Refresh</button>
+                    </div>
+                    <div id="status-content">
+                        <!-- Status content will be loaded here -->
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=4"></script>
 </body>
 </html>

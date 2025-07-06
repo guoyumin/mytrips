@@ -1,8 +1,9 @@
 """
 数据库模型定义
 """
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Index
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Index, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from database.config import Base
 
@@ -111,3 +112,43 @@ class ClassificationStats(Base):
     
     def __repr__(self):
         return f"<ClassificationStats(date={self.date}, total={self.total_emails}, travel={self.travel_emails})>"
+
+class EmailContent(Base):
+    """邮件内容表 - 存储详细的邮件内容和附件信息"""
+    __tablename__ = 'email_content'
+    
+    id = Column(Integer, primary_key=True)
+    email_id = Column(String(255), ForeignKey('emails.email_id'), unique=True, nullable=False)
+    
+    # 邮件内容
+    content_text = Column(Text)  # 纯文本内容
+    content_html = Column(Text)  # HTML内容
+    
+    # 附件信息
+    has_attachments = Column(Boolean, default=False)
+    attachments_info = Column(Text)  # JSON格式的附件信息
+    attachments_count = Column(Integer, default=0)
+    
+    # 提取状态
+    extraction_status = Column(String(50), default='pending')  # pending, extracting, completed, failed
+    extraction_error = Column(Text)  # 错误信息（如果有）
+    
+    # 时间戳
+    extracted_at = Column(DateTime)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # 关系
+    email = relationship("Email", back_populates="email_content")
+    
+    # 索引
+    __table_args__ = (
+        Index('idx_email_content_email_id', 'email_id'),
+        Index('idx_email_content_status', 'extraction_status'),
+    )
+    
+    def __repr__(self):
+        return f"<EmailContent(email_id='{self.email_id}', status='{self.extraction_status}')>"
+
+# 添加Email表的关系
+Email.email_content = relationship("EmailContent", back_populates="email", uselist=False)

@@ -5,6 +5,8 @@ Gmail 客户端库
 import os
 import json
 import pickle
+import base64
+import logging
 from typing import List, Dict, Optional, Any
 from datetime import datetime, timedelta
 from google.auth.transport.requests import Request
@@ -12,6 +14,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+logger = logging.getLogger(__name__)
 
 class GmailClient:
     """Gmail API 客户端"""
@@ -185,6 +189,34 @@ class GmailClient:
                 headers[name] = header['value']
         
         return headers
+    
+    def get_attachment(self, message_id: str, attachment_id: str) -> Optional[bytes]:
+        """
+        下载邮件附件
+        
+        Args:
+            message_id: 邮件 ID
+            attachment_id: 附件 ID
+            
+        Returns:
+            附件的二进制数据
+        """
+        try:
+            attachment = self.service.users().messages().attachments().get(
+                userId='me',
+                messageId=message_id,
+                id=attachment_id
+            ).execute()
+            
+            # 解码附件数据
+            data = attachment['data']
+            file_data = base64.urlsafe_b64decode(data)
+            
+            return file_data
+            
+        except HttpError as error:
+            logger.error(f"Failed to download attachment: {error}")
+            return None
     
     def search_emails_by_date(self, days_back: int = 365) -> List[Dict[str, str]]:
         """
