@@ -108,6 +108,14 @@ button:disabled {
     background-color: #c0392b !important;
 }
 
+.classify-btn {
+    background-color: #9b59b6 !important;
+}
+
+.classify-btn:hover {
+    background-color: #8e44ad !important;
+}
+
 .progress {
     width: 100%;
     height: 24px;

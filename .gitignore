@@ -15,6 +15,7 @@ pip-delete-this-directory.txt
 config/credentials.json
 config/token.json
 config/client_secret*.json
+config/gemini_config.json
 *.key
 *.pem
 

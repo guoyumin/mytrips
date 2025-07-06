@@ -3,7 +3,9 @@
 class EmailImportApp {
     constructor() {
         this.isImporting = false;
+        this.isClassifying = false;
         this.progressInterval = null;
+        this.classificationInterval = null;
         this.init();
     }
 
@@ -270,6 +272,154 @@ class EmailImportApp {
         };
         return ranges[days] || `last ${days} days`;
     }
+
+    // Classification methods
+    async testClassification() {
+        if (this.isClassifying) return;
+
+        this.isClassifying = true;
+        this.updateUIForClassification(true);
+
+        try {
+            const response = await fetch('/api/emails/classify/test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || 'Failed to start classification');
+            }
+
+            this.displayStatus('🤖 Starting AI classification of emails...', 'loading');
+            this.startClassificationMonitoring();
+
+        } catch (error) {
+            this.displayError(`Classification failed: ${error.message}`);
+            this.isClassifying = false;
+            this.updateUIForClassification(false);
+        }
+    }
+
+    async stopClassification() {
+        if (!this.isClassifying) return;
+
+        try {
+            const response = await fetch('/api/emails/classify/stop', {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                this.displayStatus('⏹️ Classification stopped by user', 'status');
+                // Update UI immediately
+                this.isClassifying = false;
+                this.stopClassificationMonitoring();
+                this.updateUIForClassification(false);
+            }
+        } catch (error) {
+            console.error('Error stopping classification:', error);
+        }
+    }
+
+    startClassificationMonitoring() {
+        this.classificationInterval = setInterval(async () => {
+            await this.updateClassificationProgress();
+        }, 2000);
+    }
+
+    stopClassificationMonitoring() {
+        if (this.classificationInterval) {
+            clearInterval(this.classificationInterval);
+            this.classificationInterval = null;
+        }
+    }
+
+    async updateClassificationProgress() {
+        if (!this.isClassifying) return;
+
+        try {
+            const response = await fetch('/api/emails/classify/progress');
+            const data = await response.json();
+
+            if (response.ok) {
+                this.displayClassificationProgress(data);
+                
+                if (data.finished) {
+                    this.isClassifying = false;
+                    this.stopClassificationMonitoring();
+                    
+                    if (data.final_results) {
+                        this.displayClassificationResults(data.final_results);
+                    }
+                    
+                    this.updateUIForClassification(false);
+                }
+            }
+        } catch (error) {
+            console.error('Classification progress update error:', error);
+        }
+    }
+
+    updateUIForClassification(classifying) {
+        const classifyBtn = document.getElementById('classifyBtn');
+        const stopClassifyBtn = document.getElementById('stopClassifyBtn');
+
+        if (classifying) {
+            classifyBtn.disabled = true;
+            classifyBtn.textContent = 'Classifying...';
+            stopClassifyBtn.style.display = 'inline-block';
+        } else {
+            classifyBtn.disabled = false;
+            classifyBtn.textContent = 'Classify Emails (Test 1000)';
+            stopClassifyBtn.style.display = 'none';
+        }
+    }
+
+    displayClassificationProgress(data) {
+        const progressBar = document.getElementById('progressBar');
+        const progressCount = document.getElementById('progressCount');
+
+        if (data.progress !== undefined) {
+            progressBar.style.width = data.progress + '%';
+            progressCount.textContent = `${data.processed || 0}/${data.total || 0}`;
+            
+            let statusText = `🤖 AI classifying emails...`;
+            
+            // Show batch progress if available
+            if (data.current_batch && data.total_batches) {
+                statusText += ` Batch ${data.current_batch}/${data.total_batches}`;
+            }
+            
+            statusText += ` (${data.classified_count || 0} processed)`;
+            
+            if (data.estimated_cost) {
+                statusText += ` • Est. cost: $${data.estimated_cost.estimated_cost_usd.toFixed(6)}`;
+            }
+            
+            this.displayStatus(statusText, 'loading');
+        }
+    }
+
+    displayClassificationResults(results) {
+        this.displayStatus(
+            `✅ Classification completed! Classified ${results.total_classified} emails. ` +
+            `${results.travel_related} travel-related, ${results.not_travel_related} not travel-related.`,
+            'success'
+        );
+
+        // Show additional info about test file
+        setTimeout(() => {
+            alert(`Classification test completed!\n\n` +
+                  `Total classified: ${results.total_classified}\n` +
+                  `Travel-related: ${results.travel_related}\n` +
+                  `Not travel-related: ${results.not_travel_related}\n\n` +
+                  `Results saved to: ${results.test_file.split('/').pop()}`);
+        }, 1000);
+    }
 }
 
 // Global functions for button clicks
@@ -285,6 +435,14 @@ function stopImport() {
 
 function viewCacheStats() {
     app.viewCacheStats();
+}
+
+function testClassification() {
+    app.testClassification();
+}
+
+function stopClassification() {
+    app.stopClassification();
 }
 
 // Initialize app when DOM is loaded
