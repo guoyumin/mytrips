@@ -47,29 +47,6 @@ class ConfigManager:
         """
         return os.path.join(self.project_root, relative_path)
     
-    def get_cache_file_path(self, cache_type: str = None) -> str:
-        """
-        获取缓存文件路径
-        
-        Args:
-            cache_type: 缓存类型 ('email_cache', 'email_cache_test', 'email_classification_test')
-                       如果为None，则根据use_test_cache设置自动选择
-            
-        Returns:
-            缓存文件的绝对路径
-        """
-        if cache_type is None:
-            # 根据配置自动选择
-            use_test = self._config.get('settings', {}).get('use_test_cache', False)
-            cache_type = 'email_cache_test' if use_test else 'email_cache'
-        
-        relative_path = self._config['cache_files'][cache_type]
-        return self.get_absolute_path(relative_path)
-    
-    def get_classification_test_file_path(self) -> str:
-        """获取分类测试文件路径"""
-        relative_path = self._config['cache_files']['email_classification_test']
-        return self.get_absolute_path(relative_path)
     
     def get_database_path(self) -> str:
         """获取数据库文件路径"""
@@ -99,20 +76,11 @@ class ConfigManager:
         """获取保存间隔"""
         return self._config.get('settings', {}).get('save_interval', 10)
     
-    def is_using_test_cache(self) -> bool:
-        """是否使用测试缓存"""
-        return self._config.get('settings', {}).get('use_test_cache', False)
     
     def get_log_level(self) -> str:
         """获取日志级别"""
         return self._config.get('settings', {}).get('log_level', 'INFO')
     
-    def set_use_test_cache(self, use_test: bool):
-        """设置是否使用测试缓存"""
-        if 'settings' not in self._config:
-            self._config['settings'] = {}
-        self._config['settings']['use_test_cache'] = use_test
-        self._save_config()
     
     def set_log_level(self, log_level: str):
         """设置日志级别"""

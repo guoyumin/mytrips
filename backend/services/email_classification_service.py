@@ -1,4 +1,3 @@
-import os
 from typing import List, Dict, Optional
 from datetime import datetime
 import threading
@@ -6,7 +5,7 @@ import time
 import logging
 
 from services.gemini_service import GeminiService
-from lib.email_cache import EmailCache
+from lib.email_cache_db import EmailCacheDB
 from lib.email_classifier import EmailClassifier
 from lib.config_manager import config_manager
 
@@ -16,23 +15,13 @@ logger = logging.getLogger(__name__)
 class EmailClassificationService:
     """Service for classifying emails using Gemini AI"""
     
-    def __init__(self, cache_file: str = None, test_file: str = None, gemini_config_path: str = None):
+    def __init__(self, gemini_config_path: str = None):
         # Use config manager for paths
-        if cache_file is None:
-            cache_file = config_manager.get_cache_file_path()
-        else:
-            # Convert relative path to absolute if needed
-            if not os.path.isabs(cache_file):
-                cache_file = config_manager.get_absolute_path(cache_file)
-        
-        if test_file is None:
-            test_file = config_manager.get_classification_test_file_path()
         if gemini_config_path is None:
             gemini_config_path = config_manager.get_gemini_config_path()
             
-        # Initialize libraries
-        self.email_cache = EmailCache(cache_file)
-        self.test_file = test_file
+        # Initialize email cache using database
+        self.email_cache = EmailCacheDB()
         
         # Try to initialize email classifier
         try:
@@ -203,32 +192,29 @@ class EmailClassificationService:
                 self.classification_progress['processed'] = len(all_results)
                 print(f"Completed batch {batch_num + 1}/{total_batches}, processed {len(all_results)}/{len(unclassified_emails)} emails")
                 
-                # Save incremental results every 10 batches
-                if (batch_num + 1) % 10 == 0:
-                    self._save_results(all_results, incremental=True)
+                # Update database with batch results immediately
+                batch_classifications = {}
+                for email, result in zip(batch_emails, batch_results):
+                    email_id = email['email_id']
+                    classification = result.get('classification', 'classification_failed')
+                    batch_classifications[email_id] = classification
+                
+                if batch_classifications:
+                    try:
+                        updated_count = self.email_cache.update_classifications(batch_classifications)
+                        print(f"Updated {updated_count} emails in database for batch {batch_num + 1}")
+                    except Exception as e:
+                        print(f"Error updating database for batch {batch_num + 1}: {e}")
+                        logger.error(f"Error updating database for batch {batch_num + 1}: {e}")
             
-            # Save final results
-            print("Saving final results...")
-            self._save_results(all_results, incremental=False)
+            # Database already updated - no need to save to CSV files
             
-            # Update email cache with classifications
-            # Separate successful and failed classifications
-            successful_classifications = {}
-            failed_count = 0
+            # Count final results for summary
+            failed_count = sum(1 for r in all_results if r['classification'] == 'classification_failed')
+            successful_count = len(all_results) - failed_count
             
-            for r in all_results:
-                if r['classification'] == 'classification_failed':
-                    failed_count += 1
-                    logger.debug(f"Classification failed for email {r['email_id'][:10]}...")
-                else:
-                    successful_classifications[r['email_id']] = r['classification']
+            logger.info(f"Classification completed: {successful_count} successful, {failed_count} failed")
             
-            # Update successful classifications as classified
-            if successful_classifications:
-                updated_count = self.email_cache.update_classifications(successful_classifications)
-                logger.info(f"Updated {updated_count} emails as successfully classified")
-            
-            # Log failed classifications
             if failed_count > 0:
                 logger.info(f"Found {failed_count} failed classifications - keeping as unclassified for retry")
             
@@ -252,36 +238,6 @@ class EmailClassificationService:
                 'message': f'Classification failed: {str(e)}'
             })
     
-    def _save_results(self, results: List[Dict], incremental: bool = False):
-        """Save classification results to test file"""
-        if not results:
-            return
-            
-        # Ensure data directory exists
-        os.makedirs(os.path.dirname(self.test_file), exist_ok=True)
-        
-        # Save simplified results to test file (ID, subject, classification only)
-        import csv
-        
-        file_mode = 'a' if incremental and os.path.exists(self.test_file) else 'w'
-        write_header = file_mode == 'w' or not os.path.exists(self.test_file)
-        
-        with open(self.test_file, file_mode, newline='', encoding='utf-8') as f:
-            simple_headers = ['email_id', 'subject', 'classification']
-            writer = csv.DictWriter(f, fieldnames=simple_headers)
-            
-            if write_header:
-                writer.writeheader()
-            
-            for result in results:
-                writer.writerow({
-                    'email_id': result['email_id'],
-                    'subject': result['subject'],
-                    'classification': result['classification']
-                })
-        
-        save_type = "incremental" if incremental else "final"
-        print(f"Classification results ({save_type}) saved to: {self.test_file}")
     
     def get_classification_stats(self) -> Dict:
         """Get statistics from email cache"""

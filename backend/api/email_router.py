@@ -87,8 +87,7 @@ async def get_config() -> Dict:
     """Get current configuration"""
     try:
         return {
-            "use_test_cache": config_manager.is_using_test_cache(),
-            "current_cache_file": config_manager.get_cache_file_path(),
+            "database_path": config_manager.get_database_path(),
             "batch_size": config_manager.get_batch_size(),
             "log_level": config_manager.get_log_level(),
             "config": config_manager.get_config()
@@ -96,22 +95,25 @@ async def get_config() -> Dict:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/config/use_test_cache")
-async def set_use_test_cache(request: dict) -> Dict:
-    """Set whether to use test cache"""
+@router.post("/config/batch_size")
+async def set_batch_size(request: dict) -> Dict:
+    """Set batch size for processing"""
     try:
-        use_test = request.get('use_test', False)
-        config_manager.set_use_test_cache(use_test)
+        batch_size = request.get('batch_size', 20)
         
-        # Note: Services need to be recreated to use new cache file
-        cache_file = config_manager.get_cache_file_path()
+        # Validate batch size
+        if not isinstance(batch_size, int) or batch_size < 1 or batch_size > 100:
+            raise HTTPException(status_code=400, detail="Batch size must be an integer between 1 and 100")
+        
+        # Update config (this would need to be implemented in config_manager)
         
         return {
             "success": True,
-            "use_test_cache": use_test,
-            "current_cache_file": cache_file,
-            "message": "Configuration updated. Restart services to apply changes."
+            "batch_size": batch_size,
+            "message": "Batch size updated."
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

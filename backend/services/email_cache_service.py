@@ -5,28 +5,21 @@ import threading
 import time
 
 from lib.gmail_client import GmailClient
-from lib.email_cache import EmailCache
+from lib.email_cache_db import EmailCacheDB
 from lib.config_manager import config_manager
 
 class EmailCacheService:
     """Service for managing email cache operations"""
     
-    def __init__(self, cache_file: str = None, credentials_path: str = None, token_path: str = None):
+    def __init__(self, credentials_path: str = None, token_path: str = None):
         # Use config manager for paths
-        if cache_file is None:
-            cache_file = config_manager.get_cache_file_path()
-        else:
-            # Convert relative path to absolute if needed
-            if not os.path.isabs(cache_file):
-                cache_file = config_manager.get_absolute_path(cache_file)
-        
         if credentials_path is None:
             credentials_path = config_manager.get_gmail_credentials_path()
         if token_path is None:
             token_path = config_manager.get_gmail_token_path()
         
-        # Initialize libraries
-        self.email_cache = EmailCache(cache_file)
+        # Initialize email cache using database
+        self.email_cache = EmailCacheDB()
         
         # Try to initialize Gmail client with error handling
         try:
@@ -151,8 +144,7 @@ class EmailCacheService:
             if messages:
                 logger.debug(f"Sample message IDs from Gmail: {[msg['id'] for msg in messages[:3]]}")
             
-            # Process emails in batches
-            batch_size = 50
+            # Process emails individually and add to database immediately
             new_emails = []
             new_count = 0
             skip_count = 0
@@ -174,7 +166,16 @@ class EmailCacheService:
                     headers['email_id'] = message['id']
                     new_emails.append(headers)
                     new_count += 1
-                    logger.debug(f"Added email to batch: {headers.get('subject', 'No subject')[:50]}")
+                    logger.debug(f"Added email: {headers.get('subject', 'No subject')[:50]}")
+                    
+                    # Add to database immediately
+                    try:
+                        added_count = self.email_cache.add_emails([headers])
+                        logger.debug(f"Added {added_count} email to database")
+                    except Exception as e:
+                        logger.error(f"Error saving email to database: {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
                 else:
                     skip_count += 1
                     logger.debug(f"Skipping existing email: {message['id']}")
@@ -186,29 +187,6 @@ class EmailCacheService:
                     'skip_count': skip_count,
                     'message': f'Processing email {i + 1}/{len(messages)}...'
                 })
-                
-                # Save in batches
-                if len(new_emails) >= batch_size:
-                    logger.info(f"Saving batch of {len(new_emails)} emails to cache...")
-                    try:
-                        added_count = self.email_cache.add_emails(new_emails)
-                        logger.info(f"Successfully added {added_count} emails to cache")
-                    except Exception as e:
-                        logger.error(f"Error saving emails to cache: {e}")
-                        import traceback
-                        logger.error(traceback.format_exc())
-                    new_emails = []
-            
-            # Save any remaining emails
-            if new_emails:
-                logger.info(f"Saving final batch of {len(new_emails)} emails to cache...")
-                try:
-                    added_count = self.email_cache.add_emails(new_emails)
-                    logger.info(f"Successfully added {added_count} emails to cache")
-                except Exception as e:
-                    logger.error(f"Error saving final batch to cache: {e}")
-                    import traceback
-                    logger.error(traceback.format_exc())
             
             # Get final stats
             final_stats = self.email_cache.get_statistics()
