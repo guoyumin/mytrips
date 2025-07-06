@@ -57,6 +57,7 @@ logs/
 exports/
 *.xlsx
 data/*.csv
+data/backup*/
 *.pdf
 
 # Temporary files
