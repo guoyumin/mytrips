@@ -29,9 +29,19 @@ class TripDetectionService:
         self.ai_provider: Optional[AIProviderInterface] = None
         self.trip_detector: Optional[TripDetector] = None
         
+        # Provider fallback order: openai-fast -> gemini-fast -> claude-fast
+        self.provider_fallback_order = [
+            ('openai', 'fast'),
+            ('gemini', 'fast'),
+            ('claude', 'fast')
+        ]
+        
         try:
-            # Create AI provider using factory - using powerful model for trip detection
-            self.ai_provider = AIProviderFactory.create_provider(model_tier='powerful')
+            # Create AI provider using factory - start with openai-fast (more stable)
+            self.ai_provider = AIProviderFactory.create_provider(
+                model_tier='fast', 
+                provider_name='openai'
+            )
             self.trip_detector = TripDetector(self.ai_provider)
             
             model_info = self.ai_provider.get_model_info()
@@ -54,6 +64,7 @@ class TripDetectionService:
         self._stop_flag = threading.Event()
         self._detection_thread = None
         self._lock = threading.Lock()
+        self._current_provider_index = 0  # Track current provider in fallback order
     
     def start_detection(self, date_range: Optional[Dict] = None) -> Dict:
         """Start trip detection process"""
@@ -114,6 +125,33 @@ class TripDetectionService:
             
         return progress
     
+    def _switch_to_next_provider(self) -> bool:
+        """Switch to the next provider in the fallback order. Returns True if successful."""
+        self._current_provider_index += 1
+        
+        if self._current_provider_index >= len(self.provider_fallback_order):
+            logger.error("All providers exhausted in fallback order")
+            return False
+        
+        provider_name, model_tier = self.provider_fallback_order[self._current_provider_index]
+        
+        try:
+            logger.info(f"Switching to fallback provider: {provider_name}-{model_tier}")
+            self.ai_provider = AIProviderFactory.create_provider(
+                model_tier=model_tier,
+                provider_name=provider_name
+            )
+            self.trip_detector = TripDetector(self.ai_provider)
+            
+            model_info = self.ai_provider.get_model_info()
+            logger.info(f"Successfully switched to: {model_info['model_name']}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to switch to {provider_name}-{model_tier}: {e}")
+            # Try next provider recursively
+            return self._switch_to_next_provider()
+    
     def _load_existing_trips_from_database(self, db: Session) -> List[Dict]:
         """Load all existing trips from database and convert to Gemini format"""
         try:
@@ -152,7 +190,7 @@ class TripDetectionService:
                         'confirmation_number': segment.confirmation_number,
                         'status': segment.status,
                         'is_latest_version': segment.is_latest_version,
-                        'related_email_ids': [link.email_id for link in segment.email_links]
+                        'related_email_ids': [email.email_id for email in segment.emails]
                     }
                     trip_dict['transport_segments'].append(segment_dict)
                 
@@ -170,7 +208,7 @@ class TripDetectionService:
                         'confirmation_number': accommodation.confirmation_number,
                         'status': accommodation.status,
                         'is_latest_version': accommodation.is_latest_version,
-                        'related_email_ids': [link.email_id for link in accommodation.email_links]
+                        'related_email_ids': [email.email_id for email in accommodation.emails]
                     }
                     trip_dict['accommodations'].append(accommodation_dict)
                 
@@ -188,7 +226,7 @@ class TripDetectionService:
                         'confirmation_number': activity.confirmation_number,
                         'status': activity.status,
                         'is_latest_version': activity.is_latest_version,
-                        'related_email_ids': [link.email_id for link in activity.email_links]
+                        'related_email_ids': [email.email_id for email in activity.emails]
                     }
                     trip_dict['tour_activities'].append(activity_dict)
                 
@@ -205,7 +243,7 @@ class TripDetectionService:
                         'confirmation_number': cruise.confirmation_number,
                         'status': cruise.status,
                         'is_latest_version': cruise.is_latest_version,
-                        'related_email_ids': [link.email_id for link in cruise.email_links]
+                        'related_email_ids': [email.email_id for email in cruise.emails]
                     }
                     trip_dict['cruises'].append(cruise_dict)
                 
@@ -271,17 +309,18 @@ class TripDetectionService:
             logger.info(f"Total booking emails found (excluding non-booking emails): {len(emails)}")
             
             # Calculate cost estimation
-            cost_estimate = self.ai_provider.estimate_cost(len(emails) * 1000)  # Rough estimate
+            # Rough estimate: 1000 input tokens and 500 output tokens per email
+            estimated_input_tokens = len(emails) * 1000
+            estimated_output_tokens = len(emails) * 500
+            cost_estimate = self.ai_provider.estimate_cost(estimated_input_tokens, estimated_output_tokens)
             self.detection_progress['cost_estimate'] = cost_estimate
             
             self.detection_progress['message'] = f'Found {len(emails)} travel emails to analyze (Est. cost: ${cost_estimate["estimated_cost_usd"]:.4f})'
             
-            # Adaptive batch size - start with moderate size and reduce on failures
-            # This allows us to process efficiently while handling API limits gracefully
-            batch_size = 10  # Start with moderate batches for better success rate
-            min_batch_size = 1  # Minimum batch size (one email at a time)
-            consecutive_failures = 0  # Track failures to adjust batch size
-            # Note: total_batches is dynamic and will be estimated during processing
+            # Fixed batch size for provider fallback strategy
+            batch_size = 10  # Process in moderate batches
+            # Reset provider index for new detection run
+            self._current_provider_index = 0
             
             # Start with existing trips from database
             all_trips = existing_trips.copy()
@@ -309,7 +348,14 @@ class TripDetectionService:
                 self._mark_emails_processing(batch_emails, db)
                 
                 # Convert emails to format expected by TripDetector
-                email_data = self._prepare_email_data(batch_emails)
+                email_data = self._prepare_email_data(batch_emails, db)
+                
+                # Skip this batch if all emails were incomplete
+                if not email_data:
+                    logger.warning(f"Batch {batch_num}: All emails had incomplete booking information, skipping batch")
+                    processed_emails += current_batch_size
+                    self.detection_progress['processed_emails'] = processed_emails
+                    continue
                 
                 # Try to process this batch
                 batch_success = False
@@ -326,9 +372,9 @@ class TripDetectionService:
                         
                         # Success! Validate and update trips
                         if batch_trips:
-                            # Validate that Gemini returned at least the existing trips
+                            # Validate that AI provider returned at least the existing trips
                             if previous_trips and len(batch_trips) < len(previous_trips):
-                                logger.error(f"Batch {batch_num}: CRITICAL - Gemini returned {len(batch_trips)} trips but we sent {len(previous_trips)} existing trips. This indicates Gemini dropped existing trips!")
+                                logger.error(f"Batch {batch_num}: CRITICAL - AI provider returned {len(batch_trips)} trips but we sent {len(previous_trips)} existing trips. This indicates the AI dropped existing trips!")
                                 logger.error(f"Sent existing trips: {[trip.get('name', 'Unknown') for trip in previous_trips]}")
                                 logger.error(f"Received trips: {[trip.get('name', 'Unknown') for trip in batch_trips]}")
                                 
@@ -340,7 +386,7 @@ class TripDetectionService:
                                 all_trips = batch_trips
                                 logger.info(f"Batch {batch_num}: Successfully updated to {len(all_trips)} total trips (expected at least {len(previous_trips) if previous_trips else 0})")
                         else:
-                            logger.warning(f"Batch {batch_num}: No trips returned from Gemini")
+                            logger.warning(f"Batch {batch_num}: No trips returned from AI provider")
                         
                         # Save current trip state to database immediately after successful detection
                         self._clear_existing_trips(db)
@@ -354,41 +400,43 @@ class TripDetectionService:
                         self._mark_emails_completed(batch_emails, db)
                         
                         batch_success = True
-                        consecutive_failures = 0  # Reset failure counter on success
                         
-                        # Consider increasing batch size after success (gradually)
-                        if consecutive_failures == 0 and batch_size < 10:
-                            new_batch_size = min(batch_size + 2, 10)  # Increase gradually
-                            if new_batch_size != batch_size:
-                                logger.info(f"Increasing batch size from {batch_size} to {new_batch_size} after success")
-                                batch_size = new_batch_size
+                        # Reset to first provider for next batch (start with most stable)
+                        if self._current_provider_index > 0:
+                            logger.info("Resetting to primary provider (openai-fast) for next batch")
+                            self._current_provider_index = 0
+                            provider_name, model_tier = self.provider_fallback_order[0]
+                            try:
+                                self.ai_provider = AIProviderFactory.create_provider(
+                                    model_tier=model_tier,
+                                    provider_name=provider_name
+                                )
+                                self.trip_detector = TripDetector(self.ai_provider)
+                            except Exception as e:
+                                logger.warning(f"Failed to reset to primary provider: {e}")
                         
                     except Exception as e:
                         error_msg = str(e)
-                        consecutive_failures += 1
-                        logger.error(f"Batch {batch_num} failed: {error_msg}")
+                        logger.error(f"Batch {batch_num} failed with {self.ai_provider.get_model_info()['model_name']}: {error_msg}")
                         
-                        # Reduce batch size if possible
-                        if batch_size > min_batch_size:
-                            new_batch_size = max(batch_size // 2, min_batch_size)
-                            logger.warning(f"Reducing batch size from {batch_size} to {new_batch_size} due to failure")
-                            batch_size = new_batch_size
-                            
-                            # Reset emails back to pending status so they can be retried with smaller batch
-                            self._mark_emails_pending(batch_emails, db)
-                            logger.info(f"Reset {len(batch_emails)} emails to pending status for retry with smaller batch size {batch_size}")
-                            batch_success = False  # Ensure we don't advance processed_emails
-                            break  # Break retry loop to try again with smaller batch
+                        # Try switching to next provider in fallback order
+                        if self._switch_to_next_provider():
+                            # Get current provider info for logging
+                            model_info = self.ai_provider.get_model_info()
+                            self.detection_progress['message'] = f'Retrying batch {batch_num} with {model_info["model_name"]}'
+                            logger.info(f"Retrying batch {batch_num} with fallback provider: {model_info['model_name']}")
+                            # Continue retry loop with new provider
+                            continue
                         else:
-                            # Already at minimum batch size, give up
-                            logger.error(f"Failed even with minimum batch size {min_batch_size}. Stopping detection.")
-                            self._mark_emails_failed(batch_emails, db, f"Failed with minimum batch size")
+                            # All providers exhausted
+                            logger.error("All providers failed. Stopping detection.")
+                            self._mark_emails_failed(batch_emails, db, "All AI providers failed")
                             
                             with self._lock:
                                 self.detection_progress.update({
                                     'finished': True,
                                     'is_running': False,
-                                    'error': f'Detection stopped: failed even with minimum batch size of {min_batch_size}'
+                                    'error': 'Detection stopped: all AI providers failed'
                                 })
                             return
                 
@@ -444,9 +492,61 @@ class TripDetectionService:
             logger.error(f"Error clearing existing trips: {e}")
             raise
     
-    def _prepare_email_data(self, emails: List[Email]) -> List[Dict]:
+    def _is_email_complete(self, extracted_booking: Dict) -> bool:
+        """Check if email has complete booking information required for trip detection"""
+        booking_type = extracted_booking.get('booking_type')
+        
+        if not booking_type:
+            return False
+            
+        # Check required fields based on booking type
+        if booking_type == 'flight':
+            segments = extracted_booking.get('segments', [])
+            if not segments:
+                return False
+            for segment in segments:
+                # Flight must have departure/arrival locations and times
+                if not all([
+                    segment.get('departure_location'),
+                    segment.get('arrival_location'),
+                    segment.get('departure_datetime') or segment.get('departure_date'),
+                    segment.get('arrival_datetime') or segment.get('arrival_date')
+                ]):
+                    return False
+                    
+        elif booking_type == 'hotel':
+            # Hotel must have property name and check-in/out dates
+            if not all([
+                extracted_booking.get('property_name'),
+                extracted_booking.get('check_in_date'),
+                extracted_booking.get('check_out_date')
+            ]):
+                return False
+                
+        elif booking_type == 'tour':
+            # Tour must have activity name and at least start date/time
+            if not all([
+                extracted_booking.get('activity_name') or extracted_booking.get('tour_name'),
+                extracted_booking.get('start_datetime') or extracted_booking.get('start_date') or extracted_booking.get('activity_date')
+            ]):
+                return False
+                
+        elif booking_type == 'train':
+            # Train must have departure/arrival and times
+            if not all([
+                extracted_booking.get('departure_location') or extracted_booking.get('departure_station'),
+                extracted_booking.get('arrival_location') or extracted_booking.get('arrival_station'),
+                extracted_booking.get('departure_datetime') or extracted_booking.get('departure_date')
+            ]):
+                return False
+                
+        # For other types, just check if there's basic info
+        return True
+    
+    def _prepare_email_data(self, emails: List[Email], db: Session) -> List[Dict]:
         """Convert Email objects to format expected by TripDetector"""
         email_data = []
+        incomplete_emails = []
         
         for email in emails:
             content = email.email_content
@@ -460,6 +560,12 @@ class TripDetectionService:
                     logger.warning(f"Failed to parse extracted booking info for {email.email_id}: {e}")
                     extracted_booking = {}
             
+            # Check if email has complete information
+            if not self._is_email_complete(extracted_booking):
+                logger.info(f"Skipping email {email.email_id} due to incomplete booking information")
+                incomplete_emails.append(email)
+                continue
+                
             email_info = {
                 'email_id': email.email_id,
                 'subject': email.subject,
@@ -470,6 +576,10 @@ class TripDetectionService:
             }
             email_data.append(email_info)
         
+        # Mark incomplete emails as failed so they won't be retried
+        if incomplete_emails:
+            self._mark_emails_failed(incomplete_emails, db, "Incomplete booking information")
+            
         return email_data
     
     def _mark_emails_processing(self, emails: List[Email], db: Session):
@@ -723,7 +833,7 @@ class TripDetectionService:
                     
                     # Skip if activity_name is missing
                     if not activity_name:
-                        error_msg = f"Missing activity_name for tour activity"
+                        error_msg = f"Missing activity_name for tour activity in email: {email_id}"
                         logger.error(error_msg)
                         
                         # Track data quality issue
