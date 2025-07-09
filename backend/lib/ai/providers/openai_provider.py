@@ -9,21 +9,29 @@ from lib.ai.ai_provider_interface import AIProviderInterface
 
 logger = logging.getLogger(__name__)
 
+# Try to import tiktoken for token counting
+try:
+    import tiktoken
+    TIKTOKEN_AVAILABLE = True
+except ImportError:
+    TIKTOKEN_AVAILABLE = False
+    logger.warning("tiktoken not available for local token counting")
+
 
 class OpenAIProvider(AIProviderInterface):
     """OpenAI implementation of AI Provider Interface"""
     
     def __init__(self, model_version: str = None):
         # Load config first to get default model if not specified
-        config = self._load_config()
-        self.model_version = model_version or config.get('model', 'gpt-4-turbo-preview')
+        self.config = self._load_config()
+        self.model_version = model_version or self.config.get('model', 'gpt-4-turbo-preview')
         self.client = None
         
         try:
             # Try to import and initialize OpenAI
             from openai import OpenAI
             
-            api_key = config.get('api_key')
+            api_key = self.config.get('api_key')
             if not api_key or api_key == 'YOUR_OPENAI_API_KEY_HERE':
                 raise ValueError("OpenAI API key not configured. Please update config/openai_config.json")
             
@@ -36,8 +44,8 @@ class OpenAIProvider(AIProviderInterface):
             logger.error(f"Failed to initialize OpenAI provider: {e}")
             raise
     
-    def generate_content(self, prompt: str) -> str:
-        """Generate content using OpenAI GPT"""
+    def generate_content(self, prompt: str) -> Dict:
+        """Generate content using OpenAI GPT and return response with token usage"""
         try:
             response = self.client.chat.completions.create(
                 model=self.model_version,
@@ -48,7 +56,21 @@ class OpenAIProvider(AIProviderInterface):
                 temperature=0.1,
                 max_tokens=4096
             )
-            return response.choices[0].message.content
+            
+            # Extract content and usage info
+            content = response.choices[0].message.content
+            usage = response.usage
+            
+            # Calculate cost
+            cost_info = self.estimate_cost(usage.prompt_tokens, usage.completion_tokens)
+            
+            return {
+                "content": content,
+                "input_tokens": usage.prompt_tokens,
+                "output_tokens": usage.completion_tokens,
+                "total_tokens": usage.total_tokens,
+                "estimated_cost_usd": cost_info["estimated_cost_usd"]
+            }
         except Exception as e:
             logger.error(f"OpenAI generate_content error: {e}")
             raise Exception(f"OpenAI API error: {str(e)}")
@@ -76,24 +98,57 @@ class OpenAIProvider(AIProviderInterface):
             "type": "Large Language Model"
         }
     
-    def estimate_cost(self, prompt_length: int) -> Dict:
-        """Estimate OpenAI API cost"""
-        chars_per_token = 4
-        input_tokens = prompt_length // chars_per_token
-        output_tokens = 2000  # Estimated output
+    def estimate_cost(self, input_tokens: int, output_tokens: int) -> Dict:
+        """Calculate OpenAI API cost based on token counts"""
+        # Get pricing from config
+        pricing_config = self.config.get('pricing', {})
         
-        # OpenAI pricing (rough estimates, varies by model)
-        if 'gpt-4' in self.model_version.lower():
-            input_cost_per_1k = 0.01
-            output_cost_per_1k = 0.03
-        else:  # GPT-3.5
-            input_cost_per_1k = 0.001
-            output_cost_per_1k = 0.002
+        # Find matching pricing for the model
+        model_pricing = None
+        for model_key, price_info in pricing_config.items():
+            if model_key in self.model_version.lower():
+                model_pricing = {
+                    'input': price_info['input_per_1m'] / 1000,  # Convert to per 1K tokens
+                    'output': price_info['output_per_1m'] / 1000
+                }
+                break
         
-        cost = (input_tokens / 1000 * input_cost_per_1k) + (output_tokens / 1000 * output_cost_per_1k)
+        # Default to GPT-4 pricing if model not found
+        if not model_pricing:
+            logger.warning(f"Unknown model {self.model_version}, using GPT-4 pricing")
+            gpt4_pricing = pricing_config.get('gpt-4', {'input_per_1m': 30.0, 'output_per_1m': 60.0})
+            model_pricing = {
+                'input': gpt4_pricing['input_per_1m'] / 1000,
+                'output': gpt4_pricing['output_per_1m'] / 1000
+            }
+        
+        # Calculate cost
+        input_cost = (input_tokens / 1000) * model_pricing['input']
+        output_cost = (output_tokens / 1000) * model_pricing['output']
+        total_cost = input_cost + output_cost
         
         return {
-            "estimated_cost_usd": cost,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens
+            "estimated_cost_usd": total_cost,
+            "input_cost_usd": input_cost,
+            "output_cost_usd": output_cost,
+            "model_pricing": model_pricing
         }
+    
+    def count_tokens(self, text: str) -> int:
+        """Count tokens using tiktoken library"""
+        if not TIKTOKEN_AVAILABLE:
+            # Fallback to character-based estimation
+            return len(text) // 4
+        
+        try:
+            # Get the appropriate encoding for the model
+            if 'gpt-4o' in self.model_version:
+                encoding = tiktoken.get_encoding("o200k_base")
+            else:
+                encoding = tiktoken.encoding_for_model(self.model_version)
+            
+            tokens = encoding.encode(text)
+            return len(tokens)
+        except Exception as e:
+            logger.warning(f"Error counting tokens with tiktoken: {e}, falling back to estimation")
+            return len(text) // 4

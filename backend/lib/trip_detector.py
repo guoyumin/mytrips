@@ -42,12 +42,22 @@ class TripDetector:
             prompt_length = len(prompt)
             logger.info(f"Sending AI request - Length: {prompt_length:,} characters, Booking emails: {len(emails)}, Existing trips: {len(existing_trips or [])}")
             
-            # Call AI provider
-            response_text = self.ai_provider.generate_content(prompt)
+            # Call AI provider and get full response with token usage
+            ai_response = self.ai_provider.generate_content(prompt)
+            
+            # Extract response text and token information
+            response_text = ai_response['content']
+            input_tokens = ai_response['input_tokens']
+            output_tokens = ai_response['output_tokens']
+            total_tokens = ai_response['total_tokens']
+            estimated_cost = ai_response['estimated_cost_usd']
             
             # Log response details for diagnostics
             response_length = len(response_text)
             logger.info(f"Received AI response - Length: {response_length:,} characters")
+            logger.info(f"Token usage - Input: {input_tokens:,}, Output: {output_tokens:,}, Total: {total_tokens:,}")
+            logger.info(f"Estimated cost: ${estimated_cost:.4f} USD")
+            
             # Log full response for diagnosis (using DEBUG level to reduce log noise)
             logger.debug(f"Full AI response: {response_text}")
             
