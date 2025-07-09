@@ -1,0 +1,64 @@
+{
+  "existing_trips": [
+    {
+      "name": "Trip to Paris",
+      "destination": "Paris",
+      "start_date": "2025-02-10",
+      "end_date": "2025-02-13",
+      "cities_visited": ["Zurich", "Paris", "Zurich"],
+      "total_cost": 850.00,
+      "transport_segments": [
+        {
+          "segment_type": "flight",
+          "departure_location": "Zurich, Switzerland",
+          "arrival_location": "Paris, France",
+          "departure_datetime": "2025-02-10 09:00",
+          "arrival_datetime": "2025-02-10 10:30",
+          "carrier_name": "Swiss International Air Lines",
+          "segment_number": "LX638",
+          "distance_km": 490,
+          "distance_type": "straight",
+          "booking_platform": "swiss.com",
+          "confirmation_number": "SWISS123",
+          "status": "confirmed",
+          "is_latest_version": true,
+          "related_email_ids": ["existing_001"]
+        },
+        {
+          "segment_type": "flight",
+          "departure_location": "Paris, France",
+          "arrival_location": "Zurich, Switzerland",
+          "departure_datetime": "2025-02-13 18:00",
+          "arrival_datetime": "2025-02-13 19:30",
+          "carrier_name": "Swiss International Air Lines",
+          "segment_number": "LX639",
+          "distance_km": 490,
+          "distance_type": "straight",
+          "booking_platform": "swiss.com",
+          "confirmation_number": "SWISS123",
+          "status": "confirmed",
+          "is_latest_version": true,
+          "related_email_ids": ["existing_001"]
+        }
+      ],
+      "accommodations": [
+        {
+          "property_name": "Hotel Le Marais",
+          "property_type": "hotel",
+          "location": "Paris, France",
+          "check_in_date": "2025-02-10",
+          "check_out_date": "2025-02-13",
+          "nights": 3,
+          "confirmation_number": "MARAIS456",
+          "booking_platform": "hotels.com",
+          "cost": 450.00,
+          "status": "confirmed",
+          "is_latest_version": true,
+          "related_email_ids": ["existing_002"]
+        }
+      ],
+      "tour_activities": [],
+      "cruises": []
+    }
+  ]
+}

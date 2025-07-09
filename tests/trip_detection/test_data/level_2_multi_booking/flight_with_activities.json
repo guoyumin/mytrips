@@ -1,0 +1,181 @@
+{
+  "emails": [
+    {
+      "email_id": "test_activity_001",
+      "date": "2024-12-10T09:00:00",
+      "subject": "Flight booking confirmation - ITA Airways",
+      "sender": "booking@ita-airways.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "flight",
+        "status": "confirmed",
+        "confirmation_numbers": ["ITA789"],
+        "transport_details": [
+          {
+            "segment_type": "flight",
+            "carrier": "ITA Airways",
+            "flight_number": "AZ569",
+            "departure_location": "Zurich, Switzerland",
+            "departure_airport_code": "ZRH",
+            "arrival_location": "Rome, Italy",
+            "arrival_airport_code": "FCO",
+            "departure_datetime": "2025-01-15 07:00",
+            "arrival_datetime": "2025-01-15 08:45",
+            "duration_text": "1h 45m",
+            "distance_km": 680,
+            "distance_type": "straight",
+            "booking_platform": "ita-airways.com",
+            "confirmation_number": "ITA789",
+            "travel_class": "Economy",
+            "passenger_name": "Jane Smith"
+          },
+          {
+            "segment_type": "flight",
+            "carrier": "ITA Airways",
+            "flight_number": "AZ570",
+            "departure_location": "Rome, Italy",
+            "departure_airport_code": "FCO",
+            "arrival_location": "Zurich, Switzerland",
+            "arrival_airport_code": "ZRH",
+            "departure_datetime": "2025-01-18 19:00",
+            "arrival_datetime": "2025-01-18 20:45",
+            "duration_text": "1h 45m",
+            "distance_km": 680,
+            "distance_type": "straight",
+            "booking_platform": "ita-airways.com",
+            "confirmation_number": "ITA789",
+            "travel_class": "Economy",
+            "passenger_name": "Jane Smith"
+          }
+        ],
+        "cost_info": {
+          "total_cost": 320.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "base_fare": 260.00,
+            "taxes": 60.00
+          }
+        },
+        "dates": {
+          "booking_date": "2024-12-10",
+          "travel_start_date": "2025-01-15",
+          "travel_end_date": "2025-01-18"
+        },
+        "passenger_names": ["Jane Smith"]
+      }
+    },
+    {
+      "email_id": "test_activity_002",
+      "date": "2024-12-11T14:20:00",
+      "subject": "Vatican Museums - Skip the Line Tickets",
+      "sender": "tickets@vaticanmuseums.va",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "activity",
+        "status": "confirmed",
+        "confirmation_numbers": ["VAT2025001"],
+        "activity_details": {
+          "activity_name": "Vatican Museums & Sistine Chapel Tour",
+          "activity_type": "museum_tour",
+          "location": "Vatican City",
+          "address": "Viale Vaticano, 00165 Roma RM, Italy",
+          "date": "2025-01-16",
+          "time": "09:00",
+          "duration": "3 hours",
+          "booking_platform": "vaticanmuseums.va",
+          "confirmation_number": "VAT2025001",
+          "participants": 1
+        },
+        "cost_info": {
+          "total_cost": 85.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "ticket_price": 75.00,
+            "booking_fee": 10.00
+          }
+        },
+        "dates": {
+          "booking_date": "2024-12-11",
+          "activity_date": "2025-01-16"
+        },
+        "participant_names": ["Jane Smith"]
+      }
+    },
+    {
+      "email_id": "test_activity_003",
+      "date": "2024-12-12T11:00:00",
+      "subject": "Colosseum Underground Tour Confirmation",
+      "sender": "bookings@coopculture.it",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "activity",
+        "status": "confirmed",
+        "confirmation_numbers": ["COL456789"],
+        "activity_details": {
+          "activity_name": "Colosseum Underground & Arena Floor Tour",
+          "activity_type": "guided_tour",
+          "location": "Rome, Italy",
+          "address": "Piazza del Colosseo, 1, 00184 Roma RM, Italy",
+          "date": "2025-01-16",
+          "time": "14:00",
+          "duration": "2.5 hours",
+          "booking_platform": "coopculture.it",
+          "confirmation_number": "COL456789",
+          "participants": 1,
+          "guide_language": "English"
+        },
+        "cost_info": {
+          "total_cost": 95.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "ticket_price": 85.00,
+            "service_fee": 10.00
+          }
+        },
+        "dates": {
+          "booking_date": "2024-12-12",
+          "activity_date": "2025-01-16"
+        },
+        "participant_names": ["Jane Smith"]
+      }
+    },
+    {
+      "email_id": "test_activity_004",
+      "date": "2024-12-13T16:30:00",
+      "subject": "Rome Food Tour - Trastevere Experience",
+      "sender": "info@romefoodtour.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "activity",
+        "status": "confirmed",
+        "confirmation_numbers": ["FOOD2025123"],
+        "activity_details": {
+          "activity_name": "Trastevere Food & Wine Evening Tour",
+          "activity_type": "food_tour",
+          "location": "Rome, Italy",
+          "address": "Piazza di Santa Maria in Trastevere, Roma RM, Italy",
+          "date": "2025-01-17",
+          "time": "18:30",
+          "duration": "3.5 hours",
+          "booking_platform": "romefoodtour.com",
+          "confirmation_number": "FOOD2025123",
+          "participants": 1,
+          "includes": "5 food stops, wine tasting, local guide"
+        },
+        "cost_info": {
+          "total_cost": 120.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "tour_price": 110.00,
+            "booking_fee": 10.00
+          }
+        },
+        "dates": {
+          "booking_date": "2024-12-13",
+          "activity_date": "2025-01-17"
+        },
+        "participant_names": ["Jane Smith"]
+      }
+    }
+  ]
+}

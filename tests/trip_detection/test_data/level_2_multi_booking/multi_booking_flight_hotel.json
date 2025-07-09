@@ -1,0 +1,158 @@
+{
+  "emails": [
+    {
+      "email_id": "test_multi_001",
+      "date": "2024-12-05T14:30:00",
+      "subject": "Your flight confirmation - Air France",
+      "sender": "confirmation@airfrance.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "flight",
+        "status": "confirmed",
+        "confirmation_numbers": ["XYZ789"],
+        "transport_details": [
+          {
+            "segment_type": "flight",
+            "carrier": "Air France",
+            "flight_number": "AF1015",
+            "departure_location": "Zurich, Switzerland",
+            "departure_airport_code": "ZRH",
+            "arrival_location": "Paris, France",
+            "arrival_airport_code": "CDG",
+            "departure_datetime": "2024-12-20 08:00",
+            "arrival_datetime": "2024-12-20 09:30",
+            "duration_text": "1h 30m",
+            "distance_km": 490,
+            "distance_type": "straight",
+            "booking_platform": "airfrance.com",
+            "confirmation_number": "XYZ789",
+            "travel_class": "Economy",
+            "passenger_name": "John Doe"
+          },
+          {
+            "segment_type": "flight",
+            "carrier": "Air France",
+            "flight_number": "AF1348",
+            "departure_location": "Paris, France",
+            "departure_airport_code": "CDG",
+            "arrival_location": "Barcelona, Spain",
+            "arrival_airport_code": "BCN",
+            "departure_datetime": "2024-12-20 11:30",
+            "arrival_datetime": "2024-12-20 13:30",
+            "duration_text": "2h",
+            "distance_km": 830,
+            "distance_type": "straight",
+            "booking_platform": "airfrance.com",
+            "confirmation_number": "XYZ789",
+            "travel_class": "Economy",
+            "passenger_name": "John Doe"
+          }
+        ],
+        "cost_info": {
+          "total_cost": 450.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "base_fare": 380.00,
+            "taxes": 70.00
+          }
+        },
+        "dates": {
+          "booking_date": "2024-12-05",
+          "travel_start_date": "2024-12-20",
+          "travel_end_date": "2024-12-20"
+        },
+        "passenger_names": ["John Doe"]
+      }
+    },
+    {
+      "email_id": "test_multi_002",
+      "date": "2024-12-06T16:00:00",
+      "subject": "Hotel booking confirmation - Hotel Barcelona Center",
+      "sender": "reservations@barcelonacenter.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "accommodation",
+        "status": "confirmed",
+        "confirmation_numbers": ["HTL123456"],
+        "accommodation_details": {
+          "property_name": "Hotel Barcelona Center",
+          "property_type": "hotel",
+          "address": "Carrer de Balmes 103, 08008 Barcelona, Spain",
+          "city": "Barcelona",
+          "country": "Spain",
+          "check_in_date": "2024-12-20",
+          "check_in_time": "15:00",
+          "check_out_date": "2024-12-23",
+          "check_out_time": "11:00",
+          "nights": 3,
+          "room_type": "Standard Double Room",
+          "guests": 1,
+          "booking_platform": "booking.com",
+          "confirmation_number": "HTL123456"
+        },
+        "cost_info": {
+          "total_cost": 360.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "room_rate": 300.00,
+            "taxes": 45.00,
+            "service_fees": 15.00
+          },
+          "payment_status": "paid"
+        },
+        "dates": {
+          "booking_date": "2024-12-06",
+          "travel_start_date": "2024-12-20",
+          "travel_end_date": "2024-12-23"
+        },
+        "guest_names": ["John Doe"]
+      }
+    },
+    {
+      "email_id": "test_multi_003",
+      "date": "2024-12-07T10:15:00",
+      "subject": "Your return flight confirmation - Vueling",
+      "sender": "noreply@vueling.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "flight",
+        "status": "confirmed",
+        "confirmation_numbers": ["VUE456"],
+        "transport_details": [
+          {
+            "segment_type": "flight",
+            "carrier": "Vueling",
+            "flight_number": "VY6402",
+            "departure_location": "Barcelona, Spain",
+            "departure_airport_code": "BCN",
+            "arrival_location": "Zurich, Switzerland",
+            "arrival_airport_code": "ZRH",
+            "departure_datetime": "2024-12-23 14:00",
+            "arrival_datetime": "2024-12-23 16:15",
+            "duration_text": "2h 15m",
+            "distance_km": 860,
+            "distance_type": "straight",
+            "booking_platform": "vueling.com",
+            "confirmation_number": "VUE456",
+            "travel_class": "Economy",
+            "passenger_name": "John Doe"
+          }
+        ],
+        "cost_info": {
+          "total_cost": 180.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "base_fare": 150.00,
+            "taxes": 30.00
+          }
+        },
+        "dates": {
+          "booking_date": "2024-12-07",
+          "travel_start_date": "2024-12-23",
+          "travel_end_date": "2024-12-23"
+        },
+        "passenger_names": ["John Doe"]
+      }
+    }
+  ]
+}

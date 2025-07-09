@@ -1,0 +1,136 @@
+{
+  "emails": [
+    {
+      "email_id": "mod_001",
+      "date": "2025-01-10T10:00:00",
+      "subject": "Flight booking confirmation - Lufthansa",
+      "sender": "booking@lufthansa.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "flight",
+        "status": "confirmed",
+        "confirmation_numbers": ["LH2025ABC"],
+        "transport_details": [
+          {
+            "segment_type": "flight",
+            "carrier": "Lufthansa",
+            "flight_number": "LH1187",
+            "departure_location": "Zurich, Switzerland",
+            "departure_airport_code": "ZRH",
+            "arrival_location": "Frankfurt, Germany",
+            "arrival_airport_code": "FRA",
+            "departure_datetime": "2025-04-10 08:00",
+            "arrival_datetime": "2025-04-10 09:00",
+            "duration_text": "1h",
+            "distance_km": 280,
+            "distance_type": "straight",
+            "booking_platform": "lufthansa.com",
+            "confirmation_number": "LH2025ABC",
+            "travel_class": "Business",
+            "passenger_name": "John Doe"
+          },
+          {
+            "segment_type": "flight",
+            "carrier": "Lufthansa",
+            "flight_number": "LH1186",
+            "departure_location": "Frankfurt, Germany",
+            "departure_airport_code": "FRA",
+            "arrival_location": "Zurich, Switzerland",
+            "arrival_airport_code": "ZRH",
+            "departure_datetime": "2025-04-12 20:00",
+            "arrival_datetime": "2025-04-12 21:00",
+            "duration_text": "1h",
+            "distance_km": 280,
+            "distance_type": "straight",
+            "booking_platform": "lufthansa.com",
+            "confirmation_number": "LH2025ABC",
+            "travel_class": "Business",
+            "passenger_name": "John Doe"
+          }
+        ],
+        "cost_info": {
+          "total_cost": 580.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "base_fare": 500.00,
+            "taxes": 80.00
+          }
+        },
+        "dates": {
+          "booking_date": "2025-01-10",
+          "travel_start_date": "2025-04-10",
+          "travel_end_date": "2025-04-12"
+        },
+        "passenger_names": ["John Doe"]
+      }
+    },
+    {
+      "email_id": "mod_002",
+      "date": "2025-03-15T14:30:00",
+      "subject": "Flight change confirmation - Lufthansa",
+      "sender": "changes@lufthansa.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "flight",
+        "status": "modified",
+        "confirmation_numbers": ["LH2025ABC"],
+        "original_booking_reference": "LH2025ABC",
+        "transport_details": [
+          {
+            "segment_type": "flight",
+            "carrier": "Lufthansa",
+            "flight_number": "LH1189",
+            "departure_location": "Zurich, Switzerland",
+            "departure_airport_code": "ZRH",
+            "arrival_location": "Frankfurt, Germany",
+            "arrival_airport_code": "FRA",
+            "departure_datetime": "2025-04-10 12:00",
+            "arrival_datetime": "2025-04-10 13:00",
+            "duration_text": "1h",
+            "distance_km": 280,
+            "distance_type": "straight",
+            "booking_platform": "lufthansa.com",
+            "confirmation_number": "LH2025ABC",
+            "travel_class": "Business",
+            "passenger_name": "John Doe",
+            "change_reason": "Schedule change by airline"
+          },
+          {
+            "segment_type": "flight",
+            "carrier": "Lufthansa",
+            "flight_number": "LH1186",
+            "departure_location": "Frankfurt, Germany",
+            "departure_airport_code": "FRA",
+            "arrival_location": "Zurich, Switzerland",
+            "arrival_airport_code": "ZRH",
+            "departure_datetime": "2025-04-12 20:00",
+            "arrival_datetime": "2025-04-12 21:00",
+            "duration_text": "1h",
+            "distance_km": 280,
+            "distance_type": "straight",
+            "booking_platform": "lufthansa.com",
+            "confirmation_number": "LH2025ABC",
+            "travel_class": "Business",
+            "passenger_name": "John Doe"
+          }
+        ],
+        "cost_info": {
+          "total_cost": 580.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "base_fare": 500.00,
+            "taxes": 80.00
+          },
+          "change_fee": 0.00,
+          "notes": "No change fee - airline initiated change"
+        },
+        "dates": {
+          "booking_date": "2025-03-15",
+          "travel_start_date": "2025-04-10",
+          "travel_end_date": "2025-04-12"
+        },
+        "passenger_names": ["John Doe"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "existing_trips": [
+    {
+      "name": "Trip to London",
+      "destination": "London",
+      "start_date": "2025-03-15",
+      "end_date": "2025-03-18",
+      "cities_visited": ["Zurich", "London", "Zurich"],
+      "total_cost": 650.00,
+      "transport_segments": [
+        {
+          "segment_type": "flight",
+          "departure_location": "Zurich, Switzerland",
+          "arrival_location": "London, United Kingdom",
+          "departure_datetime": "2025-03-15 10:00",
+          "arrival_datetime": "2025-03-15 11:00",
+          "carrier_name": "British Airways",
+          "segment_number": "BA713",
+          "distance_km": 780,
+          "distance_type": "straight",
+          "booking_platform": "ba.com",
+          "confirmation_number": "BA789XY",
+          "status": "confirmed",
+          "is_latest_version": true,
+          "related_email_ids": ["london_001"]
+        },
+        {
+          "segment_type": "flight",
+          "departure_location": "London, United Kingdom",
+          "arrival_location": "Zurich, Switzerland",
+          "departure_datetime": "2025-03-18 20:00",
+          "arrival_datetime": "2025-03-18 23:00",
+          "carrier_name": "British Airways",
+          "segment_number": "BA718",
+          "distance_km": 780,
+          "distance_type": "straight",
+          "booking_platform": "ba.com",
+          "confirmation_number": "BA789XY",
+          "status": "confirmed",
+          "is_latest_version": true,
+          "related_email_ids": ["london_001"]
+        }
+      ],
+      "accommodations": [
+        {
+          "property_name": "The Zetter Townhouse",
+          "property_type": "hotel",
+          "location": "London, United Kingdom",
+          "check_in_date": "2025-03-15",
+          "check_out_date": "2025-03-18",
+          "nights": 3,
+          "confirmation_number": "ZET123",
+          "booking_platform": "booking.com",
+          "cost": 350.00,
+          "status": "confirmed",
+          "is_latest_version": true,
+          "related_email_ids": ["london_002"]
+        }
+      ],
+      "tour_activities": [],
+      "cruises": []
+    }
+  ],
+  "new_emails": [
+    {
+      "email_id": "extend_001",
+      "date": "2025-01-25T14:00:00",
+      "subject": "Train booking confirmation - London to Edinburgh",
+      "sender": "bookings@lner.co.uk",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "train",
+        "status": "confirmed",
+        "confirmation_numbers": ["LNER456"],
+        "transport_details": [
+          {
+            "segment_type": "train",
+            "carrier": "LNER",
+            "train_number": "1S12",
+            "departure_location": "London Kings Cross, United Kingdom",
+            "departure_station_code": "KGX",
+            "arrival_location": "Edinburgh Waverley, United Kingdom",
+            "arrival_station_code": "EDB",
+            "departure_datetime": "2025-03-18 09:00",
+            "arrival_datetime": "2025-03-18 13:20",
+            "duration_text": "4h 20m",
+            "distance_km": 632,
+            "distance_type": "rail",
+            "booking_platform": "lner.co.uk",
+            "confirmation_number": "LNER456",
+            "travel_class": "Standard",
+            "passenger_name": "John Doe"
+          }
+        ],
+        "cost_info": {
+          "total_cost": 85.00,
+          "currency": "GBP",
+          "cost_breakdown": {
+            "ticket_price": 85.00
+          }
+        },
+        "dates": {
+          "booking_date": "2025-01-25",
+          "travel_date": "2025-03-18"
+        },
+        "passenger_names": ["John Doe"]
+      }
+    },
+    {
+      "email_id": "extend_002",
+      "date": "2025-01-25T15:30:00",
+      "subject": "Booking confirmed - Edinburgh Castle Apartments",
+      "sender": "stay@edinburghcastleapartments.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "accommodation",
+        "status": "confirmed",
+        "confirmation_numbers": ["ECA789"],
+        "accommodation_details": {
+          "property_name": "Edinburgh Castle Apartments",
+          "property_type": "apartment",
+          "address": "18 Castle Terrace, Edinburgh EH1 2DP, United Kingdom",
+          "city": "Edinburgh",
+          "country": "United Kingdom",
+          "check_in_date": "2025-03-18",
+          "check_in_time": "16:00",
+          "check_out_date": "2025-03-20",
+          "check_out_time": "11:00",
+          "nights": 2,
+          "room_type": "One Bedroom Apartment",
+          "guests": 1,
+          "booking_platform": "direct",
+          "confirmation_number": "ECA789"
+        },
+        "cost_info": {
+          "total_cost": 240.00,
+          "currency": "GBP",
+          "cost_breakdown": {
+            "room_rate": 220.00,
+            "cleaning_fee": 20.00
+          }
+        },
+        "dates": {
+          "booking_date": "2025-01-25",
+          "travel_start_date": "2025-03-18",
+          "travel_end_date": "2025-03-20"
+        },
+        "guest_names": ["John Doe"]
+      }
+    },
+    {
+      "email_id": "extend_003",
+      "date": "2025-01-26T09:00:00",
+      "subject": "Flight confirmation - Edinburgh to Zurich",
+      "sender": "confirmation@easyjet.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "flight",
+        "status": "confirmed",
+        "confirmation_numbers": ["EZY123"],
+        "transport_details": [
+          {
+            "segment_type": "flight",
+            "carrier": "easyJet",
+            "flight_number": "U23068",
+            "departure_location": "Edinburgh, United Kingdom",
+            "departure_airport_code": "EDI",
+            "arrival_location": "Zurich, Switzerland",
+            "arrival_airport_code": "ZRH",
+            "departure_datetime": "2025-03-20 13:30",
+            "arrival_datetime": "2025-03-20 17:00",
+            "duration_text": "2h 30m",
+            "distance_km": 1380,
+            "distance_type": "straight",
+            "booking_platform": "easyjet.com",
+            "confirmation_number": "EZY123",
+            "travel_class": "Economy",
+            "passenger_name": "John Doe"
+          }
+        ],
+        "cost_info": {
+          "total_cost": 120.00,
+          "currency": "CHF",
+          "cost_breakdown": {
+            "base_fare": 95.00,
+            "taxes": 25.00
+          }
+        },
+        "dates": {
+          "booking_date": "2025-01-26",
+          "travel_date": "2025-03-20"
+        },
+        "passenger_names": ["John Doe"]
+      }
+    }
+  ]
+}

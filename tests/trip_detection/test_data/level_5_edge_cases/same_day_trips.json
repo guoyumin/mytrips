@@ -1,0 +1,133 @@
+{
+  "emails": [
+    {
+      "email_id": "same_day_001",
+      "date": "2025-02-01T08:00:00",
+      "subject": "Business trip to Munich - Same day return",
+      "sender": "tickets@lufthansa.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "flight",
+        "status": "confirmed",
+        "confirmation_numbers": ["LH001DAY"],
+        "transport_details": [
+          {
+            "segment_type": "flight",
+            "carrier": "Lufthansa",
+            "flight_number": "LH2367",
+            "departure_location": "Zurich, Switzerland",
+            "departure_airport_code": "ZRH",
+            "arrival_location": "Munich, Germany",
+            "arrival_airport_code": "MUC",
+            "departure_datetime": "2025-06-15 07:00",
+            "arrival_datetime": "2025-06-15 08:00",
+            "duration_text": "1h",
+            "distance_km": 240,
+            "distance_type": "straight",
+            "booking_platform": "lufthansa.com",
+            "confirmation_number": "LH001DAY",
+            "travel_class": "Business",
+            "passenger_name": "John Doe",
+            "trip_purpose": "business_meeting"
+          },
+          {
+            "segment_type": "flight",
+            "carrier": "Lufthansa",
+            "flight_number": "LH2372",
+            "departure_location": "Munich, Germany",
+            "departure_airport_code": "MUC",
+            "arrival_location": "Zurich, Switzerland",
+            "arrival_airport_code": "ZRH",
+            "departure_datetime": "2025-06-15 17:00",
+            "arrival_datetime": "2025-06-15 18:00",
+            "duration_text": "1h",
+            "distance_km": 240,
+            "distance_type": "straight",
+            "booking_platform": "lufthansa.com",
+            "confirmation_number": "LH001DAY",
+            "travel_class": "Business",
+            "passenger_name": "John Doe"
+          }
+        ],
+        "cost_info": {
+          "total_cost": 480.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "base_fare": 420.00,
+            "taxes": 60.00
+          }
+        },
+        "dates": {
+          "booking_date": "2025-02-01",
+          "travel_date": "2025-06-15"
+        },
+        "passenger_names": ["John Doe"]
+      }
+    },
+    {
+      "email_id": "same_day_002",
+      "date": "2025-02-02T10:00:00",
+      "subject": "Weekend in Milan - Flight Confirmation",
+      "sender": "confirmation@swiss.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "flight",
+        "status": "confirmed",
+        "confirmation_numbers": ["LX789MIL"],
+        "transport_details": [
+          {
+            "segment_type": "flight",
+            "carrier": "Swiss International Air Lines",
+            "flight_number": "LX1612",
+            "departure_location": "Zurich, Switzerland",
+            "departure_airport_code": "ZRH",
+            "arrival_location": "Milan, Italy",
+            "arrival_airport_code": "MXP",
+            "departure_datetime": "2025-06-15 20:30",
+            "arrival_datetime": "2025-06-15 21:30",
+            "duration_text": "1h",
+            "distance_km": 280,
+            "distance_type": "straight",
+            "booking_platform": "swiss.com",
+            "confirmation_number": "LX789MIL",
+            "travel_class": "Economy",
+            "passenger_name": "John Doe",
+            "trip_purpose": "leisure"
+          },
+          {
+            "segment_type": "flight",
+            "carrier": "Swiss International Air Lines",
+            "flight_number": "LX1619",
+            "departure_location": "Milan, Italy",
+            "departure_airport_code": "MXP",
+            "arrival_location": "Zurich, Switzerland",
+            "arrival_airport_code": "ZRH",
+            "departure_datetime": "2025-06-17 19:00",
+            "arrival_datetime": "2025-06-17 20:00",
+            "duration_text": "1h",
+            "distance_km": 280,
+            "distance_type": "straight",
+            "booking_platform": "swiss.com",
+            "confirmation_number": "LX789MIL",
+            "travel_class": "Economy",
+            "passenger_name": "John Doe"
+          }
+        ],
+        "cost_info": {
+          "total_cost": 220.00,
+          "currency": "CHF",
+          "cost_breakdown": {
+            "base_fare": 180.00,
+            "taxes": 40.00
+          }
+        },
+        "dates": {
+          "booking_date": "2025-02-02",
+          "travel_start_date": "2025-06-15",
+          "travel_end_date": "2025-06-17"
+        },
+        "passenger_names": ["John Doe"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "emails": [
+    {
+      "email_id": "cancel_001",
+      "date": "2025-01-05T11:00:00",
+      "subject": "Booking confirmation - Hotel Milano Centrale",
+      "sender": "reservations@hotelmilanoCentrale.it",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "accommodation",
+        "status": "confirmed",
+        "confirmation_numbers": ["HMC2025001"],
+        "accommodation_details": {
+          "property_name": "Hotel Milano Centrale",
+          "property_type": "hotel",
+          "address": "Via Soperga 45, 20127 Milano MI, Italy",
+          "city": "Milan",
+          "country": "Italy",
+          "check_in_date": "2025-05-15",
+          "check_in_time": "14:00",
+          "check_out_date": "2025-05-18",
+          "check_out_time": "11:00",
+          "nights": 3,
+          "room_type": "Deluxe Double Room",
+          "guests": 1,
+          "booking_platform": "booking.com",
+          "confirmation_number": "HMC2025001"
+        },
+        "cost_info": {
+          "total_cost": 450.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "room_rate": 400.00,
+            "taxes": 40.00,
+            "service_fees": 10.00
+          },
+          "cancellation_policy": "Free cancellation until May 10, 2025"
+        },
+        "dates": {
+          "booking_date": "2025-01-05",
+          "travel_start_date": "2025-05-15",
+          "travel_end_date": "2025-05-18"
+        },
+        "guest_names": ["John Doe"]
+      }
+    },
+    {
+      "email_id": "cancel_002",
+      "date": "2025-04-20T09:30:00",
+      "subject": "Booking cancellation confirmed - Hotel Milano Centrale",
+      "sender": "cancellations@hotelmilanoCentrale.it",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "accommodation",
+        "status": "cancelled",
+        "confirmation_numbers": ["HMC2025001"],
+        "original_booking_reference": "HMC2025001",
+        "cancellation_details": {
+          "cancellation_date": "2025-04-20",
+          "cancellation_number": "CXL789456",
+          "refund_amount": 450.00,
+          "refund_currency": "EUR",
+          "refund_status": "processed",
+          "cancellation_fee": 0.00,
+          "reason": "Guest request"
+        },
+        "accommodation_details": {
+          "property_name": "Hotel Milano Centrale",
+          "check_in_date": "2025-05-15",
+          "check_out_date": "2025-05-18",
+          "confirmation_number": "HMC2025001"
+        },
+        "dates": {
+          "cancellation_date": "2025-04-20"
+        }
+      }
+    },
+    {
+      "email_id": "cancel_003",
+      "date": "2025-04-20T16:00:00",
+      "subject": "New booking confirmed - Bulgari Hotel Milano",
+      "sender": "reservations@bulgarihotels.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "accommodation",
+        "status": "confirmed",
+        "confirmation_numbers": ["BUL2025789"],
+        "accommodation_details": {
+          "property_name": "Bulgari Hotel Milano",
+          "property_type": "luxury_hotel",
+          "address": "Via Privata Fratelli Gabba 7b, 20121 Milano MI, Italy",
+          "city": "Milan",
+          "country": "Italy",
+          "check_in_date": "2025-05-15",
+          "check_in_time": "15:00",
+          "check_out_date": "2025-05-18",
+          "check_out_time": "12:00",
+          "nights": 3,
+          "room_type": "Superior Room",
+          "guests": 1,
+          "booking_platform": "direct",
+          "confirmation_number": "BUL2025789"
+        },
+        "cost_info": {
+          "total_cost": 890.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "room_rate": 800.00,
+            "taxes": 80.00,
+            "service_fees": 10.00
+          }
+        },
+        "dates": {
+          "booking_date": "2025-04-20",
+          "travel_start_date": "2025-05-15",
+          "travel_end_date": "2025-05-18"
+        },
+        "guest_names": ["John Doe"]
+      }
+    }
+  ]
+}

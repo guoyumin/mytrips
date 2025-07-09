@@ -64,3 +64,9 @@ data/
 # Temporary files
 tmp/
 temp/
+
+# Test outputs
+tests/trip_detection/test_data/model_comparison_report.json
+tests/trip_detection/test_output/
+tests/*/test_output/
+*_test_log.json

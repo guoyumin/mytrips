@@ -1,0 +1,41 @@
+{
+  "new_emails": [
+    {
+      "email_id": "new_activity_001",
+      "date": "2025-01-20T10:00:00",
+      "subject": "Louvre Museum - E-ticket confirmation",
+      "sender": "tickets@louvre.fr",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "activity",
+        "status": "confirmed",
+        "confirmation_numbers": ["LOUVRE789"],
+        "activity_details": {
+          "activity_name": "Louvre Museum - General Admission",
+          "activity_type": "museum_visit",
+          "location": "Paris, France",
+          "address": "Rue de Rivoli, 75001 Paris, France",
+          "date": "2025-02-11",
+          "time": "10:00",
+          "duration": "flexible",
+          "booking_platform": "louvre.fr",
+          "confirmation_number": "LOUVRE789",
+          "participants": 1,
+          "ticket_type": "Adult - Full Day Access"
+        },
+        "cost_info": {
+          "total_cost": 17.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "ticket_price": 17.00
+          }
+        },
+        "dates": {
+          "booking_date": "2025-01-20",
+          "activity_date": "2025-02-11"
+        },
+        "participant_names": ["John Doe"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "emails": [
+    {
+      "email_id": "xmas_001",
+      "date": "2024-11-15T10:00:00",
+      "subject": "New Year's Eve in Vienna - Flight Confirmation",
+      "sender": "booking@austrian.com",
+      "classification": "travel_booking",
+      "extracted_booking_info": {
+        "booking_type": "flight",
+        "status": "confirmed",
+        "confirmation_numbers": ["AUA2024XY"],
+        "transport_details": [
+          {
+            "segment_type": "flight",
+            "carrier": "Austrian Airlines",
+            "flight_number": "OS566",
+            "departure_location": "Zurich, Switzerland",
+            "departure_airport_code": "ZRH",
+            "arrival_location": "Vienna, Austria",
+            "arrival_airport_code": "VIE",
+            "departure_datetime": "2024-12-28 15:00",
+            "arrival_datetime": "2024-12-28 16:30",
+            "duration_text": "1h 30m",
+            "distance_km": 600,
+            "distance_type": "straight",
+            "booking_platform": "austrian.com",
+            "confirmation_number": "AUA2024XY",
+            "travel_class": "Economy",
+            "passenger_name": "John Doe"
+          },
+          {
+            "segment_type": "flight",
+            "carrier": "Austrian Airlines",
+            "flight_number": "OS567",
+            "departure_location": "Vienna, Austria",
+            "departure_airport_code": "VIE",
+            "arrival_location": "Zurich, Switzerland",
+            "arrival_airport_code": "ZRH",
+            "departure_datetime": "2025-01-03 18:00",
+            "arrival_datetime": "2025-01-03 19:30",
+            "duration_text": "1h 30m",
+            "distance_km": 600,
+            "distance_type": "straight",
+            "booking_platform": "austrian.com",
+            "confirmation_number": "AUA2024XY",
+            "travel_class": "Economy",
+            "passenger_name": "John Doe"
+          }
+        ],
+        "cost_info": {
+          "total_cost": 380.00,
+          "currency": "EUR",
+          "cost_breakdown": {
+            "base_fare": 320.00,
+            "taxes": 60.00
+          }
+        },
+        "dates": {
+          "booking_date": "2024-11-15",
+          "travel_start_date": "2024-12-28",
+          "travel_end_date": "2025-01-03"
+        },
+        "passenger_names": ["John Doe"]
+      }
+    }
+  ]
+}

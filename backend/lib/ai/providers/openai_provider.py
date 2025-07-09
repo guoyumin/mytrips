@@ -105,13 +105,31 @@ class OpenAIProvider(AIProviderInterface):
         
         # Find matching pricing for the model
         model_pricing = None
-        for model_key, price_info in pricing_config.items():
-            if model_key in self.model_version.lower():
+        # First try exact match
+        if self.model_version in pricing_config:
+            price_info = pricing_config[self.model_version]
+            model_pricing = {
+                'input': price_info['input_per_1m'] / 1000,  # Convert to per 1K tokens
+                'output': price_info['output_per_1m'] / 1000
+            }
+        else:
+            # Then try partial match (but check for longer matches first)
+            model_lower = self.model_version.lower()
+            best_match = None
+            best_match_len = 0
+            
+            for model_key in pricing_config.keys():
+                if model_key.lower() in model_lower and len(model_key) > best_match_len:
+                    best_match = model_key
+                    best_match_len = len(model_key)
+            
+            if best_match:
+                price_info = pricing_config[best_match]
                 model_pricing = {
-                    'input': price_info['input_per_1m'] / 1000,  # Convert to per 1K tokens
+                    'input': price_info['input_per_1m'] / 1000,
                     'output': price_info['output_per_1m'] / 1000
                 }
-                break
+                logger.info(f"Using pricing for {best_match} for model {self.model_version}")
         
         # Default to GPT-4 pricing if model not found
         if not model_pricing:
