@@ -22,6 +22,14 @@ pytest tests/
 pytest tests/email_classification/
 pytest tests/trip_detection/
 pytest tests/ai_connection/
+pytest tests/booking_extraction/
+pytest tests/content_extraction/
+
+# Run with verbose output
+pytest tests/ -v
+
+# Run a specific test file
+pytest tests/email_classification/test_workflow.py
 ```
 
 ### Development Tools
@@ -47,7 +55,8 @@ flake8 backend/
 1. **Email Classification Service**: Categorizes emails as travel-related using AI
 2. **Trip Detection Service**: Extracts trip information from classified emails
 3. **Content Extraction Service**: Processes email content for structured data
-4. **Rate Limiter**: Manages API rate limits across different AI providers
+4. **Email Booking Extraction Service**: Parses booking details from emails
+5. **Rate Limiter**: Manages API rate limits across different AI providers
 
 ### AI Provider System
 The application uses a factory pattern for AI providers:
@@ -59,9 +68,13 @@ Models are organized by tiers (fast, standard, advanced) with automatic fallback
 
 ### Database Schema
 - **emails**: Gmail message storage with classification status
-- **trips**: Extracted trip information 
+- **trips**: Extracted trip information with cost tracking
 - **email_content**: Structured email content storage
 - **booking_extractions**: Parsed booking details
+- **transport_segments**: Flight/train/bus segments
+- **accommodations**: Hotel bookings
+- **tour_activities**: Tourism activities
+- **cruises**: Cruise bookings
 
 ### Configuration
 - AI provider configs in `config/` directory
@@ -86,6 +99,8 @@ Models are organized by tiers (fast, standard, advanced) with automatic fallback
 - `tests/ai_connection/`: AI provider connectivity tests
 - `tests/email_classification/`: Email classification workflow tests
 - `tests/trip_detection/`: Trip detection logic tests
+- `tests/booking_extraction/`: Booking detail extraction tests
+- `tests/content_extraction/`: Email content processing tests
 - `tests/fixtures/`: Test data and configuration
 
 ## Development Notes

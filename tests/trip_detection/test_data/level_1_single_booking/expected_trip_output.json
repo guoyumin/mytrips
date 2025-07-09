@@ -1,0 +1,57 @@
+{
+  "trips": [
+    {
+      "name": "Trip to Paris",
+      "destination": "Paris",
+      "start_date": "2024-12-15",
+      "end_date": "2024-12-18",
+      "cities_visited": ["Zurich", "Paris", "Zurich"],
+      "total_cost": 350.00,
+      "transport_segments": [
+        {
+          "segment_type": "flight",
+          "departure_location": "Zurich, Switzerland",
+          "arrival_location": "Paris, France",
+          "departure_datetime": "2024-12-15 10:00",
+          "arrival_datetime": "2024-12-15 11:30",
+          "carrier_name": "Swiss International Air Lines",
+          "segment_number": "LX350",
+          "distance_km": 490.0,
+          "distance_type": "straight",
+          "cost": 175.00,
+          "booking_platform": "swiss.com",
+          "confirmation_number": "ABCDEF",
+          "status": "confirmed",
+          "is_latest_version": true,
+          "related_email_ids": ["test_single_flight_001"]
+        },
+        {
+          "segment_type": "flight",
+          "departure_location": "Paris, France",
+          "arrival_location": "Zurich, Switzerland",
+          "departure_datetime": "2024-12-18 15:00",
+          "arrival_datetime": "2024-12-18 16:30",
+          "carrier_name": "Swiss International Air Lines",
+          "segment_number": "LX351",
+          "distance_km": 490.0,
+          "distance_type": "straight",
+          "cost": 175.00,
+          "booking_platform": "swiss.com",
+          "confirmation_number": "ABCDEF",
+          "status": "confirmed",
+          "is_latest_version": true,
+          "related_email_ids": ["test_single_flight_001"]
+        }
+      ],
+      "accommodations": [],
+      "tour_activities": [],
+      "cruises": [],
+      "gemini_analysis": {
+        "total_trips_detected": 1,
+        "has_transport_segments": true,
+        "has_accommodations": false,
+        "has_activities": false
+      }
+    }
+  ]
+}

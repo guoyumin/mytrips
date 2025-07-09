@@ -1,0 +1,69 @@
+{
+  "email_id": "test_single_flight_001",
+  "date": "2024-12-01T10:00:00",
+  "subject": "Your flight confirmation - Swiss International Air Lines",
+  "sender": "noreply@swiss.com",
+  "classification": "travel_booking",
+  "extracted_booking_info": {
+    "booking_type": "flight",
+    "status": "confirmed",
+    "confirmation_numbers": ["ABCDEF"],
+    "transport_details": [
+      {
+        "segment_type": "flight",
+        "carrier": "Swiss International Air Lines",
+        "flight_number": "LX350",
+        "departure_location": "Zurich, Switzerland",
+        "departure_airport_code": "ZRH",
+        "arrival_location": "Paris, France",
+        "arrival_airport_code": "CDG",
+        "departure_datetime": "2024-12-15 10:00",
+        "arrival_datetime": "2024-12-15 11:30",
+        "duration_text": "1h 30m",
+        "distance_km": 490,
+        "distance_type": "straight",
+        "booking_platform": "swiss.com",
+        "confirmation_number": "ABCDEF",
+        "travel_class": "Economy",
+        "passenger_name": "John Doe"
+      },
+      {
+        "segment_type": "flight",
+        "carrier": "Swiss International Air Lines",
+        "flight_number": "LX351",
+        "departure_location": "Paris, France",
+        "departure_airport_code": "CDG",
+        "arrival_location": "Zurich, Switzerland",
+        "arrival_airport_code": "ZRH",
+        "departure_datetime": "2024-12-18 15:00",
+        "arrival_datetime": "2024-12-18 16:30",
+        "duration_text": "1h 30m",
+        "distance_km": 490,
+        "distance_type": "straight",
+        "booking_platform": "swiss.com",
+        "confirmation_number": "ABCDEF",
+        "travel_class": "Economy",
+        "passenger_name": "John Doe"
+      }
+    ],
+    "cost_info": {
+      "total_cost": 350.00,
+      "currency": "CHF",
+      "cost_breakdown": {
+        "base_fare": 280.00,
+        "taxes": 70.00
+      }
+    },
+    "dates": {
+      "booking_date": "2024-12-01",
+      "travel_start_date": "2024-12-15",
+      "travel_end_date": "2024-12-18"
+    },
+    "passenger_names": ["John Doe"],
+    "additional_info": {
+      "baggage_allowance": "1 x 23kg checked, 1 x 8kg cabin",
+      "fare_type": "Light",
+      "notes": "Round trip economy flight"
+    }
+  }
+}

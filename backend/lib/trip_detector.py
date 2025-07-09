@@ -158,6 +158,8 @@ IMPORTANT: Your response must contain ALL {len(existing_trips)} existing trips p
         
         prompt = f"""You are analyzing STRUCTURED BOOKING INFORMATION that has been pre-extracted from travel emails. Your task is to detect distinct trips and organize related bookings.
 
+CRITICAL: You MUST respond with ONLY valid JSON. Do NOT include any explanatory text, comments, or markdown formatting. Output ONLY the JSON structure starting with {{ and ending with }}.
+
 The traveler lives in Zurich, so trips typically start and end there.
 {existing_trips_text}
 
@@ -190,7 +192,7 @@ TRIP BOUNDARY DETECTION:
 - Multi-city trips should be kept as single trips
 - Consider layovers and connections as part of the same trip
 
-Return a JSON array of trips with this exact structure:
+Output ONLY this JSON structure (no additional text):
 {{
   "trips": [
     {{
@@ -279,14 +281,16 @@ Remember:
 - Respect the status field from extracted data (confirmed/cancelled/modified)
 - Mark cancelled bookings appropriately in your output
 - Only latest versions should have is_latest_version=true
-- CRITICAL: Every transport segment MUST have distance information:
+- Every transport segment should have distance information:
   * Use distance_km and distance_type from extracted data if available
   * If missing, estimate based on departure/arrival locations
   * Examples: ZUR-CDG (Paris) 490km, ZUR-LHR (London) 780km, ZUR-MUC (Munich) 240km
   * ALWAYS include both distance_km (number) and distance_type ("actual" or "straight")
   * Use "actual" only when using provided distance data from extraction
   * Use "straight" for your estimates
-  * Never leave distance fields empty or null"""
+  * Never leave distance fields empty or null
+
+FINAL REMINDER: Output ONLY valid JSON starting with {{ and ending with }}. NO other text."""
 
         return prompt
     
@@ -295,6 +299,8 @@ Remember:
         try:
             # Extract JSON from response
             response_text = response_text.strip()
+            
+            # First try to extract JSON from code blocks
             if '```json' in response_text:
                 start = response_text.find('```json') + 7
                 end = response_text.rfind('```')
@@ -305,6 +311,15 @@ Remember:
                 end = response_text.rfind('```')
                 if end > start:
                     response_text = response_text[start:end]
+            
+            # Try to find JSON object directly in the text
+            # Look for the start of the JSON object
+            json_start = response_text.find('{')
+            if json_start >= 0:
+                # Extract from the first '{' to the last '}'
+                json_end = response_text.rfind('}')
+                if json_end > json_start:
+                    response_text = response_text[json_start:json_end + 1]
             
             result = json.loads(response_text.strip())
             trips = result.get('trips', [])
