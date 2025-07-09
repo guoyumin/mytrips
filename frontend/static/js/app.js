@@ -125,10 +125,19 @@ class EmailImportApp {
 
     showTravelEmails() {
         document.getElementById('travel-emails-section').style.display = 'block';
-        // Reset filter to 'all' when first showing the page
-        const filterElement = document.getElementById('bookingFilter');
-        if (filterElement) {
-            filterElement.value = 'all';
+        // Reset filters to 'all' when first showing the page
+        const bookingFilterEl = document.getElementById('bookingFilter');
+        const tripDetectionFilterEl = document.getElementById('tripDetectionFilter');
+        const searchTextEl = document.getElementById('searchText');
+        
+        if (bookingFilterEl) {
+            bookingFilterEl.value = 'all';
+        }
+        if (tripDetectionFilterEl) {
+            tripDetectionFilterEl.value = 'all';
+        }
+        if (searchTextEl) {
+            searchTextEl.value = '';
         }
         this.loadTravelEmails();
     }
@@ -777,32 +786,49 @@ class EmailImportApp {
         this.isLoadingTravelEmails = true;
         
         try {
-            // Get current filter value
-            const filterElement = document.getElementById('bookingFilter');
-            const filterValue = filterElement ? filterElement.value : 'all';
+            // Get current filter values
+            const bookingFilter = document.getElementById('bookingFilter')?.value || 'all';
+            const tripDetectionFilter = document.getElementById('tripDetectionFilter')?.value || 'all';
+            const searchText = document.getElementById('searchText')?.value || '';
             
             // Calculate offset
             const offset = (page - 1) * this.pageSize;
             
-            // Build API URL based on filter
+            // Build API URL based on filters
             let apiUrl = `/api/emails/list?classification=travel&limit=${this.pageSize}&offset=${offset}`;
-            if (filterValue === 'booking_completed') {
+            
+            // Add booking filter
+            if (bookingFilter === 'booking_completed') {
                 apiUrl += '&booking_status=completed';
-            } else if (filterValue === 'has_booking') {
+            } else if (bookingFilter === 'has_booking') {
                 apiUrl += '&booking_status=has_booking';
             }
+            
+            // Add trip detection filter
+            if (tripDetectionFilter !== 'all') {
+                apiUrl += `&trip_detection_status=${tripDetectionFilter}`;
+            }
+            
+            // Add search text
+            if (searchText.trim()) {
+                apiUrl += `&search=${encodeURIComponent(searchText.trim())}`;
+            }
+            
+            console.log('Loading travel emails with URL:', apiUrl);
 
             // Get travel emails from the API
             const travelResponse = await fetch(apiUrl);
             const data = await travelResponse.json();
 
             if (travelResponse.ok) {
+                console.log('API response:', data);
                 this.currentPage = page;
                 this.totalEmails = data.total_count;
                 this.totalPages = Math.ceil(data.total_count / this.pageSize);
                 this.displayTravelEmails(data.emails);
                 this.updatePaginationControls();
             } else {
+                console.error('API error:', travelResponse.status, data);
                 this.displayNoTravelEmails();
             }
 
@@ -815,12 +841,19 @@ class EmailImportApp {
     }
 
     async displayTravelEmails(emails) {
-        // Get current filter value to determine how to handle data
-        const filterElement = document.getElementById('bookingFilter');
-        const filterValue = filterElement ? filterElement.value : 'all';
+        // Get current filter values
+        const bookingFilter = document.getElementById('bookingFilter')?.value || 'all';
+        const tripDetectionFilter = document.getElementById('tripDetectionFilter')?.value || 'all';
+        const searchText = document.getElementById('searchText')?.value || '';
         
-        // Only update allTravelEmails if we're loading all emails (not filtered by server)
-        if (filterValue !== 'booking_completed' && filterValue !== 'has_booking') {
+        // Check if any server-side filters are active
+        const hasServerSideFilters = bookingFilter === 'booking_completed' || 
+                                   bookingFilter === 'has_booking' || 
+                                   tripDetectionFilter !== 'all' || 
+                                   searchText.trim() !== '';
+        
+        // Only update allTravelEmails if we're not using server-side filters
+        if (!hasServerSideFilters) {
             this.allTravelEmails = emails || [];
         }
         
@@ -829,16 +862,12 @@ class EmailImportApp {
             return;
         }
 
-        // For server-side filtered emails (booking_completed, has_booking), display directly
-        // For other filters, apply client-side filtering
+        // For server-side filtered emails, display directly
+        // For client-side filters (only 'extracted'), apply filtering
         let displayEmails = emails;
         
-        if (filterValue !== 'booking_completed' && filterValue !== 'has_booking' && filterValue !== 'all') {
-            switch (filterValue) {
-                case 'extracted':
-                    displayEmails = emails.filter(email => email.content_extracted);
-                    break;
-            }
+        if (!hasServerSideFilters && bookingFilter === 'extracted') {
+            displayEmails = emails.filter(email => email.content_extracted);
         }
 
         const emailsList = document.getElementById('travel-emails-list');
@@ -855,18 +884,34 @@ class EmailImportApp {
     }
 
     applyTravelEmailFilter() {
-        const filterValue = document.getElementById('bookingFilter').value;
-        console.log('Applying filter:', filterValue, 'Current emails count:', this.allTravelEmails.length);
+        // Check if elements exist
+        const bookingFilterEl = document.getElementById('bookingFilter');
+        const tripDetectionFilterEl = document.getElementById('tripDetectionFilter');
+        const searchTextEl = document.getElementById('searchText');
+        
+        if (!bookingFilterEl || !tripDetectionFilterEl || !searchTextEl) {
+            console.error('Filter elements not found in DOM');
+            return;
+        }
+        
+        const bookingFilter = bookingFilterEl.value;
+        const tripDetectionFilter = tripDetectionFilterEl.value;
+        const searchText = searchTextEl.value.toLowerCase().trim();
+        
+        console.log('Applying filters:', { bookingFilter, tripDetectionFilter, searchText }, 'Current emails count:', this.allTravelEmails.length);
         
         // For server-side filters, we need to reload data from API
-        if (filterValue === 'booking_completed' || filterValue === 'has_booking') {
-            this.loadTravelEmails();
+        if (bookingFilter === 'booking_completed' || bookingFilter === 'has_booking' || 
+            tripDetectionFilter !== 'all' || searchText !== '') {
+            // Reset to page 1 when filters change
+            this.currentPage = 1;
+            this.loadTravelEmails(1);
             return;
         }
         
         // Check if we need to reload all emails (when switching from server-side filters to client-side filters)
         // Check if allTravelEmails is empty or if it only contains filtered emails
-        if ((filterValue === 'all' || filterValue === 'extracted') && 
+        if ((bookingFilter === 'all' || bookingFilter === 'extracted') && 
             (this.allTravelEmails.length === 0 || 
              (this.allTravelEmails.length > 0 && 
               this.allTravelEmails.every(email => email.booking_extraction_status === 'completed')))) {
@@ -878,7 +923,8 @@ class EmailImportApp {
         const emailsList = document.getElementById('travel-emails-list');
         let filteredEmails = this.allTravelEmails;
         
-        switch (filterValue) {
+        // Apply booking filter
+        switch (bookingFilter) {
             case 'extracted':
                 filteredEmails = this.allTravelEmails.filter(email => email.content_extracted);
                 break;
@@ -1065,6 +1111,7 @@ class EmailImportApp {
                         <span class="email-id">ID: ${email.email_id}</span>
                     </div>
                     <span class="email-classification">${email.classification || 'unclassified'}</span>
+                    <span class="trip-detection-status ${email.trip_detection_status || 'pending'}">${this.getTripDetectionStatusLabel(email.trip_detection_status)}</span>
                     ${bookingSummaryHtml}
                 </div>
                 <div class="email-actions">
@@ -1080,6 +1127,16 @@ class EmailImportApp {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    getTripDetectionStatusLabel(status) {
+        const statusLabels = {
+            'pending': '⏳ Pending',
+            'processing': '🔄 Processing',
+            'completed': '✅ Completed',
+            'failed': '❌ Failed'
+        };
+        return statusLabels[status] || '⏳ Pending';
     }
 
     async refreshTravelEmails() {

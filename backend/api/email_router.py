@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, List, Optional
+from sqlalchemy import or_
 from services.email_cache_service import EmailCacheService
 from services.email_classification_service import EmailClassificationService
 from lib.config_manager import config_manager
@@ -284,7 +285,9 @@ async def list_emails(
     classification: Optional[str] = Query(None, description="Filter by classification type"),
     limit: Optional[int] = Query(100, description="Maximum number of emails to return"),
     offset: Optional[int] = Query(0, description="Number of emails to skip"),
-    booking_status: Optional[str] = Query(None, description="Filter by booking extraction status")
+    booking_status: Optional[str] = Query(None, description="Filter by booking extraction status"),
+    trip_detection_status: Optional[str] = Query(None, description="Filter by trip detection status"),
+    search: Optional[str] = Query(None, description="Search in subject and email ID")
 ) -> Dict:
     """List emails with optional filtering"""
     db = SessionLocal()
@@ -316,6 +319,23 @@ async def list_emails(
                 ).filter(~EmailContent.extracted_booking_info.contains('"booking_type": null'))
             else:
                 query = query.join(EmailContent).filter(EmailContent.booking_extraction_status == booking_status)
+        
+        # Filter by trip detection status if specified
+        if trip_detection_status:
+            # Join with EmailContent if not already joined
+            if not booking_status:
+                query = query.join(EmailContent)
+            query = query.filter(EmailContent.trip_detection_status == trip_detection_status)
+        
+        # Search filter
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Email.subject.ilike(search_pattern),
+                    Email.email_id.ilike(search_pattern)
+                )
+            )
         
         # Get total count before applying limit/offset
         total_count = query.count()
@@ -353,6 +373,7 @@ async def list_emails(
                 'has_attachments': content_info.has_attachments if content_info else False,
                 'attachments_count': content_info.attachments_count if content_info else 0,
                 'booking_extraction_status': content_info.booking_extraction_status if content_info else 'pending',
+                'trip_detection_status': content_info.trip_detection_status if content_info else 'pending',
                 'has_booking_info': booking_info is not None and booking_info.get('booking_type') is not None,
                 'booking_summary': booking_summary,
                 'raw_booking_info': booking_info

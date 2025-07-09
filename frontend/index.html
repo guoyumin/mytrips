@@ -170,13 +170,33 @@
                         <button onclick="refreshTravelEmails()" class="refresh-btn">🔄 Refresh</button>
                     </div>
                     <div class="travel-filters">
-                        <label for="bookingFilter">Filter by booking extraction:</label>
-                        <select id="bookingFilter" onchange="filterTravelEmails()">
-                            <option value="all">All emails</option>
-                            <option value="extracted">Content extracted only</option>
-                            <option value="booking_completed">Booking extraction completed</option>
-                            <option value="has_booking">Has booking info only</option>
-                        </select>
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label for="bookingFilter">Booking extraction:</label>
+                                <select id="bookingFilter" onchange="filterTravelEmails()">
+                                    <option value="all">All emails</option>
+                                    <option value="extracted">Content extracted only</option>
+                                    <option value="booking_completed">Booking extraction completed</option>
+                                    <option value="has_booking">Has booking info only</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="tripDetectionFilter">Trip detection status:</label>
+                                <select id="tripDetectionFilter" onchange="filterTravelEmails()">
+                                    <option value="all">All status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="processing">Processing</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="failed">Failed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="search-row">
+                            <div class="search-group">
+                                <label for="searchText">Search:</label>
+                                <input type="text" id="searchText" placeholder="Search by subject or email ID..." onkeyup="filterTravelEmails()">
+                            </div>
+                        </div>
                     </div>
                     <div id="travel-emails-list" class="emails-list">
                         <!-- Travel emails will be loaded here -->
@@ -265,6 +285,6 @@
         </div>
     </div>
 
-    <script src="/static/js/app.js?v=17"></script>
+    <script src="/static/js/app.js?v=18"></script>
 </body>
 </html>
