@@ -16,6 +16,8 @@ config/credentials.json
 config/token.json
 config/client_secret*.json
 config/gemini_config.json
+config/openai_config.json
+config/claude_config.json
 *.key
 *.pem
 

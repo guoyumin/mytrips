@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Trip to Zurich Area",
+    "destination": "Zurich Area",
+    "start_date": "2024-06-29",
+    "end_date": "2024-06-29",
+    "cities_visited": [
+      "Zurich",
+      "Zurich Area",
+      "Zurich"
+    ],
+    "total_cost": 9.2,
+    "transport_segments": [
+      {
+        "segment_type": "train",
+        "departure_location": "Zurich, Switzerland",
+        "arrival_location": "Zurich Area, Switzerland",
+        "departure_datetime": "2024-06-29 10:49",
+        "arrival_datetime": "2024-06-29 12:49",
+        "carrier_name": "SBB CFF FFS",
+        "segment_number": null,
+        "distance_km": 25.0,
+        "distance_type": "straight",
+        "cost": 4.6,
+        "booking_platform": "SBB",
+        "confirmation_number": "169174093398",
+        "status": "confirmed",
+        "is_latest_version": true,
+        "related_email_ids": [
+          "19063209a7b25d01"
+        ]
+      },
+      {
+        "segment_type": "train",
+        "departure_location": "Zurich Area, Switzerland",
+        "arrival_location": "Zurich, Switzerland",
+        "departure_datetime": "2024-06-29 15:45",
+        "arrival_datetime": "2024-06-29 17:45",
+        "carrier_name": "SBB",
+        "segment_number": null,
+        "distance_km": 25.0,
+        "distance_type": "straight",
+        "cost": 4.6,
+        "booking_platform": "SBB",
+        "confirmation_number": "443359167623",
+        "status": "confirmed",
+        "is_latest_version": true,
+        "related_email_ids": [
+          "190643593fd9359b"
+        ]
+      }
+    ],
+    "accommodations": [],
+    "tour_activities": [],
+    "cruises": []
+  },
+  {
+    "name": "Trip to Stuttgart",
+    "destination": "Stuttgart",
+    "start_date": "2024-07-05",
+    "end_date": "2024-07-07",
+    "cities_visited": [
+      "Zurich",
+      "Stuttgart",
+      "Zurich"
+    ],
+    "total_cost": 0.0,
+    "transport_segments": [],
+    "accommodations": [
+      {
+        "property_name": "Le Méridien Stuttgart",
+        "check_in_date": "2024-07-05",
+        "check_out_date": "2024-07-07",
+        "address": "Willy-Brandt-Strasse 30 Stuttgart 70173 Germany",
+        "city": "Stuttgart",
+        "country": "Germany",
+        "cost": 0.0,
+        "booking_platform": "Marriott",
+        "confirmation_number": "70086912",
+        "status": "confirmed",
+        "is_latest_version": true,
+        "related_email_ids": [
+          "190684034abb6299"
+        ]
+      }
+    ],
+    "tour_activities": [],
+    "cruises": []
+  }
+]

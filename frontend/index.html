@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyTrips - Travel Email Manager</title>
-    <link rel="stylesheet" href="/static/css/app.css?v=6">
+    <link rel="stylesheet" href="/static/css/app.css?v=9">
     <style>
         /* Emergency CSS fix for layout */
         .main-content { 
@@ -56,6 +56,18 @@
 
                 <div class="function-group active" data-function="status">
                     <h3>📊 Status</h3>
+                </div>
+
+                <div class="function-group" data-function="booking-extraction">
+                    <h3>🔍 Extract Bookings</h3>
+                </div>
+
+                <div class="function-group" data-function="trip-detection">
+                    <h3>🗺️ Trip Detection</h3>
+                </div>
+
+                <div class="function-group" data-function="my-trips">
+                    <h3>✈️ My Trips</h3>
                 </div>
             </nav>
 
@@ -157,8 +169,20 @@
                         <h2>✈️ Travel Emails</h2>
                         <button onclick="refreshTravelEmails()" class="refresh-btn">🔄 Refresh</button>
                     </div>
+                    <div class="travel-filters">
+                        <label for="bookingFilter">Filter by booking extraction:</label>
+                        <select id="bookingFilter" onchange="filterTravelEmails()">
+                            <option value="all">All emails</option>
+                            <option value="extracted">Content extracted only</option>
+                            <option value="booking_completed">Booking extraction completed</option>
+                            <option value="has_booking">Has booking info only</option>
+                        </select>
+                    </div>
                     <div id="travel-emails-list" class="emails-list">
                         <!-- Travel emails will be loaded here -->
+                    </div>
+                    <div id="pagination-controls" class="pagination-controls" style="display: none;">
+                        <!-- Pagination controls will be added here -->
                     </div>
                 </div>
 
@@ -172,10 +196,75 @@
                         <!-- Status content will be loaded here -->
                     </div>
                 </div>
+
+                <!-- Gemini Usage Section -->
+                <div id="gemini-usage-section" class="function-section" style="display:block;">
+                    <div class="section-header">
+                        <h2>🤖 Gemini API Usage</h2>
+                        <button onclick="refreshGeminiUsage()" class="refresh-btn">🔄 Refresh</button>
+                    </div>
+                    <div id="gemini-usage-content">
+                        <!-- Gemini usage stats will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Booking Extraction Section -->
+                <div id="booking-extraction-section" class="function-section" style="display:none;">
+                    <h2>🔍 Extract Booking Information</h2>
+                    <p>Step 1: Extract detailed booking information from individual travel emails using AI analysis.</p>
+                    
+                    <div class="control-group">
+                        <div class="button-group">
+                            <button id="extractBookingsBtn" onclick="extractBookings()" class="primary-btn">Extract Bookings</button>
+                            <button id="stopBookingExtractionBtn" onclick="stopBookingExtraction()" class="stop-btn" style="display:none;">Stop Extraction</button>
+                        </div>
+                        <div class="info-text">
+                            <small>This step analyzes individual emails to extract structured booking information. This is required before trip detection can run.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trip Detection Section -->
+                <div id="trip-detection-section" class="function-section" style="display:none;">
+                    <h2>🗺️ Trip Detection</h2>
+                    <p>Step 2: Analyze extracted booking information to automatically detect and organize trips.</p>
+                    
+                    <div class="control-group">
+                        <div class="button-group">
+                            <button id="detectTripsBtn" onclick="detectTrips()" class="primary-btn">Detect Trips</button>
+                            <button id="stopDetectionBtn" onclick="stopTripDetection()" class="stop-btn" style="display:none;">Stop Detection</button>
+                        </div>
+                        <div class="info-text">
+                            <small>AI will analyze extracted booking information to identify trips, group related bookings, and handle changes/cancellations. Requires booking extraction to be completed first.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- My Trips Section -->
+                <div id="my-trips-section" class="function-section" style="display:none;">
+                    <div class="section-header">
+                        <h2>✈️ My Trips</h2>
+                        <button onclick="refreshTrips()" class="refresh-btn">🔄 Refresh</button>
+                    </div>
+                    <div id="trips-list" class="trips-list">
+                        <!-- Trip list will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Trip Detail Section -->
+                <div id="trip-detail-section" class="function-section" style="display:none;">
+                    <div class="section-header">
+                        <button onclick="backToTripList()" class="back-btn">← Back to Trips</button>
+                        <h2 id="trip-detail-title">Trip Details</h2>
+                    </div>
+                    <div id="trip-detail-content">
+                        <!-- Trip details will be loaded here -->
+                    </div>
+                </div>
             </main>
         </div>
     </div>
 
-    <script src="/static/js/app.js?v=6"></script>
+    <script src="/static/js/app.js?v=17"></script>
 </body>
 </html>

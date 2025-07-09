@@ -1,17 +1,21 @@
 import google.generativeai as genai
 import json
 import os
+import logging
 from typing import List, Dict, Optional
 import time
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+
 class GeminiService:
     """Service for interacting with Google Gemini AI"""
     
-    def __init__(self):
-        self.model = self._initialize_model()
+    def __init__(self, model_name='gemini-2.5-pro'):
+        self.model_name = model_name
+        self.model = self._initialize_model(model_name)
         
-    def _initialize_model(self):
+    def _initialize_model(self, model_name='gemini-2.5-pro'):
         """Initialize Gemini AI model with API key"""
         # Load API key from config
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -30,8 +34,8 @@ class GeminiService:
         # Configure Gemini
         genai.configure(api_key=api_key)
         
-        # Use Gemini 2.5 Pro model for best performance
-        return genai.GenerativeModel('gemini-2.5-pro')
+        # Initialize the specified model
+        return genai.GenerativeModel(model_name)
     
     def classify_emails_batch(self, emails: List[Dict]) -> List[Dict]:
         """
@@ -169,20 +173,106 @@ Emails to classify:
             'is_travel_related': False
         }
     
-    def estimate_token_cost(self, num_emails: int) -> Dict:
-        """Estimate token usage and cost for classification"""
-        # Rough estimation: ~50 tokens per email in prompt + response
-        estimated_tokens = num_emails * 50
+    def estimate_token_cost(self, num_emails: int, task_type: str = 'classification') -> Dict:
+        """Estimate token usage and cost for different tasks"""
         
-        # Gemini Pro pricing (approximate)
-        input_cost_per_1k = 0.000125  # $0.000125 per 1K input tokens
-        output_cost_per_1k = 0.000375  # $0.000375 per 1K output tokens
+        # Get model-specific pricing
+        pricing = self._get_model_pricing()
         
-        estimated_cost = (estimated_tokens * input_cost_per_1k / 1000) + \
-                        (num_emails * 20 * output_cost_per_1k / 1000)  # ~20 tokens per response
+        if task_type == 'classification':
+            # Rough estimation: ~50 tokens per email in prompt + response
+            estimated_input_tokens = num_emails * 50
+            estimated_output_tokens = num_emails * 20
+        elif task_type == 'booking_extraction':
+            # Booking extraction uses more tokens per email (full content analysis)
+            estimated_input_tokens = num_emails * 500  # Larger prompts with full email content
+            estimated_output_tokens = num_emails * 100  # More detailed extraction output
+        elif task_type == 'trip_detection':
+            # Trip detection analyzes batches of extracted data
+            batch_size = 50
+            num_batches = (num_emails + batch_size - 1) // batch_size
+            estimated_input_tokens = num_batches * 2000  # Complex analysis prompts
+            estimated_output_tokens = num_batches * 500   # Detailed trip structures
+        else:
+            # Default estimation
+            estimated_input_tokens = num_emails * 100
+            estimated_output_tokens = num_emails * 50
+        
+        input_cost = (estimated_input_tokens * pricing['input_cost_per_1k'] / 1000)
+        output_cost = (estimated_output_tokens * pricing['output_cost_per_1k'] / 1000)
+        total_cost = input_cost + output_cost
         
         return {
-            'estimated_input_tokens': estimated_tokens,
-            'estimated_output_tokens': num_emails * 20,
-            'estimated_cost_usd': round(estimated_cost, 6)
+            'model': self.model_name,
+            'task_type': task_type,
+            'estimated_input_tokens': estimated_input_tokens,
+            'estimated_output_tokens': estimated_output_tokens,
+            'input_cost_usd': round(input_cost, 6),
+            'output_cost_usd': round(output_cost, 6),
+            'estimated_cost_usd': round(total_cost, 6)
         }
+    
+    def _get_model_pricing(self) -> Dict:
+        """Get pricing information for the current model from config file"""
+        try:
+            # Load pricing config
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            pricing_config_path = os.path.join(project_root, 'config', 'gemini_pricing.json')
+            
+            if not os.path.exists(pricing_config_path):
+                # Fallback to default pricing if config not found
+                return self._get_fallback_pricing()
+            
+            with open(pricing_config_path, 'r') as f:
+                pricing_config = json.load(f)
+            
+            pricing_data = pricing_config.get('pricing', {})
+            
+            # Find matching model pricing
+            model_pricing = None
+            for model_key, pricing in pricing_data.items():
+                if model_key.lower() in self.model_name.lower():
+                    model_pricing = pricing
+                    break
+            
+            if not model_pricing:
+                # Fallback if model not found in config
+                return self._get_fallback_pricing()
+            
+            # Convert from per 1M tokens to per 1K tokens
+            if 'gemini-2.5-pro' in self.model_name.lower():
+                # Use small context pricing as default (≤200k tokens)
+                input_cost_per_1k = model_pricing.get('input_cost_per_1m_tokens_small', 1.25) / 1000
+                output_cost_per_1k = model_pricing.get('output_cost_per_1m_tokens_small', 10.00) / 1000
+            else:
+                # Flash models and others
+                input_cost_per_1k = model_pricing.get('input_cost_per_1m_tokens', 0.30) / 1000
+                output_cost_per_1k = model_pricing.get('output_cost_per_1m_tokens', 2.50) / 1000
+            
+            return {
+                'input_cost_per_1k': input_cost_per_1k,
+                'output_cost_per_1k': output_cost_per_1k,
+                'source': 'config_file',
+                'model_info': model_pricing
+            }
+            
+        except Exception as e:
+            print(f"Error loading pricing config: {e}")
+            return self._get_fallback_pricing()
+    
+    def _get_fallback_pricing(self) -> Dict:
+        """Fallback pricing if config file is not available"""
+        if 'flash' in self.model_name.lower():
+            # Gemini 2.5-flash fallback pricing
+            return {
+                'input_cost_per_1k': 0.0003,     # $0.30 per 1M = $0.0003 per 1K
+                'output_cost_per_1k': 0.0025,    # $2.50 per 1M = $0.0025 per 1K
+                'source': 'fallback'
+            }
+        else:
+            # Gemini 2.5-pro fallback pricing
+            return {
+                'input_cost_per_1k': 0.00125,    # $1.25 per 1M = $0.00125 per 1K
+                'output_cost_per_1k': 0.01,      # $10.00 per 1M = $0.01 per 1K
+                'source': 'fallback'
+            }

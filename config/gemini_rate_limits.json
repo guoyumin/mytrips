@@ -1,0 +1,54 @@
+{
+  "rate_limits": {
+    "gemini-2.5-pro": {
+      "requests_per_minute": 5,
+      "requests_per_day": 100,
+      "tokens_per_minute": 250000,
+      "description": "High-performance model with strict limits"
+    },
+    "gemini-2.5-flash": {
+      "requests_per_minute": 10,
+      "requests_per_day": 1000,
+      "tokens_per_minute": 250000,
+      "description": "Cost-effective model with moderate limits"
+    },
+    "gemini-2.0-flash": {
+      "requests_per_minute": 15,
+      "requests_per_day": 1000,
+      "tokens_per_minute": 1000000,
+      "description": "Latest flash model with higher limits"
+    },
+    "gemini-1.5-flash": {
+      "requests_per_minute": 10,
+      "requests_per_day": 1000,
+      "tokens_per_minute": 250000,
+      "description": "Legacy flash model"
+    }
+  },
+  "safety_margins": {
+    "requests_per_minute_factor": 0.8,
+    "requests_per_day_factor": 0.9,
+    "tokens_per_minute_factor": 0.8,
+    "description": "Apply safety margins to avoid hitting exact limits"
+  },
+  "batch_recommendations": {
+    "gemini-2.5-pro": {
+      "max_batch_size": 5,
+      "min_delay_seconds": 12,
+      "description": "Process 5 requests per minute with 12s delays"
+    },
+    "gemini-2.5-flash": {
+      "max_batch_size": 8,
+      "min_delay_seconds": 6,
+      "description": "Process 8 requests per minute with 6s delays"
+    }
+  },
+  "notes": [
+    "Rate limits are applied per project, not per API key",
+    "Actual capacity may vary and is not guaranteed",
+    "Safety margins help avoid temporary rate limit hits",
+    "Monitor usage and adjust batch sizes accordingly"
+  ],
+  "source": "https://ai.google.dev/gemini-api/docs/rate-limits",
+  "last_updated": "2025-01-07"
+}

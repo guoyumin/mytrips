@@ -4,10 +4,10 @@ import threading
 import time
 import logging
 
-from services.gemini_service import GeminiService
 from lib.email_cache_db import EmailCacheDB
 from lib.email_classifier import EmailClassifier
 from lib.config_manager import config_manager
+from lib.ai.ai_provider_factory import AIProviderFactory
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -15,19 +15,17 @@ logger = logging.getLogger(__name__)
 class EmailClassificationService:
     """Service for classifying emails using Gemini AI"""
     
-    def __init__(self, gemini_config_path: str = None):
-        # Use config manager for paths
-        if gemini_config_path is None:
-            gemini_config_path = config_manager.get_gemini_config_path()
-            
+    def __init__(self):
         # Initialize email cache using database
         self.email_cache = EmailCacheDB()
         
-        # Try to initialize email classifier
+        # Try to initialize email classifier with fast model for cost efficiency
         try:
-            logger.debug(f"Initializing email classifier with config: {gemini_config_path}")
-            self.email_classifier = EmailClassifier(gemini_config_path)
-            logger.debug("Email classifier initialized successfully")
+            logger.debug("Initializing AI provider for email classification")
+            ai_provider = AIProviderFactory.create_provider(model_tier='fast')
+            self.email_classifier = EmailClassifier(ai_provider)
+            model_info = ai_provider.get_model_info()
+            logger.debug(f"Email classifier initialized with {model_info['model_name']}")
         except Exception as e:
             logger.warning(f"Email classifier not available: {e}")
             self.email_classifier = None
@@ -44,10 +42,11 @@ class EmailClassificationService:
         self._classification_thread = None
         self._lock = threading.Lock()  # Add thread lock for safety
         
-        # Keep Gemini service for backward compatibility
+        # No longer need separate Gemini service - AI provider handles all models
+        self.ai_provider = None
         try:
-            logger.debug("Initializing Gemini service for backward compatibility")
-            self.gemini_service = GeminiService()
+            if self.email_classifier:
+                self.ai_provider = self.email_classifier.ai_provider
             logger.debug("Gemini service initialized successfully")
         except Exception as e:
             logger.warning(f"Gemini service not available: {e}")

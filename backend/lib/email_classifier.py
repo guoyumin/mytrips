@@ -3,11 +3,15 @@
 使用 AI 对邮件进行分类
 """
 import json
-from typing import List, Dict, Optional, Tuple
-import google.generativeai as genai
+import logging
+from typing import List, Dict, Optional
+from lib.ai.ai_provider_interface import AIProviderInterface
+
+logger = logging.getLogger(__name__)
+
 
 class EmailClassifier:
-    """邮件分类器"""
+    """邮件分类器 - 使用依赖注入的AI Provider"""
     
     # 旅行相关分类
     TRAVEL_CATEGORIES = {
@@ -21,29 +25,15 @@ class EmailClassifier:
         'marketing', 'not_travel', 'classification_failed'
     }
     
-    def __init__(self, config_path: str = None, api_key: str = None, model_name: str = 'gemini-2.5-pro'):
+    def __init__(self, ai_provider: AIProviderInterface):
         """
         初始化分类器
         
         Args:
-            config_path: Gemini 配置文件路径
-            api_key: Gemini API 密钥（可选，如果提供则忽略config_path）
-            model_name: 使用的模型名称
+            ai_provider: AI提供商实例
         """
-        if api_key:
-            # 直接使用提供的API密钥
-            genai.configure(api_key=api_key)
-        elif config_path:
-            # 从配置文件读取
-            with open(config_path, 'r') as f:
-                config = json.load(f)
-            genai.configure(api_key=config['api_key'])
-            if 'model' in config:
-                model_name = config['model']
-        else:
-            raise ValueError("必须提供 api_key 或 config_path")
-        
-        self.model = genai.GenerativeModel(model_name)
+        self.ai_provider = ai_provider
+        logger.info(f"EmailClassifier initialized with {ai_provider.get_model_info()['model_name']}")
     
     def classify_batch(self, emails: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """
@@ -62,16 +52,16 @@ class EmailClassifier:
         prompt = self._create_classification_prompt(emails)
         
         try:
-            # 调用 AI 模型
-            response = self.model.generate_content(prompt)
+            # 调用 AI Provider
+            response_text = self.ai_provider.generate_content(prompt)
             
             # 解析响应
-            classifications = self._parse_response(response.text, emails)
+            classifications = self._parse_response(response_text, emails)
             
             return classifications
             
         except Exception as e:
-            print(f"分类错误: {e}")
+            logger.error(f"分类错误: {e}")
             # 返回默认分类
             return [self._create_failed_classification(email) for email in emails]
     
@@ -154,8 +144,8 @@ Emails to classify:
             return results
             
         except Exception as e:
-            print(f"解析响应失败: {e}")
-            print(f"原始响应: {response_text[:200]}...")
+            logger.error(f"解析响应失败: {e}")
+            logger.error(f"原始响应: {response_text[:200]}...")
             return [self._create_failed_classification(email) for email in emails]
     
     def _create_failed_classification(self, email: Dict[str, str]) -> Dict[str, str]:
@@ -180,17 +170,8 @@ Emails to classify:
         Returns:
             成本估算信息
         """
-        # 粗略估算：每封邮件约 50 个 token（输入 + 输出）
-        estimated_tokens = num_emails * 50
+        # 粗略估算：每封邮件约 50 个字符的prompt
+        estimated_prompt_length = num_emails * 50
         
-        # Gemini Pro 定价（近似值）
-        input_cost_per_1k = 0.000125
-        output_cost_per_1k = 0.000375
-        
-        estimated_cost = (estimated_tokens * input_cost_per_1k / 1000) + \
-                        (num_emails * 20 * output_cost_per_1k / 1000)
-        
-        return {
-            'estimated_tokens': estimated_tokens,
-            'estimated_cost_usd': round(estimated_cost, 6)
-        }
+        # 使用AI Provider的成本估算
+        return self.ai_provider.estimate_cost(estimated_prompt_length)

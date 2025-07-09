@@ -4,13 +4,150 @@ from services.email_cache_service import EmailCacheService
 from services.email_classification_service import EmailClassificationService
 from lib.config_manager import config_manager
 from database.config import SessionLocal
-from database.models import Email, EmailContent
+from database.models import Email, EmailContent, Trip
+from services.rate_limiter import get_rate_limiter
+import json
 
 router = APIRouter()
 
 # Global service instances
 email_cache_service = EmailCacheService()
 classification_service = EmailClassificationService()
+
+def get_trip_detection_stats(db, booking_completed_count):
+    """Get trip detection statistics"""
+    try:
+        # Trip detection status counts
+        trip_pending_count = db.query(EmailContent).filter_by(trip_detection_status='pending').count()
+        trip_processing_count = db.query(EmailContent).filter_by(trip_detection_status='processing').count()
+        trip_completed_count = db.query(EmailContent).filter_by(trip_detection_status='completed').count()
+        trip_failed_count = db.query(EmailContent).filter_by(trip_detection_status='failed').count()
+        
+        # Count detected trips
+        total_trips = db.query(Trip).count()
+        
+        # Count emails with actual booking info (non-null booking_type)
+        booking_emails_count = 0
+        if booking_completed_count > 0:
+            # Get count of emails with actual booking information (not just completed extraction)
+            booking_emails = db.query(EmailContent).filter(
+                EmailContent.booking_extraction_status == 'completed',
+                EmailContent.extracted_booking_info.isnot(None)
+            ).all()
+            
+            for email_content in booking_emails:
+                try:
+                    booking_info = json.loads(email_content.extracted_booking_info)
+                    if booking_info.get('booking_type'):  # Has actual booking info
+                        booking_emails_count += 1
+                except:
+                    continue
+        
+        return {
+            'pending': trip_pending_count,
+            'processing': trip_processing_count,  
+            'completed': trip_completed_count,
+            'failed': trip_failed_count,
+            'total_trips_detected': total_trips,
+            'booking_emails_count': booking_emails_count,
+            'completion_rate': round(trip_completed_count / booking_emails_count * 100, 1) if booking_emails_count > 0 else 0,
+            'trip_coverage_rate': round(total_trips / booking_emails_count * 100, 1) if booking_emails_count > 0 else 0
+        }
+        
+    except Exception as e:
+        print(f"Error getting trip detection stats: {e}")
+        return {
+            'pending': 0,
+            'processing': 0,
+            'completed': 0,
+            'failed': 0,
+            'total_trips_detected': 0,
+            'booking_emails_count': 0,
+            'completion_rate': 0,
+            'trip_coverage_rate': 0
+        }
+
+def _create_booking_summary(booking_info: dict) -> dict:
+    """Create a summary of booking information for display"""
+    if not booking_info:
+        return None
+    
+    # Handle non-booking emails (booking_type is null)
+    if booking_info.get('booking_type') is None:
+        return {
+            'booking_type': None,
+            'non_booking_type': booking_info.get('non_booking_type', 'unknown'),
+            'reason': booking_info.get('reason', 'Not a booking email'),
+            'status': 'non_booking',
+            'confirmation_numbers': [],
+            'key_details': []
+        }
+    
+    summary = {
+        'booking_type': booking_info.get('booking_type', 'unknown'),
+        'status': booking_info.get('status', 'unknown'),
+        'confirmation_numbers': booking_info.get('confirmation_numbers', []),
+        'key_details': []
+    }
+    
+    # Add type-specific details
+    if 'transport_details' in booking_info and booking_info['transport_details']:
+        transport_details = booking_info['transport_details']
+        
+        # Handle both single transport detail (dict) and multiple transport details (list)
+        if isinstance(transport_details, list):
+            for i, transport in enumerate(transport_details):
+                segment_label = f"Segment {i+1}" if len(transport_details) > 1 else ""
+                detail = f"{transport.get('segment_type', 'Transport').title()}: {transport.get('carrier', '')} {transport.get('flight_number', '')}"
+                if transport.get('departure_location') and transport.get('arrival_location'):
+                    detail += f" from {transport['departure_location']} to {transport['arrival_location']}"
+                if transport.get('departure_datetime'):
+                    detail += f" on {transport['departure_datetime'][:10]}"
+                if segment_label:
+                    detail = f"{segment_label} - {detail}"
+                summary['key_details'].append(detail)
+        else:
+            # Single transport detail (backward compatibility)
+            transport = transport_details
+            detail = f"{transport.get('segment_type', 'Transport').title()}: {transport.get('carrier', '')} {transport.get('flight_number', '')}"
+            if transport.get('departure_location') and transport.get('arrival_location'):
+                detail += f" from {transport['departure_location']} to {transport['arrival_location']}"
+            if transport.get('departure_datetime'):
+                detail += f" on {transport['departure_datetime'][:10]}"
+            summary['key_details'].append(detail)
+    
+    if 'accommodation_details' in booking_info and booking_info['accommodation_details']:
+        hotel = booking_info['accommodation_details']
+        detail = f"Hotel: {hotel.get('property_name', 'Unknown')}"
+        if hotel.get('city'):
+            detail += f" in {hotel['city']}"
+        if hotel.get('check_in_date') and hotel.get('check_out_date'):
+            detail += f" ({hotel['check_in_date']} to {hotel['check_out_date']})"
+        summary['key_details'].append(detail)
+    
+    if 'activity_details' in booking_info and booking_info['activity_details']:
+        activity = booking_info['activity_details']
+        detail = f"Activity: {activity.get('activity_name', 'Unknown')}"
+        if activity.get('location'):
+            detail += f" at {activity['location']}"
+        if activity.get('start_datetime'):
+            detail += f" on {activity['start_datetime'][:10]}"
+        summary['key_details'].append(detail)
+    
+    if 'cruise_details' in booking_info and booking_info['cruise_details']:
+        cruise = booking_info['cruise_details']
+        detail = f"Cruise: {cruise.get('cruise_line', '')} - {cruise.get('ship_name', '')}"
+        if cruise.get('departure_datetime'):
+            detail += f" departing {cruise['departure_datetime'][:10]}"
+        summary['key_details'].append(detail)
+    
+    # Add cost information
+    if 'cost_info' in booking_info and booking_info['cost_info']:
+        cost = booking_info['cost_info']
+        if cost.get('total_cost'):
+            summary['total_cost'] = f"{cost.get('currency', '')} {cost['total_cost']}"
+    
+    return summary
 
 @router.post("/import") 
 async def start_email_import(request: dict) -> Dict:
@@ -145,8 +282,10 @@ async def set_log_level(request: dict) -> Dict:
 @router.get("/list")
 async def list_emails(
     classification: Optional[str] = Query(None, description="Filter by classification type"),
-    limit: Optional[int] = Query(100, description="Maximum number of emails to return")
-) -> List[Dict]:
+    limit: Optional[int] = Query(100, description="Maximum number of emails to return"),
+    offset: Optional[int] = Query(0, description="Number of emails to skip"),
+    booking_status: Optional[str] = Query(None, description="Filter by booking extraction status")
+) -> Dict:
     """List emails with optional filtering"""
     db = SessionLocal()
     try:
@@ -165,17 +304,43 @@ async def list_emails(
             else:
                 query = query.filter(Email.classification == classification)
         
-        # Apply limit and order by date
-        emails = query.order_by(Email.timestamp.desc()).limit(limit).all()
+        # Filter by booking status if specified
+        if booking_status:
+            if booking_status == 'has_booking':
+                # Special filter for emails that have actual booking information
+                query = query.join(EmailContent).filter(
+                    EmailContent.booking_extraction_status == 'completed',
+                    EmailContent.extracted_booking_info.isnot(None),
+                    EmailContent.extracted_booking_info != 'null',
+                    EmailContent.extracted_booking_info.contains('"booking_type"')
+                ).filter(~EmailContent.extracted_booking_info.contains('"booking_type": null'))
+            else:
+                query = query.join(EmailContent).filter(EmailContent.booking_extraction_status == booking_status)
         
-        # Check for extracted content for each email
+        # Get total count before applying limit/offset
+        total_count = query.count()
+        
+        # Apply offset, limit and order by date
+        emails = query.order_by(Email.timestamp.desc()).offset(offset).limit(limit).all()
+        
+        # Check for extracted content and booking info for each email
         email_list = []
         for email in emails:
-            # Check if content has been extracted
+            # Check if content has been extracted (any status, not just 'completed')
             content_info = db.query(EmailContent).filter_by(
-                email_id=email.email_id,
-                extraction_status='completed'
+                email_id=email.email_id
             ).first()
+            
+            # Parse extracted booking info if available
+            booking_info = None
+            booking_summary = None
+            if content_info and content_info.extracted_booking_info:
+                try:
+                    booking_info = json.loads(content_info.extracted_booking_info)
+                    booking_summary = _create_booking_summary(booking_info)
+                except:
+                    booking_info = None
+                    booking_summary = None
             
             email_dict = {
                 'email_id': email.email_id,
@@ -184,15 +349,78 @@ async def list_emails(
                 'date': email.date,
                 'timestamp': email.timestamp.isoformat() if email.timestamp else None,
                 'classification': email.classification,
-                'content_extracted': content_info is not None,  # Based on EmailContent table existence
+                'content_extracted': content_info is not None and content_info.extraction_status == 'completed',
                 'has_attachments': content_info.has_attachments if content_info else False,
-                'attachments_count': content_info.attachments_count if content_info else 0
+                'attachments_count': content_info.attachments_count if content_info else 0,
+                'booking_extraction_status': content_info.booking_extraction_status if content_info else 'pending',
+                'has_booking_info': booking_info is not None and booking_info.get('booking_type') is not None,
+                'booking_summary': booking_summary,
+                'raw_booking_info': booking_info
             }
             email_list.append(email_dict)
-            
-        return email_list
+        
+        return {
+            'emails': email_list,
+            'total_count': total_count,
+            'limit': limit,
+            'offset': offset,
+            'has_more': offset + len(email_list) < total_count
+        }
         
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@router.get("/{email_id}/booking-info")
+async def get_email_booking_info(email_id: str) -> Dict:
+    """Get detailed booking information for a specific email"""
+    db = SessionLocal()
+    try:
+        # Get email content (any extraction status)
+        content_info = db.query(EmailContent).filter_by(
+            email_id=email_id
+        ).first()
+        
+        if not content_info:
+            raise HTTPException(status_code=404, detail="Email content not found")
+        
+        # Get email basic info
+        email = db.query(Email).filter_by(email_id=email_id).first()
+        if not email:
+            raise HTTPException(status_code=404, detail="Email not found")
+        
+        # Parse booking info - show raw response even if no booking found
+        booking_info = None
+        raw_booking_response = content_info.extracted_booking_info
+        
+        if raw_booking_response:
+            try:
+                booking_info = json.loads(raw_booking_response)
+            except json.JSONDecodeError:
+                # If it's not valid JSON, treat it as raw text
+                booking_info = {"raw_response": raw_booking_response}
+        
+        return {
+            'email_id': email_id,
+            'subject': email.subject,
+            'sender': email.sender,
+            'date': email.date,
+            'classification': email.classification,
+            'booking_extraction_status': content_info.booking_extraction_status or 'pending',
+            'booking_extraction_error': content_info.booking_extraction_error,
+            'has_booking_info': booking_info is not None and isinstance(booking_info, dict) and booking_info.get('booking_type') is not None,
+            'booking_info': booking_info,
+            'raw_booking_response': raw_booking_response,
+            'booking_summary': _create_booking_summary(booking_info) if booking_info and isinstance(booking_info, dict) and booking_info.get('booking_type') else None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"Error in get_email_booking_info: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
@@ -259,31 +487,77 @@ async def get_detailed_email_stats() -> Dict:
             total_travel_emails += count
         
         # 内容提取统计 - 只统计旅行相关邮件的提取状态
-        # 首先获取所有旅行相关邮件的ID
-        travel_email_ids = db.query(Email.email_id).filter(
-            Email.classification.in_(travel_categories)
-        ).subquery()
+        # 首先获取所有旅行相关邮件的ID列表
+        travel_email_ids_list = [
+            row[0] for row in db.query(Email.email_id).filter(
+                Email.classification.in_(travel_categories)
+            ).all()
+        ]
         
-        # 统计旅行邮件中已完成提取的数量
-        content_extracted_count = db.query(EmailContent).filter(
-            EmailContent.extraction_status == 'completed',
-            EmailContent.email_id.in_(travel_email_ids)
-        ).count()
+        # 初始化计数器
+        content_extracted_count = 0
+        content_failed_count = 0
+        content_extracting_count = 0
+        content_pending_count = 0
+        booking_completed_count = 0
+        booking_failed_count = 0
+        booking_extracting_count = 0
+        booking_pending_count = 0
         
-        # 统计旅行邮件中提取失败的数量
-        content_failed_count = db.query(EmailContent).filter(
-            EmailContent.extraction_status == 'failed',
-            EmailContent.email_id.in_(travel_email_ids)
-        ).count()
-        
-        # 统计旅行邮件中正在提取的数量
-        content_extracting_count = db.query(EmailContent).filter(
-            EmailContent.extraction_status == 'extracting',
-            EmailContent.email_id.in_(travel_email_ids)
-        ).count()
-        
-        # 统计旅行邮件中待提取的数量（还没有EmailContent记录的）
-        content_pending_count = total_travel_emails - content_extracted_count - content_failed_count - content_extracting_count
+        try:
+            # 检查EmailContent表是否有新字段
+            # 先尝试一个简单的查询来测试字段是否存在
+            test_query = db.query(EmailContent).filter(
+                EmailContent.email_id.in_(travel_email_ids_list)
+            ).first()
+            
+            # 如果到这里没有异常，说明基础字段存在，继续统计
+            content_extracted_count = db.query(EmailContent).filter(
+                EmailContent.extraction_status == 'completed',
+                EmailContent.email_id.in_(travel_email_ids_list)
+            ).count()
+            
+            content_failed_count = db.query(EmailContent).filter(
+                EmailContent.extraction_status == 'failed',
+                EmailContent.email_id.in_(travel_email_ids_list)
+            ).count()
+            
+            content_extracting_count = db.query(EmailContent).filter(
+                EmailContent.extraction_status == 'extracting',
+                EmailContent.email_id.in_(travel_email_ids_list)
+            ).count()
+            
+            content_pending_count = total_travel_emails - content_extracted_count - content_failed_count - content_extracting_count
+            
+            # 现在尝试booking extraction相关的查询
+            try:
+                booking_completed_count = db.query(EmailContent).filter(
+                    EmailContent.booking_extraction_status == 'completed',
+                    EmailContent.email_id.in_(travel_email_ids_list)
+                ).count()
+                
+                booking_failed_count = db.query(EmailContent).filter(
+                    EmailContent.booking_extraction_status == 'failed',
+                    EmailContent.email_id.in_(travel_email_ids_list)
+                ).count()
+                
+                booking_extracting_count = db.query(EmailContent).filter(
+                    EmailContent.booking_extraction_status == 'extracting',
+                    EmailContent.email_id.in_(travel_email_ids_list)
+                ).count()
+                
+                # 已提取内容但尚未进行booking extraction的数量
+                booking_pending_count = content_extracted_count - booking_completed_count - booking_failed_count - booking_extracting_count
+                
+            except Exception as e:
+                # booking extraction字段不存在，所有已提取内容的邮件都标记为待处理
+                booking_pending_count = content_extracted_count
+                print(f"Booking extraction columns not found, marking {content_extracted_count} emails as pending booking extraction")
+                
+        except Exception as e:
+            # EmailContent表查询失败，可能表不存在或字段有问题
+            print(f"EmailContent table query failed: {e}")
+            content_pending_count = total_travel_emails
         
         return {
             'total_emails': total_emails,
@@ -304,7 +578,15 @@ async def get_detailed_email_stats() -> Dict:
                 'extracting': content_extracting_count,
                 'pending': content_pending_count if content_pending_count > 0 else 0,
                 'extraction_rate': round(content_extracted_count / total_travel_emails * 100, 1) if total_travel_emails > 0 else 0
-            }
+            },
+            'booking_extraction': {
+                'completed': booking_completed_count,
+                'failed': booking_failed_count,
+                'extracting': booking_extracting_count,
+                'pending': booking_pending_count if booking_pending_count > 0 else 0,
+                'completion_rate': round(booking_completed_count / content_extracted_count * 100, 1) if content_extracted_count > 0 else 0
+            },
+            'trip_detection': get_trip_detection_stats(db, booking_completed_count)
         }
         
     except Exception as e:
@@ -312,3 +594,28 @@ async def get_detailed_email_stats() -> Dict:
         
     finally:
         db.close()
+
+@router.get("/gemini-usage")
+async def get_gemini_usage() -> Dict:
+    """Get current Gemini API usage statistics"""
+    try:
+        rate_limiter = get_rate_limiter()
+        usage_stats = rate_limiter.get_usage_stats()
+        
+        # Calculate summary statistics
+        total_rpm = sum(stats.get('requests_last_minute', 0) for stats in usage_stats.values())
+        total_rpd = sum(stats.get('requests_today', 0) for stats in usage_stats.values())
+        total_tokens = sum(stats.get('tokens_last_minute', 0) for stats in usage_stats.values())
+        
+        return {
+            'summary': {
+                'total_requests_last_minute': total_rpm,
+                'total_requests_today': total_rpd,
+                'total_tokens_last_minute': total_tokens
+            },
+            'by_model': usage_stats,
+            'rate_limits': rate_limiter.rate_limits
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
