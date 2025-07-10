@@ -58,6 +58,7 @@ class TripDetector:
             logger.info(f"Token usage - Input: {input_tokens:,}, Output: {output_tokens:,}, Total: {total_tokens:,}")
             logger.info(f"Estimated cost: ${estimated_cost:.4f} USD")
             
+            
             # Log full response for diagnosis (using DEBUG level to reduce log noise)
             logger.debug(f"Full AI response: {response_text}")
             
@@ -351,4 +352,5 @@ FINAL REMINDER: Output ONLY valid JSON starting with {{ and ending with }}. NO o
         except Exception as e:
             logger.error(f"Error parsing AI response: {e}")
             logger.error(f"Response was: {response_text[:500]}...")
-            return []
+            # Raise exception instead of returning empty list so the service knows there was an error
+            raise Exception(f"Failed to parse AI response: {str(e)}")

@@ -92,55 +92,48 @@ def _create_booking_summary(booking_info: dict) -> dict:
     }
     
     # Add type-specific details
-    if 'transport_details' in booking_info and booking_info['transport_details']:
-        transport_details = booking_info['transport_details']
+    if 'transport_segments' in booking_info and booking_info['transport_segments']:
+        transport_segments = booking_info['transport_segments']
         
-        # Handle both single transport detail (dict) and multiple transport details (list)
-        if isinstance(transport_details, list):
-            for i, transport in enumerate(transport_details):
-                segment_label = f"Segment {i+1}" if len(transport_details) > 1 else ""
-                detail = f"{transport.get('segment_type', 'Transport').title()}: {transport.get('carrier', '')} {transport.get('flight_number', '')}"
-                if transport.get('departure_location') and transport.get('arrival_location'):
-                    detail += f" from {transport['departure_location']} to {transport['arrival_location']}"
-                if transport.get('departure_datetime'):
-                    detail += f" on {transport['departure_datetime'][:10]}"
-                if segment_label:
-                    detail = f"{segment_label} - {detail}"
-                summary['key_details'].append(detail)
-        else:
-            # Single transport detail (backward compatibility)
-            transport = transport_details
-            detail = f"{transport.get('segment_type', 'Transport').title()}: {transport.get('carrier', '')} {transport.get('flight_number', '')}"
+        # Always expect array format
+        for i, transport in enumerate(transport_segments):
+            segment_label = f"Segment {i+1}" if len(transport_segments) > 1 else ""
+            detail = f"{transport.get('segment_type', 'Transport').title()}: {transport.get('carrier_name', '')} {transport.get('segment_number', '')}"
             if transport.get('departure_location') and transport.get('arrival_location'):
                 detail += f" from {transport['departure_location']} to {transport['arrival_location']}"
             if transport.get('departure_datetime'):
                 detail += f" on {transport['departure_datetime'][:10]}"
+            if segment_label:
+                detail = f"{segment_label} - {detail}"
             summary['key_details'].append(detail)
     
-    if 'accommodation_details' in booking_info and booking_info['accommodation_details']:
-        hotel = booking_info['accommodation_details']
-        detail = f"Hotel: {hotel.get('property_name', 'Unknown')}"
-        if hotel.get('city'):
-            detail += f" in {hotel['city']}"
-        if hotel.get('check_in_date') and hotel.get('check_out_date'):
-            detail += f" ({hotel['check_in_date']} to {hotel['check_out_date']})"
-        summary['key_details'].append(detail)
+    if 'accommodations' in booking_info and booking_info['accommodations']:
+        # Always expect array format
+        for accommodation in booking_info['accommodations']:
+            detail = f"Hotel: {accommodation.get('property_name', 'Unknown')}"
+            if accommodation.get('city'):
+                detail += f" in {accommodation['city']}"
+            if accommodation.get('check_in_date') and accommodation.get('check_out_date'):
+                detail += f" ({accommodation['check_in_date']} to {accommodation['check_out_date']})"
+            summary['key_details'].append(detail)
     
-    if 'activity_details' in booking_info and booking_info['activity_details']:
-        activity = booking_info['activity_details']
-        detail = f"Activity: {activity.get('activity_name', 'Unknown')}"
-        if activity.get('location'):
-            detail += f" at {activity['location']}"
-        if activity.get('start_datetime'):
-            detail += f" on {activity['start_datetime'][:10]}"
-        summary['key_details'].append(detail)
+    if 'activities' in booking_info and booking_info['activities']:
+        # Always expect array format
+        for activity in booking_info['activities']:
+            detail = f"Activity: {activity.get('activity_name', 'Unknown')}"
+            if activity.get('location'):
+                detail += f" at {activity['location']}"
+            if activity.get('start_datetime'):
+                detail += f" on {activity['start_datetime'][:10]}"
+            summary['key_details'].append(detail)
     
-    if 'cruise_details' in booking_info and booking_info['cruise_details']:
-        cruise = booking_info['cruise_details']
-        detail = f"Cruise: {cruise.get('cruise_line', '')} - {cruise.get('ship_name', '')}"
-        if cruise.get('departure_datetime'):
-            detail += f" departing {cruise['departure_datetime'][:10]}"
-        summary['key_details'].append(detail)
+    if 'cruises' in booking_info and booking_info['cruises']:
+        # Always expect array format
+        for cruise in booking_info['cruises']:
+            detail = f"Cruise: {cruise.get('cruise_line', '')} - {cruise.get('ship_name', '')}"
+            if cruise.get('departure_datetime'):
+                detail += f" departing {cruise['departure_datetime'][:10]}"
+            summary['key_details'].append(detail)
     
     # Add cost information
     if 'cost_info' in booking_info and booking_info['cost_info']:

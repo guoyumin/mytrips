@@ -53,8 +53,8 @@ class OpenAIProvider(AIProviderInterface):
                     {"role": "system", "content": "You are a helpful assistant for travel booking analysis."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.1,
-                max_tokens=4096
+                temperature=0.1
+                # Don't limit max_tokens - let the model use what it needs
             )
             
             # Extract content and usage info

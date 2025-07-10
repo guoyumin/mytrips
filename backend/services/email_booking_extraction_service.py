@@ -22,8 +22,11 @@ class EmailBookingExtractionService:
     def __init__(self):
         self.ai_provider: Optional[AIProviderInterface] = None
         try:
-            # Create AI provider using factory - using fast model for extraction
-            self.ai_provider = AIProviderFactory.create_provider(model_tier='fast')
+            # Create AI provider using factory - using openai-fast model for extraction
+            self.ai_provider = AIProviderFactory.create_provider(
+                model_tier='fast',
+                provider_name='openai'
+            )
             model_info = self.ai_provider.get_model_info()
             logger.info(f"AI provider initialized for booking extraction: {model_info['model_name']}")
         except Exception as e:
@@ -144,11 +147,10 @@ class EmailBookingExtractionService:
             # Update progress
             self.extraction_progress['total_emails'] = len(emails)
             
-            # Calculate cost estimation
-            cost_estimate = self.gemini_service.estimate_token_cost(len(emails), 'booking_extraction')
-            self.extraction_progress['cost_estimate'] = cost_estimate
+            # Skip cost estimation for now since we're using AI provider interface
+            # TODO: Add cost estimation to AI provider interface
             
-            self.extraction_progress['message'] = f'Found {len(emails)} emails to extract booking information (Est. cost: ${cost_estimate["estimated_cost_usd"]:.4f})'
+            self.extraction_progress['message'] = f'Found {len(emails)} emails to extract booking information'
             
             # Process emails in smaller batches for booking extraction (10 emails per batch)
             batch_size = 10
@@ -223,21 +225,32 @@ class EmailBookingExtractionService:
             # Create AI prompt for booking extraction
             prompt = self._create_booking_extraction_prompt(email, content)
             
-            # Call AI provider
-            response_text = self.ai_provider.generate_content(prompt)
+            # Call AI provider - use simple method that returns just the content string
+            response_text = self.ai_provider.generate_content_simple(prompt)
             
             # Parse response
             booking_info = self._parse_booking_response(response_text)
             
             if booking_info:
-                # Save extracted booking information
-                content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
-                content.booking_extraction_status = 'completed'
-                content.booking_extraction_error = None
-                db.commit()
-                
-                logger.info(f"Successfully extracted booking info from email {email.email_id}")
-                return True
+                # Check if this is a non-booking email
+                if booking_info.get('booking_type') is None:
+                    # This is a non-booking email (reminder, marketing, etc.)
+                    content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
+                    content.booking_extraction_status = 'no_booking'
+                    content.booking_extraction_error = booking_info.get('reason', 'Non-booking email')
+                    db.commit()
+                    
+                    logger.info(f"Email {email.email_id} identified as non-booking: {booking_info.get('non_booking_type', 'unknown')}")
+                    return True
+                else:
+                    # This is a booking email with extracted information
+                    content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
+                    content.booking_extraction_status = 'completed'
+                    content.booking_extraction_error = None
+                    db.commit()
+                    
+                    logger.info(f"Successfully extracted booking info from email {email.email_id}")
+                    return True
             else:
                 # Mark as failed
                 content.booking_extraction_status = 'failed'
@@ -325,58 +338,71 @@ For ACTUAL BOOKING emails:
   "confirmation_numbers": ["ABC123", "DEF456"],
   "original_booking_reference": "XYZ789",  // For cancellations/changes, reference to original booking
   
-  // For flights/trains/transport
-  "transport_details": {{
-    "segment_type": "flight|train|bus|ferry",
-    "carrier": "Airline/Railway name",
-    "flight_number": "LX123",
-    "departure_location": "City, Country",
-    "departure_airport_code": "ZUR",
-    "arrival_location": "City, Country", 
-    "arrival_airport_code": "CDG",
-    "departure_datetime": "2024-01-15T14:30:00",
-    "arrival_datetime": "2024-01-15T16:45:00",
-    "distance_km": 490.5,
-    "distance_type": "actual|straight",
-    "booking_platform": "Platform name",
-    "confirmation_number": "ABC123"
-  }},
+  // Transport segments (ALWAYS an array, even for single segment)
+  "transport_segments": [
+    {{
+      "segment_type": "flight|train|bus|ferry",
+      "carrier_name": "Airline/Railway name",
+      "segment_number": "LX123",
+      "departure_location": "City, Country",
+      "departure_airport_code": "ZUR",
+      "arrival_location": "City, Country", 
+      "arrival_airport_code": "CDG",
+      "departure_datetime": "2024-01-15T14:30:00",
+      "arrival_datetime": "2024-01-15T16:45:00",
+      "distance_km": 490.5,
+      "distance_type": "actual|straight",
+      "booking_platform": "Platform name",
+      "confirmation_number": "ABC123",
+      "cost": 123.45
+    }}
+  ],
   
-  // For hotels
-  "accommodation_details": {{
-    "property_name": "Hotel Name",
-    "address": "Full address",
-    "city": "City",
-    "country": "Country",
-    "check_in_date": "2024-01-15",
-    "check_out_date": "2024-01-17",
-    "booking_platform": "Platform name",
-    "confirmation_number": "HTL456"
-  }},
+  // Accommodations (ALWAYS an array, even for single hotel)
+  "accommodations": [
+    {{
+      "property_name": "Hotel Name",
+      "address": "Full address",
+      "city": "City",
+      "country": "Country",
+      "check_in_date": "2024-01-15",
+      "check_out_date": "2024-01-17",
+      "booking_platform": "Platform name",
+      "confirmation_number": "HTL456",
+      "cost": 234.56
+    }}
+  ],
   
-  // For tours/activities
-  "activity_details": {{
-    "activity_name": "Tour name",
-    "description": "Brief description",
-    "start_datetime": "2024-01-16T09:00:00",
-    "end_datetime": "2024-01-16T17:00:00",
-    "location": "Location",
-    "city": "City",
-    "booking_platform": "Platform name",
-    "confirmation_number": "TUR789"
-  }},
+  // Activities (ALWAYS an array, even for single activity)
+  "activities": [
+    {{
+      "activity_name": "Tour name",
+      "description": "Brief description",
+      "start_datetime": "2024-01-16T09:00:00",
+      "end_datetime": "2024-01-16T17:00:00",
+      "location": "Location",
+      "city": "City",
+      "booking_platform": "Platform name",
+      "confirmation_number": "TUR789",
+      "cost": 89.00
+    }}
+  ],
   
-  // For cruises
-  "cruise_details": {{
-    "cruise_line": "Cruise company",
-    "ship_name": "Ship name",
-    "departure_datetime": "2024-01-20T18:00:00",
-    "arrival_datetime": "2024-01-27T08:00:00",
-    "departure_port": "Port name",
-    "arrival_port": "Port name",
-    "itinerary": ["Port1", "Port2", "Port3"],
-    "confirmation_number": "CRU012"
-  }},
+  // Cruises (ALWAYS an array, even for single cruise)
+  "cruises": [
+    {{
+      "cruise_line": "Cruise company",
+      "ship_name": "Ship name",
+      "departure_datetime": "2024-01-20T18:00:00",
+      "arrival_datetime": "2024-01-27T08:00:00",
+      "departure_port": "Port name",
+      "arrival_port": "Port name",
+      "itinerary": ["Port1", "Port2", "Port3"],
+      "confirmation_number": "CRU012",
+      "booking_platform": "Platform name",
+      "cost": 1500.00
+    }}
+  ],
   
   "cost_info": {{
     "total_cost": 1234.56,
@@ -408,14 +434,17 @@ CRITICAL REQUIREMENTS:
    - Provide brief "reason" explaining why it's not a booking
 
 3. For BOOKING emails only:
-   - CONFIRMATION NUMBERS are EXTREMELY IMPORTANT - Extract ALL confirmation numbers/booking references mentioned in the email (these are crucial for linking related emails like changes, cancellations, and original bookings)
+   - ARRAY FORMAT IS MANDATORY: ALL booking details MUST be in arrays (transport_segments, accommodations, activities, cruises)
+   - Even for single items, use an array with one element: transport_segments: [{{...}}] NOT transport_details: {{...}}
+   - CONFIRMATION NUMBERS are EXTREMELY IMPORTANT - Extract ALL confirmation numbers/booking references mentioned in the email
    - For cancellation/change emails, ALWAYS include the original booking reference in "original_booking_reference"
-   - Include confirmation numbers in BOTH the main "confirmation_numbers" array AND in the specific details sections (transport_details, accommodation_details, etc.)
+   - Include confirmation numbers in BOTH the main "confirmation_numbers" array AND in each segment/accommodation/activity
+   - Field names must match exactly: "carrier_name" (not "carrier"), "segment_number" (not "flight_number")
    - If distances are mentioned (flight miles, etc.), include them and mark distance_type as "actual"
    - Include exact dates and times when available
    - Use English values only (no Chinese characters in the JSON)
    - If information is not available, use null instead of guessing
-   - For multi-segment trips, extract each segment separately if they have different confirmation numbers
+   - For multi-segment trips, include ALL segments in the transport_segments array
    - Look for confirmation numbers in various formats: booking reference, confirmation code, PNR, reservation number, ticket number, etc.
 
 Return only the JSON object, no additional text."""
@@ -443,5 +472,6 @@ Return only the JSON object, no additional text."""
             
         except Exception as e:
             logger.error(f"Error parsing booking response: {e}")
-            logger.error(f"Response was: {response_text[:500]}...")
+            if 'response_text' in locals():
+                logger.error(f"Response was: {response_text[:500]}...")
             return None

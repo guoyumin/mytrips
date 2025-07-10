@@ -20,6 +20,7 @@ from lib.ai.ai_provider_interface import AIProviderInterface
 from lib.trip_detector import TripDetector
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # Temporarily enable debug logging
 
 
 class TripDetectionService:
@@ -163,8 +164,8 @@ class TripDetectionService:
                 trip_dict = {
                     'name': trip.name,
                     'destination': trip.destination,
-                    'start_date': trip.start_date.strftime('%Y-%m-%d'),
-                    'end_date': trip.end_date.strftime('%Y-%m-%d'),
+                    'start_date': trip.start_date.strftime('%Y-%m-%d') if trip.start_date else None,
+                    'end_date': trip.end_date.strftime('%Y-%m-%d') if trip.end_date else None,
                     'cities_visited': json.loads(trip.cities_visited) if trip.cities_visited else [],
                     'total_cost': float(trip.total_cost) if trip.total_cost else 0.0,
                     'transport_segments': [],
@@ -254,15 +255,26 @@ class TripDetectionService:
             
         except Exception as e:
             logger.error(f"Error loading existing trips from database: {e}")
-            return []
+            raise Exception(f"Failed to load existing trips: {e}")
     
     def _background_detection(self, date_range: Optional[Dict] = None):
         """Background process for trip detection"""
         db = SessionLocal()
         try:
             # Load existing trips from database first
-            existing_trips = self._load_existing_trips_from_database(db)
-            logger.info(f"Starting with {len(existing_trips)} existing trips from database")
+            try:
+                existing_trips = self._load_existing_trips_from_database(db)
+                logger.info(f"Starting with {len(existing_trips)} existing trips from database")
+            except Exception as e:
+                logger.error(f"CRITICAL: Failed to load existing trips from database: {e}")
+                with self._lock:
+                    self.detection_progress.update({
+                        'finished': True,
+                        'is_running': False,
+                        'error': f'Failed to load existing trips: {str(e)}',
+                        'message': f'Detection failed: Unable to load existing trips from database'
+                    })
+                return  # Exit early to prevent data loss
             
             # Fetch all travel-related emails with extracted content
             travel_categories = [
@@ -271,13 +283,40 @@ class TripDetectionService:
                 'hotel_change', 'other_travel'
             ]
             
-            # Only get emails that have actual booking information (not null booking_type)
-            # This filters out non-booking emails (like status updates, reminders, etc.)
-            query = db.query(Email).join(EmailContent).filter(
+            # Check for stuck emails in processing status
+            stuck_count = db.query(Email).join(EmailContent).filter(
                 Email.classification.in_(travel_categories),
                 EmailContent.extraction_status == 'completed',
                 EmailContent.booking_extraction_status == 'completed',
-                EmailContent.trip_detection_status.in_(['pending', 'failed']),  # Only process unprocessed emails
+                EmailContent.trip_detection_status == 'processing'
+            ).count()
+            
+            if stuck_count > 0:
+                logger.warning(f"Found {stuck_count} emails stuck in 'processing' status - resetting them to 'pending'")
+                # Reset stuck emails to pending
+                db.query(EmailContent).filter(
+                    EmailContent.email_id.in_(
+                        db.query(Email.email_id).join(EmailContent).filter(
+                            Email.classification.in_(travel_categories),
+                            EmailContent.extraction_status == 'completed',
+                            EmailContent.booking_extraction_status == 'completed',
+                            EmailContent.trip_detection_status == 'processing'
+                        )
+                    )
+                ).update({
+                    'trip_detection_status': 'pending',
+                    'trip_detection_error': 'Reset from stuck processing status'
+                }, synchronize_session=False)
+                db.commit()
+                logger.info(f"Reset {stuck_count} stuck emails to 'pending' status")
+            
+            # Only get emails that have actual booking information
+            # Filter out non-booking emails directly in the database
+            query = db.query(Email).join(EmailContent).filter(
+                Email.classification.in_(travel_categories),
+                EmailContent.extraction_status == 'completed',
+                EmailContent.booking_extraction_status == 'completed',  # This excludes 'no_booking' status
+                EmailContent.trip_detection_status.in_(['pending', 'failed']),  # Only pending and failed, since we reset stuck ones
                 # Filter for emails with actual bookings by checking the extracted_booking_info
                 EmailContent.extracted_booking_info.isnot(None),
                 # Ensure the booking info contains a booking_type (not null)
@@ -348,7 +387,9 @@ class TripDetectionService:
                 self._mark_emails_processing(batch_emails, db)
                 
                 # Convert emails to format expected by TripDetector
+                logger.debug(f"Batch {batch_num}: About to prepare email data for {len(batch_emails)} emails")
                 email_data = self._prepare_email_data(batch_emails, db)
+                logger.debug(f"Batch {batch_num}: Prepared {len(email_data)} email data entries")
                 
                 # Skip this batch if all emails were incomplete
                 if not email_data:
@@ -364,6 +405,12 @@ class TripDetectionService:
                     try:
                         logger.info(f"Batch {batch_num}: Processing {len(email_data)} booking emails (batch size: {current_batch_size})")
                         
+                        # Debug logging for previous_trips
+                        logger.debug(f"Batch {batch_num}: previous_trips type: {type(previous_trips)}")
+                        if previous_trips:
+                            logger.debug(f"Batch {batch_num}: previous_trips length: {len(previous_trips)}")
+                            logger.debug(f"Batch {batch_num}: previous_trips[0] type: {type(previous_trips[0]) if previous_trips else 'N/A'}")
+                        
                         batch_trips = self.trip_detector.detect_trips(email_data, previous_trips)
                         
                         # Check if detection actually succeeded 
@@ -372,9 +419,18 @@ class TripDetectionService:
                         
                         # Success! Validate and update trips
                         if batch_trips:
+                            # Debug logging for batch_trips
+                            logger.debug(f"Batch {batch_num}: batch_trips type: {type(batch_trips)}")
+                            logger.debug(f"Batch {batch_num}: batch_trips length: {len(batch_trips)}")
+                            if batch_trips:
+                                logger.debug(f"Batch {batch_num}: batch_trips[0] type: {type(batch_trips[0])}")
+                                
                             # Validate that AI provider returned at least the existing trips
                             if previous_trips and len(batch_trips) < len(previous_trips):
                                 logger.error(f"Batch {batch_num}: CRITICAL - AI provider returned {len(batch_trips)} trips but we sent {len(previous_trips)} existing trips. This indicates the AI dropped existing trips!")
+                                
+                                # Debug before accessing .get()
+                                logger.debug(f"About to access .get() on previous_trips items. Type check: {[type(trip) for trip in previous_trips[:3]]}")
                                 logger.error(f"Sent existing trips: {[trip.get('name', 'Unknown') for trip in previous_trips]}")
                                 logger.error(f"Received trips: {[trip.get('name', 'Unknown') for trip in batch_trips]}")
                                 
@@ -417,7 +473,10 @@ class TripDetectionService:
                         
                     except Exception as e:
                         error_msg = str(e)
+                        # Log full stack trace for debugging
+                        import traceback
                         logger.error(f"Batch {batch_num} failed with {self.ai_provider.get_model_info()['model_name']}: {error_msg}")
+                        logger.error(f"Full stack trace:\n{traceback.format_exc()}")
                         
                         # Try switching to next provider in fallback order
                         if self._switch_to_next_provider():
@@ -492,52 +551,106 @@ class TripDetectionService:
             logger.error(f"Error clearing existing trips: {e}")
             raise
     
+    def _is_zurich_local_trip(self, extracted_booking: Dict) -> bool:
+        """Check if this is a Zurich local trip (zone tickets, local transport)"""
+        booking_type = extracted_booking.get('booking_type')
+        
+        # Check for zone tickets or local transport indicators
+        if booking_type == 'train':
+            additional_info = extracted_booking.get('additional_info', {})
+            # Handle case where additional_info might be None
+            if additional_info is None:
+                additional_info = {}
+            notes = additional_info.get('notes', '')
+            # Check for ZVV zone tickets or extensions
+            if any(indicator in notes.lower() for indicator in ['zvv extension', 'zone ticket', 'zones', 'tageskarte']):
+                return True
+                
+            # Check if both departure and arrival are in Zurich area
+            # Use new field name and expect array format
+            transport_segments = extracted_booking.get('transport_segments', [])
+            
+            # Check if any segment is a Zurich local trip
+            for segment in transport_segments:
+                departure = (segment.get('departure_location') or '').lower()
+                arrival = (segment.get('arrival_location') or '').lower()
+                zurich_areas = ['zurich', 'zürich', 'winterthur', 'oerlikon', 'altstetten', 'stadelhofen']
+                if any(area in departure for area in zurich_areas) and any(area in arrival for area in zurich_areas):
+                    return True
+                    
+        return False
+    
     def _is_email_complete(self, extracted_booking: Dict) -> bool:
-        """Check if email has complete booking information required for trip detection"""
+        """Check if email has minimum required booking information for trip detection"""
         booking_type = extracted_booking.get('booking_type')
         
         if not booking_type:
+            logger.debug("Email incomplete: missing booking_type")
             return False
             
-        # Check required fields based on booking type
+        # Be more lenient - only require minimal information
         if booking_type == 'flight':
-            segments = extracted_booking.get('segments', [])
-            if not segments:
+            # For flights, we at least need departure datetime
+            transport_segments = extracted_booking.get('transport_segments', [])
+            
+            if not transport_segments:
+                logger.debug(f"Flight booking incomplete: no transport_segments found")
                 return False
-            for segment in segments:
-                # Flight must have departure/arrival locations and times
-                if not all([
-                    segment.get('departure_location'),
-                    segment.get('arrival_location'),
-                    segment.get('departure_datetime') or segment.get('departure_date'),
-                    segment.get('arrival_datetime') or segment.get('arrival_date')
-                ]):
+                
+            # Only require departure datetime, be lenient with other fields
+            for segment in transport_segments:
+                if not (segment.get('departure_datetime') or segment.get('departure_date')):
+                    logger.debug(f"Flight booking incomplete: missing departure datetime")
                     return False
                     
         elif booking_type == 'hotel':
-            # Hotel must have property name and check-in/out dates
-            if not all([
-                extracted_booking.get('property_name'),
-                extracted_booking.get('check_in_date'),
-                extracted_booking.get('check_out_date')
-            ]):
+            # Check for accommodations array
+            accommodations = extracted_booking.get('accommodations', [])
+            
+            if not accommodations:
+                logger.debug("Hotel booking incomplete: no accommodations found")
                 return False
+            
+            # For hotels, be lenient - only require property name OR check-in date
+            for accommodation in accommodations:
+                if not accommodation.get('property_name') and not accommodation.get('check_in_date'):
+                    logger.debug("Hotel booking incomplete: missing both property name and check-in date")
+                    return False
                 
         elif booking_type == 'tour':
-            # Tour must have activity name and at least start date/time
-            if not all([
-                extracted_booking.get('activity_name') or extracted_booking.get('tour_name'),
-                extracted_booking.get('start_datetime') or extracted_booking.get('start_date') or extracted_booking.get('activity_date')
-            ]):
+            # Check for activities array
+            activities = extracted_booking.get('activities', [])
+            
+            if not activities:
+                logger.debug("Tour booking incomplete: no activities found")
                 return False
+            
+            # For tours, be lenient - only require activity name OR date
+            for activity in activities:
+                has_name = activity.get('activity_name') or activity.get('tour_name')
+                has_date = (activity.get('start_datetime') or activity.get('start_date') or 
+                           activity.get('activity_date'))
+                
+                if not has_name and not has_date:
+                    logger.debug("Tour booking incomplete: missing both name and date")
+                    return False
                 
         elif booking_type == 'train':
-            # Train must have departure/arrival and times
-            if not all([
-                extracted_booking.get('departure_location') or extracted_booking.get('departure_station'),
-                extracted_booking.get('arrival_location') or extracted_booking.get('arrival_station'),
-                extracted_booking.get('departure_datetime') or extracted_booking.get('departure_date')
-            ]):
+            # Similar to flights, check for departure information
+            transport_segments = extracted_booking.get('transport_segments', [])
+            
+            if not transport_segments:
+                logger.debug("Train booking incomplete: no transport_segments found")
+                return False
+                
+            # Check if any segment has departure time
+            has_departure_time = any(
+                segment.get('departure_datetime') or segment.get('departure_date')
+                for segment in transport_segments
+            )
+            
+            if not has_departure_time:
+                logger.debug(f"Train booking incomplete: missing departure datetime")
                 return False
                 
         # For other types, just check if there's basic info
@@ -548,37 +661,63 @@ class TripDetectionService:
         email_data = []
         incomplete_emails = []
         
-        for email in emails:
-            content = email.email_content
-            
-            # Use extracted booking information instead of raw content
-            extracted_booking = {}
-            if content and content.extracted_booking_info:
-                try:
-                    extracted_booking = json.loads(content.extracted_booking_info)
-                except Exception as e:
-                    logger.warning(f"Failed to parse extracted booking info for {email.email_id}: {e}")
-                    extracted_booking = {}
-            
-            # Check if email has complete information
-            if not self._is_email_complete(extracted_booking):
-                logger.info(f"Skipping email {email.email_id} due to incomplete booking information")
-                incomplete_emails.append(email)
-                continue
+        for i, email in enumerate(emails):
+            try:
+                logger.debug(f"Processing email {i+1}/{len(emails)}: {email.email_id}")
+                content = email.email_content
                 
-            email_info = {
-                'email_id': email.email_id,
-                'subject': email.subject,
-                'sender': email.sender,
-                'date': email.timestamp.isoformat() if email.timestamp else email.date,
-                'classification': email.classification,
-                'extracted_booking_info': extracted_booking
-            }
-            email_data.append(email_info)
+                # Use extracted booking information instead of raw content
+                extracted_booking = {}
+                if content and content.extracted_booking_info:
+                    try:
+                        extracted_booking = json.loads(content.extracted_booking_info)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse extracted booking info for {email.email_id}: {e}")
+                        extracted_booking = {}
+                
+                # Check if this is a Zurich local trip
+                if self._is_zurich_local_trip(extracted_booking):
+                    booking_type = extracted_booking.get('booking_type', 'unknown')
+                    logger.info(f"Skipping Zurich local trip email {email.email_id} (type: {booking_type}, subject: {email.subject[:50]}...)")
+                    incomplete_emails.append((email, "Zurich local trip - zone ticket or local transport"))
+                    continue
+                
+                # Check if email has complete information
+                if not self._is_email_complete(extracted_booking):
+                    booking_type = extracted_booking.get('booking_type', 'unknown')
+                    logger.warning(f"Skipping email {email.email_id} (type: {booking_type}, subject: {email.subject[:50]}...) due to incomplete booking information")
+                    logger.debug(f"Email {email.email_id} booking data: {json.dumps(extracted_booking, indent=2)}")
+                    incomplete_emails.append((email, "Incomplete booking information"))
+                    continue
+                    
+                email_info = {
+                    'email_id': email.email_id,
+                    'subject': email.subject,
+                    'sender': email.sender,
+                    'date': email.timestamp.isoformat() if email.timestamp else email.date,
+                    'classification': email.classification,
+                    'extracted_booking_info': extracted_booking
+                }
+                email_data.append(email_info)
+                
+            except Exception as e:
+                logger.error(f"Error processing email {email.email_id}: {e}")
+                import traceback
+                logger.error(f"Stack trace: {traceback.format_exc()}")
+                incomplete_emails.append((email, f"Processing error: {str(e)}"))
         
-        # Mark incomplete emails as failed so they won't be retried
+        # Mark incomplete emails as failed with specific reasons
         if incomplete_emails:
-            self._mark_emails_failed(incomplete_emails, db, "Incomplete booking information")
+            # Group emails by reason
+            emails_by_reason = {}
+            for email, reason in incomplete_emails:
+                if reason not in emails_by_reason:
+                    emails_by_reason[reason] = []
+                emails_by_reason[reason].append(email)
+            
+            # Mark each group with its specific reason
+            for reason, email_list in emails_by_reason.items():
+                self._mark_emails_failed(email_list, db, reason)
             
         return email_data
     
@@ -733,11 +872,9 @@ class TripDetectionService:
                     departure_dt = self._safe_parse_datetime(segment_data.get('departure_datetime'))
                     arrival_dt = self._safe_parse_datetime(segment_data.get('arrival_datetime'))
                     
-                    # Skip segment if any required field is missing
-                    if not all([segment_type, departure_location, arrival_location, departure_dt, arrival_dt]):
-                        error_msg = (f"Missing required fields for transport segment: "
-                                   f"type={segment_type}, dep_loc={departure_location}, arr_loc={arrival_location}, "
-                                   f"dep_dt={departure_dt}, arr_dt={arrival_dt}")
+                    # Be more lenient - only skip if we don't have minimal required fields
+                    if not (segment_type and departure_dt):
+                        error_msg = f"Missing critical fields for transport segment: type={segment_type}, dep_dt={departure_dt}"
                         logger.error(error_msg)
                         
                         # Track data quality issue
@@ -748,6 +885,25 @@ class TripDetectionService:
                             'email_ids': related_emails
                         })
                         continue
+                    
+                    # Use defaults for missing non-critical fields
+                    if not departure_location:
+                        departure_location = "Unknown departure"
+                        logger.warning(f"Missing departure location for {segment_type}, using default")
+                    
+                    if not arrival_location:
+                        arrival_location = "Unknown arrival"
+                        logger.warning(f"Missing arrival location for {segment_type}, using default")
+                    
+                    if not arrival_dt:
+                        # Estimate arrival time based on segment type
+                        if segment_type == 'flight':
+                            arrival_dt = departure_dt + timedelta(hours=2)  # Default 2 hour flight
+                        elif segment_type == 'train':
+                            arrival_dt = departure_dt + timedelta(hours=3)  # Default 3 hour train
+                        else:
+                            arrival_dt = departure_dt + timedelta(hours=4)  # Default 4 hours
+                        logger.warning(f"Missing arrival datetime for {segment_type}, estimated as {arrival_dt}")
                     
                     segment = TransportSegment(
                         trip_id=trip.id,
@@ -784,10 +940,9 @@ class TripDetectionService:
                     check_in_date = self._safe_parse_date(accommodation_data.get('check_in_date'))
                     check_out_date = self._safe_parse_date(accommodation_data.get('check_out_date'))
                     
-                    # Skip accommodation if any required field is missing
-                    if not all([property_name, check_in_date, check_out_date]):
-                        error_msg = (f"Missing required fields for accommodation: "
-                                   f"name={property_name}, check_in={check_in_date}, check_out={check_out_date}")
+                    # Be more lenient - only skip if we have neither property name nor check-in date
+                    if not (property_name or check_in_date):
+                        error_msg = "Missing both property name and check-in date for accommodation"
                         logger.error(error_msg)
                         
                         # Track data quality issue
@@ -798,6 +953,25 @@ class TripDetectionService:
                             'email_ids': related_emails
                         })
                         continue
+                    
+                    # Use defaults for missing fields
+                    if not property_name:
+                        property_name = "Unknown accommodation"
+                        logger.warning("Missing property name, using default")
+                    
+                    if not check_in_date:
+                        # Try to infer from trip dates
+                        if trip.start_date:
+                            check_in_date = trip.start_date.date() if hasattr(trip.start_date, 'date') else trip.start_date
+                        logger.warning(f"Missing check-in date, using trip start date: {check_in_date}")
+                    
+                    if not check_out_date:
+                        # Default to 1 night stay or trip end date
+                        if check_in_date:
+                            check_out_date = check_in_date + timedelta(days=1)
+                        elif trip.end_date:
+                            check_out_date = trip.end_date.date() if hasattr(trip.end_date, 'date') else trip.end_date
+                        logger.warning(f"Missing check-out date, estimated as {check_out_date}")
                     
                     accommodation = Accommodation(
                         trip_id=trip.id,
