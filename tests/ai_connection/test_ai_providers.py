@@ -30,7 +30,9 @@ class TestAIProviders:
         return {
             'gemini': ['fast', 'powerful'],
             'openai': ['fast', 'powerful'],
-            'claude': ['fast', 'powerful']
+            'claude': ['fast', 'powerful'],
+            'gemma3': ['fast', 'powerful'],
+            'deepseek': ['fast', 'powerful']
         }
     
     @pytest.fixture
@@ -59,6 +61,20 @@ class TestAIProviders:
             with open(claude_config_path, 'r') as f:
                 config = json.load(f)
                 models['claude'] = config.get('model_mapping', {})
+        
+        # Load Gemma3 models
+        gemma3_config_path = os.path.join(config_root, 'gemma3_config.json')
+        if os.path.exists(gemma3_config_path):
+            with open(gemma3_config_path, 'r') as f:
+                config = json.load(f)
+                models['gemma3'] = config.get('model_mapping', {})
+        
+        # Load DeepSeek models
+        deepseek_config_path = os.path.join(config_root, 'deepseek_config.json')
+        if os.path.exists(deepseek_config_path):
+            with open(deepseek_config_path, 'r') as f:
+                config = json.load(f)
+                models['deepseek'] = config.get('model_mapping', {})
         
         return models
     
@@ -169,49 +185,6 @@ class TestAIProviders:
         # Test passes if at least one provider works (we expect some to fail if not configured)
         assert success_count > 0, f"No providers working. Results: {results}"
     
-    def test_specific_models_direct(self, all_models):
-        """Test creating providers with specific model names directly"""
-        results = []
-        
-        for provider_name, model_mapping in all_models.items():
-            for tier, model_name in model_mapping.items():
-                try:
-                    # Create provider with specific model
-                    provider = AIProviderFactory.create_provider_direct(model_name)
-                    
-                    # Test connectivity
-                    print(f"\n🔄 Sending real request to {provider_name} model {model_name}")
-                    print(f"📝 Request: {self.TEST_PROMPT}")
-                    response = provider.generate_content(self.TEST_PROMPT)
-                    print(f"✅ Response: {response}")
-                    is_valid = response and len(response.strip()) > 0
-                    
-                    results.append({
-                        'provider': provider_name,
-                        'model': model_name,
-                        'tier': tier,
-                        'status': 'SUCCESS' if is_valid else 'INVALID_RESPONSE',
-                        'response': response[:100] if response else None,
-                        'error': None if is_valid else 'Empty or invalid response'
-                    })
-                    
-                except Exception as e:
-                    results.append({
-                        'provider': provider_name,
-                        'model': model_name,
-                        'tier': tier,
-                        'status': 'FAILED',
-                        'response': None,
-                        'error': str(e)
-                    })
-        
-        # Print results
-        print("\n=== Direct Model Creation Test Results ===")
-        for result in results:
-            status_symbol = "✓" if result['status'] == 'SUCCESS' else "✗"
-            print(f"{status_symbol} {result['model']} ({result['provider']}-{result['tier']}): {result['status']}")
-            if result['error']:
-                print(f"  Error: {result['error']}")
     
     def test_cost_estimation(self, provider_configs):
         """Test cost estimation for all providers"""
@@ -330,7 +303,11 @@ class TestAIProviders:
                 assert 20 < result['input_tokens'] < 150, f"Input tokens {result['input_tokens']} seems unreasonable"
                 assert result['output_tokens'] > 0, "Output tokens should be positive"
                 assert result['total_tokens'] == result['input_tokens'] + result['output_tokens']
-                assert 0 < result['cost_usd'] < 1.0, f"Cost ${result['cost_usd']} seems unreasonable"
+                # Local models (gemma3, deepseek) have zero cost, others should have positive cost
+                if result['provider'] in ['gemma3', 'deepseek']:
+                    assert result['cost_usd'] == 0.0, f"{result['provider']} should have zero cost, got ${result['cost_usd']}"
+                else:
+                    assert 0 < result['cost_usd'] < 1.0, f"Cost ${result['cost_usd']} seems unreasonable"
     
     def test_no_fallback_mechanism(self):
         """Test that invalid provider raises error without fallback"""

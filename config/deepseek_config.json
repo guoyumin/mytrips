@@ -1,0 +1,38 @@
+{
+  "base_url": "http://yumin-home.local:11434",
+  "model": "deepseek-r1:14b",
+  "model_mapping": {
+    "fast": "deepseek-r1:7b",
+    "powerful": "deepseek-r1:14b"
+  },
+  "pricing": {
+    "deepseek-r1:7b": {
+      "input_per_1m": 0.0,
+      "output_per_1m": 0.0,
+      "cached_input_per_1m": 0.0,
+      "description": "Local DeepSeek R1 7B model - Fast tier (no cost)"
+    },
+    "deepseek-r1:14b": {
+      "input_per_1m": 0.0,
+      "output_per_1m": 0.0,
+      "cached_input_per_1m": 0.0,
+      "description": "Local DeepSeek R1 14B model - Powerful tier (no cost)"
+    }
+  },
+  "notes": {
+    "provider_name": "deepseek",
+    "setup_instructions": [
+      "1. Install Ollama from https://ollama.ai",
+      "2. Pull the DeepSeek R1 models:",
+      "   - ollama pull deepseek-r1:7b",
+      "   - ollama pull deepseek-r1:14b",
+      "3. Ensure Ollama server is running",
+      "4. Update base_url if not using default localhost"
+    ],
+    "model_info": {
+      "deepseek-r1:7b": "Fast, efficient DeepSeek model suitable for most tasks",
+      "deepseek-r1:14b": "More powerful DeepSeek model for complex reasoning tasks"
+    },
+    "server_info": "Ollama server running on yumin-home.local with DeepSeek R1 models"
+  }
+}

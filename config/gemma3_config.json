@@ -1,0 +1,38 @@
+{
+  "base_url": "http://yumin-home.local:11434",
+  "model": "gemma3:12b",
+  "model_mapping": {
+    "fast": "gemma3:4b",
+    "powerful": "gemma3:12b"
+  },
+  "pricing": {
+    "gemma3:4b": {
+      "input_per_1m": 0.0,
+      "output_per_1m": 0.0,
+      "cached_input_per_1m": 0.0,
+      "description": "Local Gemma 3 4B model - Fast tier (no cost)"
+    },
+    "gemma3:12b": {
+      "input_per_1m": 0.0,
+      "output_per_1m": 0.0,
+      "cached_input_per_1m": 0.0,
+      "description": "Local Gemma 3 12B model - Powerful tier (no cost)"
+    }
+  },
+  "notes": {
+    "provider_name": "gemma3",
+    "setup_instructions": [
+      "1. Install Ollama from https://ollama.ai",
+      "2. Pull the Gemma 3 models:",
+      "   - ollama pull gemma3:4b",
+      "   - ollama pull gemma3:12b",
+      "3. Ensure Ollama server is running",
+      "4. Update base_url if not using default localhost"
+    ],
+    "model_info": {
+      "gemma3:4b": "Fast, efficient model suitable for most tasks",
+      "gemma3:12b": "More powerful model for complex reasoning tasks"
+    },
+    "server_info": "Ollama server running on yumin-home.local with Gemma 3 models"
+  }
+}

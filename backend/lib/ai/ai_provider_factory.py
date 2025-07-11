@@ -9,6 +9,8 @@ from lib.ai.ai_provider_interface import AIProviderInterface
 from lib.ai.providers.gemini_provider import GeminiProvider
 from lib.ai.providers.openai_provider import OpenAIProvider
 from lib.ai.providers.claude_provider import ClaudeProvider
+from lib.ai.providers.gemma3_provider import Gemma3Provider
+from lib.ai.providers.deepseek_provider import DeepSeekProvider
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,9 @@ class AIProviderFactory:
         'gpt': OpenAIProvider,
         'o1': OpenAIProvider,
         'o4': OpenAIProvider,
-        'claude': ClaudeProvider
+        'claude': ClaudeProvider,
+        'gemma3': Gemma3Provider,
+        'deepseek': DeepSeekProvider
     }
     
     # Model tier definitions
@@ -90,7 +94,9 @@ class AIProviderFactory:
             'gemini': 'gemini_config.json',
             'openai': 'openai_config.json',
             'gpt': 'openai_config.json',
-            'claude': 'claude_config.json'
+            'claude': 'claude_config.json',
+            'gemma3': 'gemma3_config.json',
+            'deepseek': 'deepseek_config.json'
         }
         
         config_file = config_mapping.get(provider_name.lower())
@@ -124,7 +130,7 @@ class AIProviderFactory:
         """Get available providers and their model tiers"""
         providers = {}
         
-        for provider_name in ['gemini', 'openai', 'claude']:
+        for provider_name in ['gemini', 'openai', 'claude', 'gemma3', 'deepseek']:
             try:
                 fast_model = cls._get_model_for_tier(provider_name, 'fast')
                 powerful_model = cls._get_model_for_tier(provider_name, 'powerful')
@@ -153,5 +159,13 @@ class AIProviderFactory:
         # Special handling for o1 and o4 models
         if model_name.startswith('o1') or model_name.startswith('o4'):
             return OpenAIProvider(model_name)
+        
+        # Special handling for gemma models
+        if model_name.startswith('gemma'):
+            return Gemma3Provider(model_name)
+        
+        # Special handling for deepseek models
+        if model_name.startswith('deepseek'):
+            return DeepSeekProvider(model_name)
         
         raise ValueError(f"Cannot determine provider for model: {model_name}")

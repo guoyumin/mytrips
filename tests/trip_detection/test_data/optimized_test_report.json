@@ -1,0 +1,3407 @@
+{
+  "timestamp": "2025-07-11T15:04:17.779951",
+  "results": {
+    "Level 1: Single Flight": {
+      "gemini_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2024-12-15",
+            "end_date": "2024-12-18",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 350.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-15 10:00",
+                "arrival_datetime": "2024-12-15 11:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX350",
+                "distance_km": 490.0,
+                "distance_type": "straight",
+                "cost": 350.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-18 15:00",
+                "arrival_datetime": "2024-12-18 16:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX351",
+                "distance_km": 490.0,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:54:03.447476",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 1951,
+        "output_tokens": 442,
+        "total_tokens": 2393,
+        "cost": 0.00027892499999999996,
+        "response_time": 13.085934,
+        "prompt_length": 7807,
+        "response_length": 1771
+      },
+      "gemini_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2024-12-15",
+            "end_date": "2024-12-18",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 350.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-15 10:00",
+                "arrival_datetime": "2024-12-15 11:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX350",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 175.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-18 15:00",
+                "arrival_datetime": "2024-12-18 16:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX351",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 175.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:54:27.158974",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 1951,
+        "output_tokens": 445,
+        "total_tokens": 2396,
+        "cost": 0.0046637499999999995,
+        "response_time": 23.707049,
+        "prompt_length": 7807,
+        "response_length": 1781
+      },
+      "openai_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2024-12-15",
+            "end_date": "2024-12-18",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 350.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-15 10:00",
+                "arrival_datetime": "2024-12-15 11:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX350",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-18 15:00",
+                "arrival_datetime": "2024-12-18 16:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX351",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:54:34.927414",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 1960,
+        "output_tokens": 448,
+        "total_tokens": 2408,
+        "cost": 0.0015008,
+        "response_time": 7.524079,
+        "prompt_length": 7807,
+        "response_length": 1762
+      },
+      "openai_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2024-12-15",
+            "end_date": "2024-12-18",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 350.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-15 10:00",
+                "arrival_datetime": "2024-12-15 11:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX350",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 175.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-18 15:00",
+                "arrival_datetime": "2024-12-18 16:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX351",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 175.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:54:38.932622",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 1960,
+        "output_tokens": 434,
+        "total_tokens": 2394,
+        "cost": 0.007392,
+        "response_time": 3.996736,
+        "prompt_length": 7807,
+        "response_length": 1686
+      },
+      "claude_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2024-12-15",
+            "end_date": "2024-12-18",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 350.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-15 10:00",
+                "arrival_datetime": "2024-12-15 11:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX350",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 350.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-18 15:00",
+                "arrival_datetime": "2024-12-18 16:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX351",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 350.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:54:46.013704",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2321,
+        "output_tokens": 534,
+        "total_tokens": 2855,
+        "cost": 0.0039928,
+        "response_time": 6.979723,
+        "prompt_length": 7807,
+        "response_length": 1695
+      },
+      "claude_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2024-12-15",
+            "end_date": "2024-12-18",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 350.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-15 10:00",
+                "arrival_datetime": "2024-12-15 11:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX350",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 175.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-18 15:00",
+                "arrival_datetime": "2024-12-18 16:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX351",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 175.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:54:52.776593",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2321,
+        "output_tokens": 528,
+        "total_tokens": 2849,
+        "cost": 0.014883,
+        "response_time": 6.748551,
+        "prompt_length": 7807,
+        "response_length": 1689
+      },
+      "gemma3_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Zurich to Paris and Return",
+            "destination": "Paris, France",
+            "start_date": "2024-12-15",
+            "end_date": "2024-12-18",
+            "cities_visited": [
+              "Zurich",
+              "Paris"
+            ],
+            "total_cost": 350.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-15 10:00",
+                "arrival_datetime": "2024-12-15 11:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX350",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 350.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-18 15:00",
+                "arrival_datetime": "2024-12-18 16:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX351",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:54:59.298788",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2341,
+        "output_tokens": 592,
+        "total_tokens": 2933,
+        "cost": 0.0,
+        "response_time": 6.463573,
+        "prompt_length": 7807,
+        "response_length": 1779
+      },
+      "gemma3_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2024-12-15",
+            "end_date": "2024-12-18",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 350.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-15 10:00",
+                "arrival_datetime": "2024-12-15 11:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX350",
+                "distance_km": 490.0,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-18 15:00",
+                "arrival_datetime": "2024-12-18 16:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX351",
+                "distance_km": 490.0,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:55:12.674415",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2341,
+        "output_tokens": 598,
+        "total_tokens": 2939,
+        "cost": 0.0,
+        "response_time": 13.362047,
+        "prompt_length": 7807,
+        "response_length": 1781
+      },
+      "deepseek_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "",
+            "destination": "Paris",
+            "start_date": "2024-12-15",
+            "end_date": "2024-12-18",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 350.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_airport_code": "ZRH",
+                "arrival_airport_code": "CDG",
+                "departure_datetime": "2024-12-15 10:00",
+                "arrival_datetime": "2024-12-15 11:30",
+                "carrier": "Swiss International Air Lines",
+                "segment_number": "LX350",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": []
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_airport_code": "CDG",
+                "arrival_airport_code": "ZRH",
+                "departure_datetime": "2024-12-18 15:00",
+                "arrival_datetime": "2024-12-18 16:30",
+                "carrier": "Swiss International Air Lines",
+                "segment_number": "LX351",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": []
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:55:24.052916",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2053,
+        "output_tokens": 970,
+        "total_tokens": 3023,
+        "cost": 0.0,
+        "response_time": 11.266506,
+        "prompt_length": 7807,
+        "response_length": 3888
+      },
+      "deepseek_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2024-12-15",
+            "end_date": "2024-12-18",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 350.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-15 10:00",
+                "arrival_datetime": "2024-12-15 11:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX350",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 350.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-18 15:00",
+                "arrival_datetime": "2024-12-18 16:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX351",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "ABCDEF",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_single_flight_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:55:42.789539",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2053,
+        "output_tokens": 783,
+        "total_tokens": 2836,
+        "cost": 0.0,
+        "response_time": 18.726731,
+        "prompt_length": 7807,
+        "response_length": 2948
+      }
+    },
+    "Level 2: Multi Booking (Flight + Hotel)": {
+      "gemini_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Barcelona",
+            "destination": "Barcelona",
+            "start_date": "2024-12-20",
+            "end_date": "2024-12-23",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Barcelona",
+              "Zurich"
+            ],
+            "total_cost": 990.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-20 08:00",
+                "arrival_datetime": "2024-12-20 09:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1015",
+                "distance_km": 490.0,
+                "distance_type": "straight",
+                "cost": 450.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Barcelona, Spain",
+                "departure_datetime": "2024-12-20 11:30",
+                "arrival_datetime": "2024-12-20 13:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1348",
+                "distance_km": 830.0,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Barcelona, Spain",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-23 14:00",
+                "arrival_datetime": "2024-12-23 16:15",
+                "carrier_name": "Vueling",
+                "segment_number": "VY6402",
+                "distance_km": 860.0,
+                "distance_type": "straight",
+                "cost": 180.0,
+                "booking_platform": "vueling.com",
+                "confirmation_number": "VUE456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_003"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Barcelona Center",
+                "check_in_date": "2024-12-20",
+                "check_out_date": "2024-12-23",
+                "address": "Carrer de Balmes 103, 08008 Barcelona, Spain",
+                "city": "Barcelona",
+                "country": "Spain",
+                "cost": 360.0,
+                "booking_platform": "booking.com",
+                "confirmation_number": "HTL123456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_002"
+                ]
+              }
+            ],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:56:09.901494",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2517,
+        "output_tokens": 745,
+        "total_tokens": 3262,
+        "cost": 0.000412275,
+        "response_time": 27.108379,
+        "prompt_length": 10068,
+        "response_length": 2982
+      },
+      "gemini_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Barcelona",
+            "destination": "Barcelona",
+            "start_date": "2024-12-20",
+            "end_date": "2024-12-23",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Barcelona",
+              "Zurich"
+            ],
+            "total_cost": 990.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-20 08:00",
+                "arrival_datetime": "2024-12-20 09:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1015",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 450.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Barcelona, Spain",
+                "departure_datetime": "2024-12-20 11:30",
+                "arrival_datetime": "2024-12-20 13:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1348",
+                "distance_km": 830,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Barcelona, Spain",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-23 14:00",
+                "arrival_datetime": "2024-12-23 16:15",
+                "carrier_name": "Vueling",
+                "segment_number": "VY6402",
+                "distance_km": 860,
+                "distance_type": "straight",
+                "cost": 180.0,
+                "booking_platform": "vueling.com",
+                "confirmation_number": "VUE456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_003"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Barcelona Center",
+                "check_in_date": "2024-12-20",
+                "check_out_date": "2024-12-23",
+                "address": "Carrer de Balmes 103, 08008 Barcelona, Spain",
+                "city": "Barcelona",
+                "country": "Spain",
+                "cost": 360.0,
+                "booking_platform": "booking.com",
+                "confirmation_number": "HTL123456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_002"
+                ]
+              }
+            ],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:56:44.457708",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2517,
+        "output_tokens": 745,
+        "total_tokens": 3262,
+        "cost": 0.006871250000000001,
+        "response_time": 34.553747,
+        "prompt_length": 10068,
+        "response_length": 2981
+      },
+      "openai_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris and Barcelona",
+            "destination": "Barcelona",
+            "start_date": "2024-12-20",
+            "end_date": "2024-12-23",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Barcelona",
+              "Zurich"
+            ],
+            "total_cost": 990.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-20 08:00",
+                "arrival_datetime": "2024-12-20 09:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1015",
+                "distance_km": 490,
+                "distance_type": "actual",
+                "cost": 450.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Barcelona, Spain",
+                "departure_datetime": "2024-12-20 11:30",
+                "arrival_datetime": "2024-12-20 13:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1348",
+                "distance_km": 830,
+                "distance_type": "actual",
+                "cost": 0.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Barcelona, Spain",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-23 14:00",
+                "arrival_datetime": "2024-12-23 16:15",
+                "carrier_name": "Vueling",
+                "segment_number": "VY6402",
+                "distance_km": 860,
+                "distance_type": "actual",
+                "cost": 180.0,
+                "booking_platform": "vueling.com",
+                "confirmation_number": "VUE456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_003"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Barcelona Center",
+                "check_in_date": "2024-12-20",
+                "check_out_date": "2024-12-23",
+                "address": "Carrer de Balmes 103, 08008 Barcelona, Spain",
+                "city": "Barcelona",
+                "country": "Spain",
+                "cost": 360.0,
+                "booking_platform": "booking.com",
+                "confirmation_number": "HTL123456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_002"
+                ]
+              }
+            ],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:56:56.686767",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2683,
+        "output_tokens": 751,
+        "total_tokens": 3434,
+        "cost": 0.0022748000000000004,
+        "response_time": 12.215075,
+        "prompt_length": 10068,
+        "response_length": 2968
+      },
+      "openai_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris and Barcelona",
+            "destination": "Barcelona",
+            "start_date": "2024-12-20",
+            "end_date": "2024-12-23",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Barcelona",
+              "Zurich"
+            ],
+            "total_cost": 990.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-20 08:00",
+                "arrival_datetime": "2024-12-20 09:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1015",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 225.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Barcelona, Spain",
+                "departure_datetime": "2024-12-20 11:30",
+                "arrival_datetime": "2024-12-20 13:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1348",
+                "distance_km": 830,
+                "distance_type": "straight",
+                "cost": 225.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Barcelona, Spain",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-23 14:00",
+                "arrival_datetime": "2024-12-23 16:15",
+                "carrier_name": "Vueling",
+                "segment_number": "VY6402",
+                "distance_km": 860,
+                "distance_type": "straight",
+                "cost": 180.0,
+                "booking_platform": "vueling.com",
+                "confirmation_number": "VUE456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_003"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Barcelona Center",
+                "check_in_date": "2024-12-20",
+                "check_out_date": "2024-12-23",
+                "address": "Carrer de Balmes 103, 08008 Barcelona, Spain",
+                "city": "Barcelona",
+                "country": "Spain",
+                "cost": 360.0,
+                "booking_platform": "booking.com",
+                "confirmation_number": "HTL123456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_002"
+                ]
+              }
+            ],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:57:08.323053",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2683,
+        "output_tokens": 751,
+        "total_tokens": 3434,
+        "cost": 0.011374,
+        "response_time": 11.627482,
+        "prompt_length": 10068,
+        "response_length": 2976
+      },
+      "claude_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Barcelona via Paris",
+            "destination": "Barcelona",
+            "start_date": "2024-12-20",
+            "end_date": "2024-12-23",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Barcelona",
+              "Zurich"
+            ],
+            "total_cost": 990.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-20 08:00",
+                "arrival_datetime": "2024-12-20 09:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1015",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 450.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Barcelona, Spain",
+                "departure_datetime": "2024-12-20 11:30",
+                "arrival_datetime": "2024-12-20 13:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1348",
+                "distance_km": 830,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Barcelona, Spain",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-23 14:00",
+                "arrival_datetime": "2024-12-23 16:15",
+                "carrier_name": "Vueling",
+                "segment_number": "VY6402",
+                "distance_km": 860,
+                "distance_type": "straight",
+                "cost": 180.0,
+                "booking_platform": "vueling.com",
+                "confirmation_number": "VUE456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_003"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Barcelona Center",
+                "check_in_date": "2024-12-20",
+                "check_out_date": "2024-12-23",
+                "address": "Carrer de Balmes 103, 08008 Barcelona, Spain",
+                "city": "Barcelona",
+                "country": "Spain",
+                "cost": 360.0,
+                "booking_platform": "booking.com",
+                "confirmation_number": "HTL123456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_002"
+                ]
+              }
+            ],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:57:19.207204",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 3184,
+        "output_tokens": 893,
+        "total_tokens": 4077,
+        "cost": 0.0061192,
+        "response_time": 10.872839,
+        "prompt_length": 10068,
+        "response_length": 2848
+      },
+      "claude_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Barcelona via Paris",
+            "destination": "Barcelona",
+            "start_date": "2024-12-20",
+            "end_date": "2024-12-23",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Barcelona",
+              "Zurich"
+            ],
+            "total_cost": 990.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-20 08:00",
+                "arrival_datetime": "2024-12-20 09:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1015",
+                "distance_km": 490.0,
+                "distance_type": "straight",
+                "cost": 225.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Barcelona, Spain",
+                "departure_datetime": "2024-12-20 11:30",
+                "arrival_datetime": "2024-12-20 13:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1348",
+                "distance_km": 830.0,
+                "distance_type": "straight",
+                "cost": 225.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Barcelona, Spain",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-23 14:00",
+                "arrival_datetime": "2024-12-23 16:15",
+                "carrier_name": "Vueling",
+                "segment_number": "VY6402",
+                "distance_km": 860.0,
+                "distance_type": "straight",
+                "cost": 180.0,
+                "booking_platform": "vueling.com",
+                "confirmation_number": "VUE456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_003"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Barcelona Center",
+                "check_in_date": "2024-12-20",
+                "check_out_date": "2024-12-23",
+                "address": "Carrer de Balmes 103, 08008 Barcelona, Spain",
+                "city": "Barcelona",
+                "country": "Spain",
+                "cost": 360.0,
+                "booking_platform": "booking.com",
+                "confirmation_number": "HTL123456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_002"
+                ]
+              }
+            ],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:57:28.832238",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 3184,
+        "output_tokens": 894,
+        "total_tokens": 4078,
+        "cost": 0.022962000000000003,
+        "response_time": 9.615111,
+        "prompt_length": 10068,
+        "response_length": 2851
+      },
+      "gemma3_fast": {
+        "success": false,
+        "error": "AssertionError: Expected 3 segments, got 2\nassert 2 == 3"
+      },
+      "gemma3_powerful": {
+        "success": false,
+        "error": "AssertionError: Trip missing required field: tour_activities\nassert 'tour_activities' in {'accommodations': [{'address': 'Carrer de Balmes 103, 08008 Barcelona, Spain', 'booking_platform': 'booking.com', 'check_in_date': '2024-12-20', 'check_out_date': '2024-12-23', ...}], 'cities_visited': ['Zurich', 'Paris', 'Barcelona', 'Zurich'], 'destination': 'Barcelona', 'end_date': '2024-12-23', ...}"
+      },
+      "deepseek_fast": {
+        "success": false,
+        "error": "AssertionError: Trip missing required field: tour_activities\nassert 'tour_activities' in {'accommodations': [{'city': 'Barcelona', 'cost_breakdown': {'room_rate': 300.0, 'service_fees': 15.0, 'taxes': 45.0}, 'dates': {'booking_date': '2024-12-06', 'travel_end_date': '2024-12-23', 'travel_start_date': '2024-12-20'}, 'end_date': '2024-12-23', ...}], 'cities_visited': ['Zurich', 'Paris', 'Barcelona', 'Zurich'], 'destination': 'Barcelona', 'end_date': '2024-12-23', ...}"
+      },
+      "deepseek_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris and Barcelona",
+            "destination": "Barcelona",
+            "start_date": "2024-12-20",
+            "end_date": "2024-12-23",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Barcelona",
+              "Zurich"
+            ],
+            "total_cost": 990.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2024-12-20 08:00",
+                "arrival_datetime": "2024-12-20 09:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1015",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 450.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Barcelona, Spain",
+                "departure_datetime": "2024-12-20 11:30",
+                "arrival_datetime": "2024-12-20 13:30",
+                "carrier_name": "Air France",
+                "segment_number": "AF1348",
+                "distance_km": 830,
+                "distance_type": "straight",
+                "cost": 450.0,
+                "booking_platform": "airfrance.com",
+                "confirmation_number": "XYZ789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Barcelona, Spain",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2024-12-23 14:00",
+                "arrival_datetime": "2024-12-23 16:15",
+                "carrier_name": "Vueling",
+                "segment_number": "VY6402",
+                "distance_km": 860,
+                "distance_type": "straight",
+                "cost": 180.0,
+                "booking_platform": "vueling.com",
+                "confirmation_number": "VUE456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_003"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Barcelona Center",
+                "check_in_date": "2024-12-20",
+                "check_out_date": "2024-12-23",
+                "address": "Carrer de Balmes 103, 08008 Barcelona, Spain",
+                "city": "Barcelona",
+                "country": "Spain",
+                "cost": 360.0,
+                "booking_platform": "booking.com",
+                "confirmation_number": "HTL123456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "test_multi_002"
+                ]
+              }
+            ],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:58:42.484112",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2881,
+        "output_tokens": 1179,
+        "total_tokens": 4060,
+        "cost": 0.0,
+        "response_time": 26.10905,
+        "prompt_length": 10068,
+        "response_length": 4384
+      }
+    },
+    "Level 3: Add Activity to Existing Trip": {
+      "gemini_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2025-02-10",
+            "end_date": "2025-02-13",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 867.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2025-02-10 08:00",
+                "arrival_datetime": "2025-02-10 09:30",
+                "carrier_name": "Airline",
+                "segment_number": "Flight123",
+                "distance_km": 490.0,
+                "distance_type": "straight",
+                "cost": 250.0,
+                "booking_platform": "existing_platform",
+                "confirmation_number": "FLIGHT123",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing_email_1"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-02-13 18:00",
+                "arrival_datetime": "2025-02-13 19:30",
+                "carrier_name": "Airline",
+                "segment_number": "Flight456",
+                "distance_km": 490.0,
+                "distance_type": "straight",
+                "cost": 250.0,
+                "booking_platform": "existing_platform",
+                "confirmation_number": "FLIGHT456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing_email_2"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel de Paris",
+                "check_in_date": "2025-02-10",
+                "check_out_date": "2025-02-13",
+                "address": "123 Rue de la Paix, Paris",
+                "city": "Paris",
+                "country": "France",
+                "cost": 350.0,
+                "booking_platform": "existing_platform",
+                "confirmation_number": "HOTEL789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing_email_3"
+                ]
+              }
+            ],
+            "tour_activities": [
+              {
+                "activity_name": "Louvre Museum - General Admission",
+                "description": "museum_visit",
+                "start_datetime": "2025-02-11 10:00",
+                "end_datetime": "2025-02-11 12:00",
+                "location": "Rue de Rivoli, 75001 Paris, France",
+                "city": "Paris",
+                "cost": 17.0,
+                "booking_platform": "louvre.fr",
+                "confirmation_number": "LOUVRE789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "new_activity_001"
+                ]
+              }
+            ],
+            "cruises": [],
+            "related_email_ids": [
+              "existing_email_1",
+              "existing_email_2",
+              "existing_email_3",
+              "new_activity_001"
+            ],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:58:54.812395",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": true
+            }
+          }
+        ],
+        "input_tokens": 1984,
+        "output_tokens": 706,
+        "total_tokens": 2690,
+        "cost": 0.0003606,
+        "response_time": 12.324586,
+        "prompt_length": 7937,
+        "response_length": 2827
+      },
+      "gemini_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2025-02-10",
+            "end_date": "2025-02-13",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 867.0,
+            "transport_segments": [
+              {
+                "segment_type": "train",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2025-02-10 09:34",
+                "arrival_datetime": "2025-02-10 13:35",
+                "carrier_name": "TGV Lyria",
+                "segment_number": "9210",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 150.0,
+                "booking_platform": "Trainline",
+                "confirmation_number": "EXISTING_TRAIN_1",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing"
+                ]
+              },
+              {
+                "segment_type": "train",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-02-13 18:23",
+                "arrival_datetime": "2025-02-13 22:26",
+                "carrier_name": "TGV Lyria",
+                "segment_number": "9229",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 150.0,
+                "booking_platform": "Trainline",
+                "confirmation_number": "EXISTING_TRAIN_2",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Lutetia",
+                "check_in_date": "2025-02-10",
+                "check_out_date": "2025-02-13",
+                "address": "45 Bd Raspail, 75006 Paris, France",
+                "city": "Paris",
+                "country": "France",
+                "cost": 550.0,
+                "booking_platform": "Booking.com",
+                "confirmation_number": "EXISTING_HOTEL_1",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing..."
+                ]
+              }
+            ],
+            "tour_activities": [
+              {
+                "activity_name": "Louvre Museum - General Admission",
+                "description": "General admission ticket for the Louvre Museum.",
+                "start_datetime": "2025-02-11 10:00",
+                "end_datetime": "2025-02-11 18:00",
+                "location": "Rue de Rivoli, 75001 Paris, France",
+                "city": "Paris",
+                "cost": 17.0,
+                "booking_platform": "louvre.fr",
+                "confirmation_number": "LOUVRE789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "new_activity_001"
+                ]
+              }
+            ],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:59:43.656507",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": true
+            }
+          }
+        ],
+        "input_tokens": 1984,
+        "output_tokens": 717,
+        "total_tokens": 2701,
+        "cost": 0.006064999999999999,
+        "response_time": 48.841586,
+        "prompt_length": 7937,
+        "response_length": 2868
+      },
+      "openai_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2025-02-10",
+            "end_date": "2025-02-13",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 867.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2025-02-10 08:00",
+                "arrival_datetime": "2025-02-10 09:30",
+                "carrier_name": "Swiss Air",
+                "segment_number": "LX123",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 400.0,
+                "booking_platform": "Swiss Air",
+                "confirmation_number": "ABC123",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-02-13 18:00",
+                "arrival_datetime": "2025-02-13 19:30",
+                "carrier_name": "Swiss Air",
+                "segment_number": "LX124",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 400.0,
+                "booking_platform": "Swiss Air",
+                "confirmation_number": "DEF456",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Paris Centre",
+                "check_in_date": "2025-02-10",
+                "check_out_date": "2025-02-13",
+                "address": "10 Rue de Paris, 75001 Paris, France",
+                "city": "Paris",
+                "country": "France",
+                "cost": 50.0,
+                "booking_platform": "Booking.com",
+                "confirmation_number": "HOTEL789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing"
+                ]
+              }
+            ],
+            "tour_activities": [
+              {
+                "activity_name": "Louvre Museum - General Admission",
+                "description": "Museum visit - Adult Full Day Access",
+                "start_datetime": "2025-02-11 10:00",
+                "end_datetime": "2025-02-11 18:00",
+                "location": "Rue de Rivoli, 75001 Paris, France",
+                "city": "Paris",
+                "cost": 17.0,
+                "booking_platform": "louvre.fr",
+                "confirmation_number": "LOUVRE789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "new_activity_001"
+                ]
+              }
+            ],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T14:59:59.696908",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": true
+            }
+          }
+        ],
+        "input_tokens": 1938,
+        "output_tokens": 714,
+        "total_tokens": 2652,
+        "cost": 0.0019176,
+        "response_time": 16.027659,
+        "prompt_length": 7937,
+        "response_length": 2824
+      },
+      "openai_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2025-02-10",
+            "end_date": "2025-02-13",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 867.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2025-02-10 08:00",
+                "arrival_datetime": "2025-02-10 09:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX634",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 200.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "EXISTING1",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Paris, France",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-02-13 18:00",
+                "arrival_datetime": "2025-02-13 19:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX637",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 200.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "EXISTING2",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Le Meurice",
+                "check_in_date": "2025-02-10",
+                "check_out_date": "2025-02-13",
+                "address": "228 Rue de Rivoli, 75001 Paris, France",
+                "city": "Paris",
+                "country": "France",
+                "cost": 450.0,
+                "booking_platform": "booking.com",
+                "confirmation_number": "EXISTING3",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "existing"
+                ]
+              }
+            ],
+            "tour_activities": [
+              {
+                "activity_name": "Louvre Museum - General Admission",
+                "description": "General admission to the Louvre Museum, full day access.",
+                "start_datetime": "2025-02-11 10:00",
+                "end_datetime": null,
+                "location": "Rue de Rivoli, 75001 Paris, France",
+                "city": "Paris",
+                "cost": 17.0,
+                "booking_platform": "louvre.fr",
+                "confirmation_number": "LOUVRE789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "new_activity_001"
+                ]
+              }
+            ],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T15:00:10.183501",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": true
+            }
+          }
+        ],
+        "input_tokens": 1938,
+        "output_tokens": 699,
+        "total_tokens": 2637,
+        "cost": 0.009468,
+        "response_time": 10.47764,
+        "prompt_length": 7937,
+        "response_length": 2750
+      },
+      "claude_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2025-02-10",
+            "end_date": "2025-02-13",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 867.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2025-02-10 00:00",
+                "arrival_datetime": "2025-02-10 00:00",
+                "carrier_name": "",
+                "segment_number": "",
+                "distance_km": 490,
+                "distance_type": "straight",
+                "cost": 0,
+                "booking_platform": "",
+                "confirmation_number": "",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": []
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "",
+                "check_in_date": "2025-02-10",
+                "check_out_date": "2025-02-13",
+                "address": "",
+                "city": "Paris",
+                "country": "France",
+                "cost": 850.0,
+                "booking_platform": "",
+                "confirmation_number": "",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": []
+              }
+            ],
+            "tour_activities": [
+              {
+                "activity_name": "Louvre Museum - General Admission",
+                "description": "Adult - Full Day Access",
+                "start_datetime": "2025-02-11 10:00",
+                "end_datetime": "2025-02-11 00:00",
+                "location": "Rue de Rivoli, 75001 Paris, France",
+                "city": "Paris",
+                "cost": 17.0,
+                "booking_platform": "louvre.fr",
+                "confirmation_number": "LOUVRE789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "new_activity_001"
+                ]
+              }
+            ],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T15:00:18.692692",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": true
+            }
+          }
+        ],
+        "input_tokens": 2265,
+        "output_tokens": 611,
+        "total_tokens": 2876,
+        "cost": 0.004256,
+        "response_time": 8.500271,
+        "prompt_length": 7937,
+        "response_length": 1931
+      },
+      "claude_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2025-02-10",
+            "end_date": "2025-02-13",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 867.0,
+            "transport_segments": [],
+            "accommodations": [],
+            "tour_activities": [
+              {
+                "activity_name": "Louvre Museum - General Admission",
+                "description": "Museum visit - Adult - Full Day Access",
+                "start_datetime": "2025-02-11 10:00",
+                "end_datetime": "2025-02-11 18:00",
+                "location": "Rue de Rivoli, 75001 Paris, France",
+                "city": "Paris",
+                "cost": 17.0,
+                "booking_platform": "louvre.fr",
+                "confirmation_number": "LOUVRE789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "new_activity_001"
+                ]
+              }
+            ],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T15:00:23.515002",
+              "has_transport_segments": false,
+              "has_accommodations": false,
+              "has_activities": true
+            }
+          }
+        ],
+        "input_tokens": 2265,
+        "output_tokens": 310,
+        "total_tokens": 2575,
+        "cost": 0.011445,
+        "response_time": 4.814278,
+        "prompt_length": 7937,
+        "response_length": 924
+      },
+      "gemma3_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2025-02-10",
+            "end_date": "2025-02-13",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 850.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Paris, France",
+                "departure_datetime": "2025-02-10 10:00",
+                "arrival_datetime": "2025-02-10 13:00",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX123",
+                "distance_km": 490.0,
+                "distance_type": "actual",
+                "cost": 300.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "SWISS789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "new_activity_001"
+                ]
+              }
+            ],
+            "accommodations": [
+              {
+                "property_name": "Hotel Plaza Ath\u00e9n\u00e9",
+                "check_in_date": "2025-02-10",
+                "check_out_date": "2025-02-13",
+                "address": "Avenue Montaigne, 75008 Paris, France",
+                "city": "Paris",
+                "country": "France",
+                "cost": 500.0,
+                "booking_platform": "booking.com",
+                "confirmation_number": "BOOK123",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "new_activity_001"
+                ]
+              }
+            ],
+            "tour_activities": [
+              {
+                "activity_name": "Louvre Museum - General Admission",
+                "description": "Visit the world-renowned Louvre Museum.",
+                "start_datetime": "2025-02-11 10:00",
+                "end_datetime": "2025-02-11 17:00",
+                "location": "Paris, France",
+                "city": "Paris",
+                "cost": 17.0,
+                "booking_platform": "louvre.fr",
+                "confirmation_number": "LOUVRE789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "new_activity_001"
+                ]
+              }
+            ],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T15:00:31.946795",
+              "has_transport_segments": true,
+              "has_accommodations": true,
+              "has_activities": true
+            }
+          }
+        ],
+        "input_tokens": 2260,
+        "output_tokens": 749,
+        "total_tokens": 3009,
+        "cost": 0.0,
+        "response_time": 8.412149,
+        "prompt_length": 7937,
+        "response_length": 2202
+      },
+      "gemma3_powerful": {
+        "success": false,
+        "error": "AssertionError: Expected 1 trips, got 2\nassert 2 == 1\n +  where 2 = len([{'accommodations': [], 'cities_visited': ['Zurich', 'Paris', 'Zurich'], 'cruises': [], 'destination': 'Paris', ...}, {'accommodations': [], 'cities_visited': ['Paris'], 'cruises': [], 'destination': 'Paris', ...}])"
+      },
+      "deepseek_fast": {
+        "success": false,
+        "error": "AssertionError: Trip missing required field: cruises\nassert 'cruises' in {'accommodations': [], 'cities_visited': ['Zurich', 'Paris', 'Zurich'], 'destination': 'Paris', 'end_date': '2025-02-13', ...}"
+      },
+      "deepseek_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Paris",
+            "destination": "Paris",
+            "start_date": "2025-02-10",
+            "end_date": "2025-02-13",
+            "cities_visited": [
+              "Zurich",
+              "Paris",
+              "Zurich"
+            ],
+            "total_cost": 867.0,
+            "transport_segments": [],
+            "accommodations": [],
+            "tour_activities": [
+              {
+                "activity_name": "Louvre Museum - General Admission",
+                "description": "General admission ticket for the Louvre Museum",
+                "start_datetime": "2025-02-11T10:00",
+                "end_datetime": "2025-02-11T10:00",
+                "location": "Paris, France",
+                "city": "Paris",
+                "cost": 17.0,
+                "booking_platform": "louvre.fr",
+                "confirmation_number": "LOUVRE789",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "new_activity_001"
+                ]
+              }
+            ],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 1,
+              "response_timestamp": "2025-07-11T15:01:13.927657",
+              "has_transport_segments": false,
+              "has_accommodations": false,
+              "has_activities": true
+            }
+          }
+        ],
+        "input_tokens": 2013,
+        "output_tokens": 801,
+        "total_tokens": 2814,
+        "cost": 0.0,
+        "response_time": 18.7159,
+        "prompt_length": 7937,
+        "response_length": 3187
+      }
+    },
+    "Level 5: Same Day Multiple Trips": {
+      "gemini_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Munich",
+            "destination": "Munich",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-15",
+            "cities_visited": [
+              "Zurich",
+              "Munich",
+              "Zurich"
+            ],
+            "total_cost": 480.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Munich, Germany",
+                "departure_datetime": "2025-06-15 07:00",
+                "arrival_datetime": "2025-06-15 08:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2367",
+                "distance_km": 240.0,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Munich, Germany",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-15 17:00",
+                "arrival_datetime": "2025-06-15 18:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2372",
+                "distance_km": 240.0,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:01:34.413540",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          },
+          {
+            "name": "Trip to Milan",
+            "destination": "Milan",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-17",
+            "cities_visited": [
+              "Zurich",
+              "Milan",
+              "Zurich"
+            ],
+            "total_cost": 220.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Milan, Italy",
+                "departure_datetime": "2025-06-15 20:30",
+                "arrival_datetime": "2025-06-15 21:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1612",
+                "distance_km": 280.0,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Milan, Italy",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-17 19:00",
+                "arrival_datetime": "2025-06-17 20:00",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1619",
+                "distance_km": 280.0,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:01:34.413540",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2384,
+        "output_tokens": 869,
+        "total_tokens": 3253,
+        "cost": 0.0004395,
+        "response_time": 20.483015,
+        "prompt_length": 9539,
+        "response_length": 3476
+      },
+      "gemini_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Munich",
+            "destination": "Munich",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-15",
+            "cities_visited": [
+              "Zurich",
+              "Munich",
+              "Zurich"
+            ],
+            "total_cost": 480.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Munich, Germany",
+                "departure_datetime": "2025-06-15 07:00",
+                "arrival_datetime": "2025-06-15 08:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2367",
+                "distance_km": 240,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Munich, Germany",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-15 17:00",
+                "arrival_datetime": "2025-06-15 18:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2372",
+                "distance_km": 240,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:02:12.615239",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          },
+          {
+            "name": "Trip to Milan",
+            "destination": "Milan",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-17",
+            "cities_visited": [
+              "Zurich",
+              "Milan",
+              "Zurich"
+            ],
+            "total_cost": 220.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Milan, Italy",
+                "departure_datetime": "2025-06-15 20:30",
+                "arrival_datetime": "2025-06-15 21:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1612",
+                "distance_km": 280,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Milan, Italy",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-17 19:00",
+                "arrival_datetime": "2025-06-17 20:00",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1619",
+                "distance_km": 280,
+                "distance_type": "straight",
+                "cost": 0.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:02:12.615239",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2384,
+        "output_tokens": 867,
+        "total_tokens": 3251,
+        "cost": 0.007315,
+        "response_time": 38.199892,
+        "prompt_length": 9539,
+        "response_length": 3468
+      },
+      "openai_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Munich",
+            "destination": "Munich",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-15",
+            "cities_visited": [
+              "Zurich",
+              "Munich",
+              "Zurich"
+            ],
+            "total_cost": 480.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Munich, Germany",
+                "departure_datetime": "2025-06-15 07:00",
+                "arrival_datetime": "2025-06-15 08:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2367",
+                "distance_km": 240,
+                "distance_type": "straight",
+                "cost": 240.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Munich, Germany",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-15 17:00",
+                "arrival_datetime": "2025-06-15 18:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2372",
+                "distance_km": 240,
+                "distance_type": "straight",
+                "cost": 240.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:02:27.864706",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          },
+          {
+            "name": "Trip to Milan",
+            "destination": "Milan",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-17",
+            "cities_visited": [
+              "Zurich",
+              "Milan",
+              "Zurich"
+            ],
+            "total_cost": 220.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Milan, Italy",
+                "departure_datetime": "2025-06-15 20:30",
+                "arrival_datetime": "2025-06-15 21:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1612",
+                "distance_km": 280,
+                "distance_type": "straight",
+                "cost": 110.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Milan, Italy",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-17 19:00",
+                "arrival_datetime": "2025-06-17 20:00",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1619",
+                "distance_km": 280,
+                "distance_type": "straight",
+                "cost": 110.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:02:27.864706",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2474,
+        "output_tokens": 890,
+        "total_tokens": 3364,
+        "cost": 0.0024136,
+        "response_time": 15.238712,
+        "prompt_length": 9539,
+        "response_length": 3458
+      },
+      "openai_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Business trip to Munich",
+            "destination": "Munich",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-15",
+            "cities_visited": [
+              "Zurich",
+              "Munich",
+              "Zurich"
+            ],
+            "total_cost": 480.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Munich, Germany",
+                "departure_datetime": "2025-06-15 07:00",
+                "arrival_datetime": "2025-06-15 08:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2367",
+                "distance_km": 240,
+                "distance_type": "straight",
+                "cost": 240.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Munich, Germany",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-15 17:00",
+                "arrival_datetime": "2025-06-15 18:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2372",
+                "distance_km": 240,
+                "distance_type": "straight",
+                "cost": 240.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:02:33.937152",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          },
+          {
+            "name": "Weekend in Milan",
+            "destination": "Milan",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-17",
+            "cities_visited": [
+              "Zurich",
+              "Milan",
+              "Zurich"
+            ],
+            "total_cost": 220.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Milan, Italy",
+                "departure_datetime": "2025-06-15 20:30",
+                "arrival_datetime": "2025-06-15 21:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1612",
+                "distance_km": 280,
+                "distance_type": "straight",
+                "cost": 110.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Milan, Italy",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-17 19:00",
+                "arrival_datetime": "2025-06-17 20:00",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1619",
+                "distance_km": 280,
+                "distance_type": "straight",
+                "cost": 110.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:02:33.937152",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2474,
+        "output_tokens": 863,
+        "total_tokens": 3337,
+        "cost": 0.011852000000000001,
+        "response_time": 6.064315,
+        "prompt_length": 9539,
+        "response_length": 3310
+      },
+      "claude_fast": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Business Trip to Munich",
+            "destination": "Munich",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-15",
+            "cities_visited": [
+              "Zurich",
+              "Munich",
+              "Zurich"
+            ],
+            "total_cost": 480.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Munich, Germany",
+                "departure_datetime": "2025-06-15 07:00",
+                "arrival_datetime": "2025-06-15 08:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2367",
+                "distance_km": 240,
+                "distance_type": "straight",
+                "cost": 240.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Munich, Germany",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-15 17:00",
+                "arrival_datetime": "2025-06-15 18:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2372",
+                "distance_km": 240,
+                "distance_type": "straight",
+                "cost": 240.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:02:46.329711",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          },
+          {
+            "name": "Weekend in Milan",
+            "destination": "Milan",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-17",
+            "cities_visited": [
+              "Zurich",
+              "Milan",
+              "Zurich"
+            ],
+            "total_cost": 220.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Milan, Italy",
+                "departure_datetime": "2025-06-15 20:30",
+                "arrival_datetime": "2025-06-15 21:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1612",
+                "distance_km": 280,
+                "distance_type": "straight",
+                "cost": 110.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Milan, Italy",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-17 19:00",
+                "arrival_datetime": "2025-06-17 20:00",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1619",
+                "distance_km": 280,
+                "distance_type": "straight",
+                "cost": 110.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:02:46.329711",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2951,
+        "output_tokens": 1059,
+        "total_tokens": 4010,
+        "cost": 0.0065968,
+        "response_time": 12.383813,
+        "prompt_length": 9539,
+        "response_length": 3327
+      },
+      "claude_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Munich",
+            "destination": "Munich",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-15",
+            "cities_visited": [
+              "Zurich",
+              "Munich",
+              "Zurich"
+            ],
+            "total_cost": 480.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Munich, Germany",
+                "departure_datetime": "2025-06-15 07:00",
+                "arrival_datetime": "2025-06-15 08:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2367",
+                "distance_km": 240,
+                "distance_type": "straight",
+                "cost": 240.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Munich, Germany",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-15 17:00",
+                "arrival_datetime": "2025-06-15 18:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2372",
+                "distance_km": 240,
+                "distance_type": "straight",
+                "cost": 240.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:02:57.634072",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          },
+          {
+            "name": "Trip to Milan",
+            "destination": "Milan",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-17",
+            "cities_visited": [
+              "Zurich",
+              "Milan",
+              "Zurich"
+            ],
+            "total_cost": 220.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Milan, Italy",
+                "departure_datetime": "2025-06-15 20:30",
+                "arrival_datetime": "2025-06-15 21:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1612",
+                "distance_km": 280,
+                "distance_type": "straight",
+                "cost": 110.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Milan, Italy",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-17 19:00",
+                "arrival_datetime": "2025-06-17 20:00",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1619",
+                "distance_km": 280,
+                "distance_type": "straight",
+                "cost": 110.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:02:57.634072",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2951,
+        "output_tokens": 1047,
+        "total_tokens": 3998,
+        "cost": 0.024558,
+        "response_time": 11.295483,
+        "prompt_length": 9539,
+        "response_length": 3304
+      },
+      "gemma3_fast": {
+        "success": false,
+        "error": "AssertionError: Expected 2 trips, got 1\nassert 1 == 2\n +  where 1 = len([{'accommodations': [], 'cities_visited': ['Zurich', 'Munich', 'Milan'], 'cruises': [], 'destination': 'Munich, Germany; Milan, Italy', ...}])"
+      },
+      "gemma3_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Weekend in Milan",
+            "destination": "Milan",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-17",
+            "cities_visited": [
+              "Zurich",
+              "Milan",
+              "Zurich"
+            ],
+            "total_cost": 220.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Milan, Italy",
+                "departure_datetime": "2025-06-15 20:30",
+                "arrival_datetime": "2025-06-15 21:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1612",
+                "distance_km": 280.0,
+                "distance_type": "straight",
+                "cost": 110.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Milan, Italy",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-17 19:00",
+                "arrival_datetime": "2025-06-17 20:00",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1619",
+                "distance_km": 280.0,
+                "distance_type": "straight",
+                "cost": 110.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:03:31.602483",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          },
+          {
+            "name": "Business trip to Munich",
+            "destination": "Munich",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-15",
+            "cities_visited": [
+              "Zurich",
+              "Munich",
+              "Zurich"
+            ],
+            "total_cost": 1000.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Munich, Germany",
+                "departure_datetime": "2025-06-15 07:00",
+                "arrival_datetime": "2025-06-15 08:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2367",
+                "distance_km": 240.0,
+                "distance_type": "straight",
+                "cost": 240.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Munich, Germany",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-15 17:00",
+                "arrival_datetime": "2025-06-15 18:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2372",
+                "distance_km": 240.0,
+                "distance_type": "straight",
+                "cost": 240.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:03:31.602483",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 3010,
+        "output_tokens": 1191,
+        "total_tokens": 4201,
+        "cost": 0.0,
+        "response_time": 23.116663,
+        "prompt_length": 9539,
+        "response_length": 3491
+      },
+      "deepseek_fast": {
+        "success": false,
+        "error": "Exception: Failed to parse AI response: Expecting ',' delimiter: line 105 column 5 (char 3559)"
+      },
+      "deepseek_powerful": {
+        "success": true,
+        "trips": [
+          {
+            "name": "Trip to Munich",
+            "destination": "Munich",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-15",
+            "cities_visited": [
+              "Zurich",
+              "Munich",
+              "Zurich"
+            ],
+            "total_cost": 480.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Munich, Germany",
+                "departure_datetime": "2025-06-15 07:00",
+                "arrival_datetime": "2025-06-15 08:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2367",
+                "distance_km": 240,
+                "distance_type": "actual",
+                "cost": 480.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Munich, Germany",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-15 17:00",
+                "arrival_datetime": "2025-06-15 18:00",
+                "carrier_name": "Lufthansa",
+                "segment_number": "LH2372",
+                "distance_km": 240,
+                "distance_type": "actual",
+                "cost": 480.0,
+                "booking_platform": "lufthansa.com",
+                "confirmation_number": "LH001DAY",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_001"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:04:17.776573",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          },
+          {
+            "name": "Trip to Milan",
+            "destination": "Milan",
+            "start_date": "2025-06-15",
+            "end_date": "2025-06-17",
+            "cities_visited": [
+              "Zurich",
+              "Milan",
+              "Zurich"
+            ],
+            "total_cost": 220.0,
+            "transport_segments": [
+              {
+                "segment_type": "flight",
+                "departure_location": "Zurich, Switzerland",
+                "arrival_location": "Milan, Italy",
+                "departure_datetime": "2025-06-15 20:30",
+                "arrival_datetime": "2025-06-15 21:30",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1612",
+                "distance_km": 280,
+                "distance_type": "actual",
+                "cost": 220.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              },
+              {
+                "segment_type": "flight",
+                "departure_location": "Milan, Italy",
+                "arrival_location": "Zurich, Switzerland",
+                "departure_datetime": "2025-06-17 19:00",
+                "arrival_datetime": "2025-06-17 20:00",
+                "carrier_name": "Swiss International Air Lines",
+                "segment_number": "LX1619",
+                "distance_km": 280,
+                "distance_type": "actual",
+                "cost": 220.0,
+                "booking_platform": "swiss.com",
+                "confirmation_number": "LX789MIL",
+                "status": "confirmed",
+                "is_latest_version": true,
+                "related_email_ids": [
+                  "same_day_002"
+                ]
+              }
+            ],
+            "accommodations": [],
+            "tour_activities": [],
+            "cruises": [],
+            "gemini_analysis": {
+              "total_trips_detected": 2,
+              "response_timestamp": "2025-07-11T15:04:17.776573",
+              "has_transport_segments": true,
+              "has_accommodations": false,
+              "has_activities": false
+            }
+          }
+        ],
+        "input_tokens": 2654,
+        "output_tokens": 1259,
+        "total_tokens": 3913,
+        "cost": 0.0,
+        "response_time": 27.080716,
+        "prompt_length": 9539,
+        "response_length": 4403
+      }
+    }
+  },
+  "provider_stats": {
+    "gemini": {
+      "tests": 8,
+      "successes": 8,
+      "failures": 0,
+      "total_cost": 0.026406299999999994,
+      "total_time": 218.30418799999998,
+      "total_tokens": 23208
+    },
+    "openai": {
+      "tests": 8,
+      "successes": 8,
+      "failures": 0,
+      "total_cost": 0.04819280000000001,
+      "total_time": 83.17169799999999,
+      "total_tokens": 23660
+    },
+    "claude": {
+      "tests": 8,
+      "successes": 8,
+      "failures": 0,
+      "total_cost": 0.0948128,
+      "total_time": 71.210069,
+      "total_tokens": 27318
+    },
+    "gemma3": {
+      "tests": 8,
+      "successes": 4,
+      "failures": 4,
+      "total_cost": 0.0,
+      "total_time": 51.354432,
+      "total_tokens": 13082
+    },
+    "deepseek": {
+      "tests": 8,
+      "successes": 5,
+      "failures": 3,
+      "total_cost": 0.0,
+      "total_time": 101.898903,
+      "total_tokens": 16646
+    }
+  },
+  "total_tests": 40,
+  "total_success": 33,
+  "total_failures": 7,
+  "total_cost": 0.16941189999999998
+}
