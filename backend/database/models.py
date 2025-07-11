@@ -67,7 +67,7 @@ class Trip(Base):
     total_cost = Column(Float, default=0.0)  # 总费用
     origin_city = Column(String(100), default='Zurich')  # 出发城市
     cities_visited = Column(Text, nullable=True)  # JSON格式的访问城市列表
-    gemini_analysis = Column(Text, nullable=True)  # JSON格式的Gemini分析结果
+    ai_analysis = Column(Text, nullable=True)  # JSON格式的AI分析结果
     
     # 描述信息
     description = Column(Text, nullable=True)  # 旅行描述

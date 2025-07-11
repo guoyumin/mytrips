@@ -32,9 +32,9 @@ class TripDetectionService:
         
         # Provider fallback order: openai-fast -> gemini-fast -> claude-fast
         self.provider_fallback_order = [
-            ('openai', 'fast'),
+            ('deepseek', 'powerful'),
             ('gemini', 'fast'),
-            ('claude', 'fast')
+            ('openai', 'fast')
         ]
         
         try:
@@ -154,13 +154,13 @@ class TripDetectionService:
             return self._switch_to_next_provider()
     
     def _load_existing_trips_from_database(self, db: Session) -> List[Dict]:
-        """Load all existing trips from database and convert to Gemini format"""
+        """Load all existing trips from database and convert to AI provider format"""
         try:
             trips = db.query(Trip).all()
             existing_trips = []
             
             for trip in trips:
-                # Convert database trip to Gemini format
+                # Convert database trip to AI provider format
                 trip_dict = {
                     'name': trip.name,
                     'destination': trip.destination,
@@ -858,7 +858,7 @@ class TripDetectionService:
                     end_date=self._safe_parse_date(trip_data.get('end_date')),
                     origin_city='Zurich',
                     cities_visited=json.dumps(trip_data.get('cities_visited', [])),
-                    gemini_analysis=json.dumps(trip_data.get('gemini_analysis', {}))
+                    ai_analysis=json.dumps(trip_data.get('ai_analysis', {}))
                 )
                 db.add(trip)
                 db.flush()  # Get trip ID

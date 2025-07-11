@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class TripDetector:
-    """Core trip detection logic using Gemini AI"""
+    """Core trip detection logic using AI providers"""
     
     def __init__(self, ai_provider: AIProviderInterface):
         self.ai_provider = ai_provider
@@ -345,7 +345,7 @@ FINAL REMINDER: Output ONLY valid JSON starting with {{ and ending with }}. NO o
             }
             
             for trip in trips:
-                trip['gemini_analysis'] = analysis_metadata
+                trip['ai_analysis'] = analysis_metadata
             
             return trips
             

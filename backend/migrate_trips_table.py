@@ -44,7 +44,7 @@ def migrate_trips_table():
             ('total_cost', 'REAL DEFAULT 0.0'),
             ('origin_city', 'VARCHAR(100) DEFAULT "Zurich"'),
             ('cities_visited', 'TEXT'),
-            ('gemini_analysis', 'TEXT')
+            ('ai_analysis', 'TEXT')
         ]
         
         # 添加缺失的字段
