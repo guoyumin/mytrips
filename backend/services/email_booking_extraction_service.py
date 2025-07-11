@@ -21,11 +21,19 @@ class EmailBookingExtractionService:
     
     def __init__(self):
         self.ai_provider: Optional[AIProviderInterface] = None
+        
+        # Provider fallback order: deepseek-powerful -> gemini-fast -> openai-fast
+        self.provider_fallback_order = [
+            ('deepseek', 'powerful'),
+            ('gemini', 'fast'),
+            ('openai', 'fast')
+        ]
+        
         try:
-            # Create AI provider using factory - using openai-fast model for extraction
+            # Create AI provider using factory - start with deepseek-powerful model for extraction
             self.ai_provider = AIProviderFactory.create_provider(
-                model_tier='fast',
-                provider_name='openai'
+                model_tier='powerful',
+                provider_name='deepseek'
             )
             model_info = self.ai_provider.get_model_info()
             logger.info(f"AI provider initialized for booking extraction: {model_info['model_name']}")
@@ -48,6 +56,7 @@ class EmailBookingExtractionService:
         self._stop_flag = threading.Event()
         self._extraction_thread = None
         self._lock = threading.Lock()
+        self._current_provider_index = 0  # Track current provider in fallback order
     
     def start_extraction(self, date_range: Optional[Dict] = None) -> Dict:
         """Start booking information extraction process"""
@@ -108,6 +117,32 @@ class EmailBookingExtractionService:
             progress['progress'] = 0
             
         return progress
+    
+    def _switch_to_next_provider(self) -> bool:
+        """Switch to the next provider in the fallback order. Returns True if successful."""
+        self._current_provider_index += 1
+        
+        if self._current_provider_index >= len(self.provider_fallback_order):
+            logger.error("All providers exhausted in fallback order")
+            return False
+        
+        provider_name, model_tier = self.provider_fallback_order[self._current_provider_index]
+        
+        try:
+            logger.info(f"Switching to fallback provider: {provider_name}-{model_tier}")
+            self.ai_provider = AIProviderFactory.create_provider(
+                model_tier=model_tier,
+                provider_name=provider_name
+            )
+            
+            model_info = self.ai_provider.get_model_info()
+            logger.info(f"Successfully switched to: {model_info['model_name']}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to switch to {provider_name}-{model_tier}: {e}")
+            # Try next provider recursively
+            return self._switch_to_next_provider()
     
     def _background_extraction(self, date_range: Optional[Dict] = None):
         """Background process for booking extraction"""
@@ -171,6 +206,19 @@ class EmailBookingExtractionService:
                 self.extraction_progress['current_batch'] = batch_num + 1
                 self.extraction_progress['message'] = f'Processing batch {batch_num + 1}/{total_batches}'
                 
+                # Reset to first provider for each new batch
+                if self._current_provider_index > 0:
+                    logger.info(f"Resetting to primary provider (deepseek-powerful) for batch {batch_num + 1}")
+                    self._current_provider_index = 0
+                    provider_name, model_tier = self.provider_fallback_order[0]
+                    try:
+                        self.ai_provider = AIProviderFactory.create_provider(
+                            model_tier=model_tier,
+                            provider_name=provider_name
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to reset to primary provider: {e}")
+                
                 # Process each email individually in this batch
                 for email in batch_emails:
                     if self._stop_flag.is_set():
@@ -211,60 +259,68 @@ class EmailBookingExtractionService:
             db.close()
     
     def _extract_single_email_booking(self, email: Email, db: Session) -> bool:
-        """Extract booking information from a single email"""
-        try:
-            content = email.email_content
-            if not content:
-                logger.warning(f"No content found for email {email.email_id}")
-                return False
-            
-            # Update status to extracting
-            content.booking_extraction_status = 'extracting'
-            db.commit()
-            
-            # Create AI prompt for booking extraction
-            prompt = self._create_booking_extraction_prompt(email, content)
-            
-            # Call AI provider - use simple method that returns just the content string
-            response_text = self.ai_provider.generate_content_simple(prompt)
-            
-            # Parse response
-            booking_info = self._parse_booking_response(response_text)
-            
-            if booking_info:
-                # Check if this is a non-booking email
-                if booking_info.get('booking_type') is None:
-                    # This is a non-booking email (reminder, marketing, etc.)
-                    content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
-                    content.booking_extraction_status = 'no_booking'
-                    content.booking_extraction_error = booking_info.get('reason', 'Non-booking email')
-                    db.commit()
-                    
-                    logger.info(f"Email {email.email_id} identified as non-booking: {booking_info.get('non_booking_type', 'unknown')}")
-                    return True
-                else:
-                    # This is a booking email with extracted information
-                    content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
-                    content.booking_extraction_status = 'completed'
-                    content.booking_extraction_error = None
-                    db.commit()
-                    
-                    logger.info(f"Successfully extracted booking info from email {email.email_id}")
-                    return True
-            else:
-                # Mark as failed
-                content.booking_extraction_status = 'failed'
-                content.booking_extraction_error = 'Failed to parse booking information'
-                db.commit()
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error extracting booking info from email {email.email_id}: {e}")
-            # Mark as failed
-            content.booking_extraction_status = 'failed'
-            content.booking_extraction_error = str(e)
-            db.commit()
+        """Extract booking information from a single email with provider fallback"""
+        content = email.email_content
+        if not content:
+            logger.warning(f"No content found for email {email.email_id}")
             return False
+        
+        # Update status to extracting
+        content.booking_extraction_status = 'extracting'
+        db.commit()
+        
+        # Create AI prompt for booking extraction
+        prompt = self._create_booking_extraction_prompt(email, content)
+        
+        # Keep trying with different providers until success or all exhausted
+        last_error = None
+        while True:
+            try:
+                # Call AI provider - use simple method that returns just the content string
+                response_text = self.ai_provider.generate_content_simple(prompt)
+                
+                # Parse response
+                booking_info = self._parse_booking_response(response_text)
+                
+                if booking_info:
+                    # Check if this is a non-booking email
+                    if booking_info.get('booking_type') is None:
+                        # This is a non-booking email (reminder, marketing, etc.)
+                        content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
+                        content.booking_extraction_status = 'no_booking'
+                        content.booking_extraction_error = booking_info.get('reason', 'Non-booking email')
+                        db.commit()
+                        
+                        logger.info(f"Email {email.email_id} identified as non-booking: {booking_info.get('non_booking_type', 'unknown')}")
+                        return True
+                    else:
+                        # This is a booking email with extracted information
+                        content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
+                        content.booking_extraction_status = 'completed'
+                        content.booking_extraction_error = None
+                        db.commit()
+                        
+                        logger.info(f"Successfully extracted booking info from email {email.email_id}")
+                        return True
+                else:
+                    # Failed to parse - will retry with next provider
+                    raise Exception("Failed to parse booking information")
+                    
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(f"Provider {self.ai_provider.get_model_info()['model_name']} failed for email {email.email_id}: {e}")
+                
+                # Try switching to next provider
+                if not self._switch_to_next_provider():
+                    # All providers exhausted
+                    logger.error(f"All providers failed for email {email.email_id}. Last error: {last_error}")
+                    content.booking_extraction_status = 'failed'
+                    content.booking_extraction_error = f"All providers failed. Last error: {last_error}"
+                    db.commit()
+                    return False
+                
+                # Continue with next provider
+                logger.info(f"Retrying email {email.email_id} with {self.ai_provider.get_model_info()['model_name']}")
     
     def _create_booking_extraction_prompt(self, email: Email, content: EmailContent) -> str:
         """Create prompt for extracting booking information from a single email"""
