@@ -4,10 +4,10 @@ Trip Management API Endpoints
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, List, Optional
 from datetime import datetime
-from database.config import SessionLocal
-from database.models import Trip, TransportSegment, Accommodation, TourActivity, Cruise
-from services.trip_detection_service import TripDetectionService
-from services.email_booking_extraction_service import EmailBookingExtractionService
+from backend.database.config import SessionLocal
+from backend.database.models import Trip, TransportSegment, Accommodation, TourActivity, Cruise
+from backend.services.trip_detection_service import TripDetectionService
+from backend.services.email_booking_extraction_service import EmailBookingExtractionService
 
 router = APIRouter()
 
@@ -66,6 +66,15 @@ async def stop_detection() -> Dict:
     try:
         message = trip_detection_service.stop_detection()
         return {"stopped": True, "message": message}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/detection/reset")
+async def reset_trip_detection() -> Dict:
+    """Reset trip detection status for all emails and clear all trips"""
+    try:
+        result = trip_detection_service.reset_trip_detection_status()
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

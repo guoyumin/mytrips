@@ -5,7 +5,7 @@ import json
 import os
 import logging
 from typing import Dict
-from lib.ai.ai_provider_interface import AIProviderInterface
+from backend.lib.ai.ai_provider_interface import AIProviderInterface
 
 logger = logging.getLogger(__name__)
 

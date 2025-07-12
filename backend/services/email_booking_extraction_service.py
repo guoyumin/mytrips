@@ -8,10 +8,9 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
 
-from database.config import SessionLocal
-from database.models import Email, EmailContent
-from lib.ai.ai_provider_factory import AIProviderFactory
-from lib.ai.ai_provider_interface import AIProviderInterface
+from backend.database.config import SessionLocal
+from backend.database.models import Email, EmailContent
+from backend.lib.ai.ai_provider_with_fallback import AIProviderWithFallback
 
 logger = logging.getLogger(__name__)
 
@@ -20,25 +19,24 @@ class EmailBookingExtractionService:
     """Service for extracting booking information from individual travel emails"""
     
     def __init__(self):
-        self.ai_provider: Optional[AIProviderInterface] = None
+        self.ai_provider: Optional[AIProviderWithFallback] = None
         
         # Provider fallback order: deepseek-powerful -> gemini-fast -> openai-fast
         self.provider_fallback_order = [
+            ('gemma3', 'powerful'),
             ('deepseek', 'powerful'),
             ('gemini', 'fast'),
             ('openai', 'fast')
         ]
         
         try:
-            # Create AI provider using factory - start with deepseek-powerful model for extraction
-            self.ai_provider = AIProviderFactory.create_provider(
-                model_tier='powerful',
-                provider_name='deepseek'
-            )
+            # Create AI provider with fallback support
+            self.ai_provider = AIProviderWithFallback(self.provider_fallback_order)
             model_info = self.ai_provider.get_model_info()
-            logger.info(f"AI provider initialized for booking extraction: {model_info['model_name']}")
+            logger.info(f"Booking extraction AI provider initialized with fallback support. Primary model: {model_info['model_name']}")
         except Exception as e:
-            logger.error(f"Failed to initialize AI provider: {e}")
+            logger.error(f"Failed to initialize AI provider with fallback: {e}")
+            self.ai_provider = None
         
         # Progress tracking with thread safety
         self.extraction_progress = {
@@ -56,7 +54,6 @@ class EmailBookingExtractionService:
         self._stop_flag = threading.Event()
         self._extraction_thread = None
         self._lock = threading.Lock()
-        self._current_provider_index = 0  # Track current provider in fallback order
     
     def start_extraction(self, date_range: Optional[Dict] = None) -> Dict:
         """Start booking information extraction process"""
@@ -118,31 +115,6 @@ class EmailBookingExtractionService:
             
         return progress
     
-    def _switch_to_next_provider(self) -> bool:
-        """Switch to the next provider in the fallback order. Returns True if successful."""
-        self._current_provider_index += 1
-        
-        if self._current_provider_index >= len(self.provider_fallback_order):
-            logger.error("All providers exhausted in fallback order")
-            return False
-        
-        provider_name, model_tier = self.provider_fallback_order[self._current_provider_index]
-        
-        try:
-            logger.info(f"Switching to fallback provider: {provider_name}-{model_tier}")
-            self.ai_provider = AIProviderFactory.create_provider(
-                model_tier=model_tier,
-                provider_name=provider_name
-            )
-            
-            model_info = self.ai_provider.get_model_info()
-            logger.info(f"Successfully switched to: {model_info['model_name']}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to switch to {provider_name}-{model_tier}: {e}")
-            # Try next provider recursively
-            return self._switch_to_next_provider()
     
     def _background_extraction(self, date_range: Optional[Dict] = None):
         """Background process for booking extraction"""
@@ -206,18 +178,10 @@ class EmailBookingExtractionService:
                 self.extraction_progress['current_batch'] = batch_num + 1
                 self.extraction_progress['message'] = f'Processing batch {batch_num + 1}/{total_batches}'
                 
-                # Reset to first provider for each new batch
-                if self._current_provider_index > 0:
-                    logger.info(f"Resetting to primary provider (deepseek-powerful) for batch {batch_num + 1}")
-                    self._current_provider_index = 0
-                    provider_name, model_tier = self.provider_fallback_order[0]
-                    try:
-                        self.ai_provider = AIProviderFactory.create_provider(
-                            model_tier=model_tier,
-                            provider_name=provider_name
-                        )
-                    except Exception as e:
-                        logger.warning(f"Failed to reset to primary provider: {e}")
+                # Reset to primary provider for each new batch
+                if batch_num > 0:  # Only reset after first batch
+                    logger.info(f"Resetting to primary provider for batch {batch_num + 1}")
+                    self.ai_provider.reset_to_primary()
                 
                 # Process each email individually in this batch
                 for email in batch_emails:
@@ -272,55 +236,48 @@ class EmailBookingExtractionService:
         # Create AI prompt for booking extraction
         prompt = self._create_booking_extraction_prompt(email, content)
         
-        # Keep trying with different providers until success or all exhausted
-        last_error = None
-        while True:
-            try:
-                # Call AI provider - use simple method that returns just the content string
-                response_text = self.ai_provider.generate_content_simple(prompt)
-                
-                # Parse response
-                booking_info = self._parse_booking_response(response_text)
-                
-                if booking_info:
-                    # Check if this is a non-booking email
-                    if booking_info.get('booking_type') is None:
-                        # This is a non-booking email (reminder, marketing, etc.)
-                        content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
-                        content.booking_extraction_status = 'no_booking'
-                        content.booking_extraction_error = booking_info.get('reason', 'Non-booking email')
-                        db.commit()
-                        
-                        logger.info(f"Email {email.email_id} identified as non-booking: {booking_info.get('non_booking_type', 'unknown')}")
-                        return True
-                    else:
-                        # This is a booking email with extracted information
-                        content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
-                        content.booking_extraction_status = 'completed'
-                        content.booking_extraction_error = None
-                        db.commit()
-                        
-                        logger.info(f"Successfully extracted booking info from email {email.email_id}")
-                        return True
-                else:
-                    # Failed to parse - will retry with next provider
-                    raise Exception("Failed to parse booking information")
-                    
-            except Exception as e:
-                last_error = str(e)
-                logger.warning(f"Provider {self.ai_provider.get_model_info()['model_name']} failed for email {email.email_id}: {e}")
-                
-                # Try switching to next provider
-                if not self._switch_to_next_provider():
-                    # All providers exhausted
-                    logger.error(f"All providers failed for email {email.email_id}. Last error: {last_error}")
-                    content.booking_extraction_status = 'failed'
-                    content.booking_extraction_error = f"All providers failed. Last error: {last_error}"
+        try:
+            # Log AI model being used
+            model_info = self.ai_provider.get_model_info()
+            logger.info(f"Calling AI model for booking extraction: {model_info.get('provider', 'Unknown')} - {model_info['model_name']}")
+            
+            # Call AI provider - AIProviderWithFallback handles retries internally
+            response_text = self.ai_provider.generate_content_simple(prompt)
+            
+            # Parse response
+            booking_info = self._parse_booking_response(response_text)
+            
+            if booking_info:
+                # Check if this is a non-booking email
+                if booking_info.get('booking_type') is None:
+                    # This is a non-booking email (reminder, marketing, etc.)
+                    content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
+                    content.booking_extraction_status = 'no_booking'
+                    content.booking_extraction_error = booking_info.get('reason', 'Non-booking email')
                     db.commit()
-                    return False
+                    
+                    logger.info(f"Email {email.email_id} identified as non-booking: {booking_info.get('non_booking_type', 'unknown')}")
+                    return True
+                else:
+                    # This is a booking email with extracted information
+                    content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
+                    content.booking_extraction_status = 'completed'
+                    content.booking_extraction_error = None
+                    db.commit()
+                    
+                    logger.info(f"Successfully extracted booking info from email {email.email_id}")
+                    return True
+            else:
+                # Failed to parse
+                raise Exception("Failed to parse booking information from AI response")
                 
-                # Continue with next provider
-                logger.info(f"Retrying email {email.email_id} with {self.ai_provider.get_model_info()['model_name']}")
+        except Exception as e:
+            # All providers have been exhausted by AIProviderWithFallback
+            logger.error(f"Failed to extract booking from email {email.email_id}: {e}")
+            content.booking_extraction_status = 'failed'
+            content.booking_extraction_error = str(e)
+            db.commit()
+            return False
     
     def _create_booking_extraction_prompt(self, email: Email, content: EmailContent) -> str:
         """Create prompt for extracting booking information from a single email"""
@@ -503,15 +460,24 @@ CRITICAL REQUIREMENTS:
    - For multi-segment trips, include ALL segments in the transport_segments array
    - Look for confirmation numbers in various formats: booking reference, confirmation code, PNR, reservation number, ticket number, etc.
 
-Return only the JSON object, no additional text."""
+IMPORTANT: Return ONLY the JSON object. Do NOT include any thinking process, explanations, or additional text before or after the JSON. Do NOT use <think> tags or any other markup. Start your response directly with {{ and end with }}."""
 
         return prompt
     
     def _parse_booking_response(self, response_text: str) -> Optional[Dict]:
-        """Parse Gemini response and extract booking information"""
+        """Parse AI response and extract booking information"""
         try:
             # Extract JSON from response
             response_text = response_text.strip()
+            
+            # Remove <think> tags if present (for models like DeepSeek)
+            if '<think>' in response_text and '</think>' in response_text:
+                think_start = response_text.find('<think>')
+                think_end = response_text.find('</think>') + len('</think>')
+                if think_end > think_start:
+                    response_text = response_text[:think_start] + response_text[think_end:]
+                    response_text = response_text.strip()
+            
             if '```json' in response_text:
                 start = response_text.find('```json') + 7
                 end = response_text.rfind('```')
@@ -531,3 +497,58 @@ Return only the JSON object, no additional text."""
             if 'response_text' in locals():
                 logger.error(f"Response was: {response_text[:500]}...")
             return None
+    
+    def reset_all_booking_extraction(self) -> Dict:
+        """重置所有booking提取状态"""
+        from backend.database.config import SessionLocal
+        from backend.database.models import EmailContent
+        
+        db = SessionLocal()
+        try:
+            # 确保没有正在运行的提取任务
+            if self.extraction_progress.get('is_running'):
+                return {
+                    'success': False,
+                    'message': 'Booking提取正在进行中，请先停止提取'
+                }
+            
+            # 重置所有EmailContent记录的booking提取状态
+            reset_count = db.query(EmailContent).update({
+                'booking_extraction_status': 'pending',
+                'booking_extraction_error': None,
+                'extracted_booking_info': None
+            }, synchronize_session=False)
+            
+            db.commit()
+            
+            # 重置进度状态
+            with self._lock:
+                self.extraction_progress = {
+                    'is_running': False,
+                    'total_emails': 0,
+                    'processed_emails': 0,
+                    'extracted_count': 0,
+                    'failed_count': 0,
+                    'finished': False,
+                    'error': None,
+                    'message': ''
+                }
+            
+            logger.info(f"成功重置 {reset_count} 条booking提取记录")
+            
+            return {
+                'success': True,
+                'reset_count': reset_count,
+                'message': f'成功重置 {reset_count} 条booking提取记录'
+            }
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"重置booking提取失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': f'重置booking提取失败: {str(e)}'
+            }
+        finally:
+            db.close()

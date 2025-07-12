@@ -3,7 +3,7 @@
 """
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Optional
-from services.email_content_service import EmailContentService
+from backend.services.email_content_service import EmailContentService
 
 router = APIRouter()
 
@@ -468,6 +468,34 @@ async def download_attachment(email_id: str, filename: str):
         
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/reset")
+async def reset_content_extraction():
+    """重置内容提取"""
+    try:
+        result = content_service.reset_all_content_extraction()
+        if result['success']:
+            return result
+        else:
+            raise HTTPException(status_code=400, detail=result['message'])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/reset-booking")
+async def reset_booking_extraction():
+    """重置booking提取"""
+    try:
+        # Import the booking extraction service
+        from backend.services.email_booking_extraction_service import EmailBookingExtractionService
+        booking_service = EmailBookingExtractionService()
+        
+        result = booking_service.reset_all_booking_extraction()
+        if result['success']:
+            return result
+        else:
+            raise HTTPException(status_code=400, detail=result['message'])
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

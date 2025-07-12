@@ -2,8 +2,8 @@
 """Reset failed trip detection emails to pending status"""
 import sys
 from sqlalchemy import func
-from database.config import SessionLocal
-from database.models import EmailContent
+from backend.database.config import SessionLocal
+from backend.database.models import EmailContent
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

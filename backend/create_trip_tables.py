@@ -9,8 +9,8 @@ import logging
 # Add backend directory to Python path
 sys.path.append(os.path.dirname(__file__))
 
-from database.config import engine, Base
-from database.models import (
+from backend.database.config import engine, Base
+from backend.database.models import (
     Trip, TransportSegment, Accommodation, TourActivity, Cruise,
     EmailTransportSegment, EmailAccommodation, EmailTourActivity, EmailCruise
 )

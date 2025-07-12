@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 from typing import List, Dict, Optional
-from lib.ai.ai_provider_interface import AIProviderInterface
+from backend.lib.ai.ai_provider_interface import AIProviderInterface
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,10 @@ class TripDetector:
             
             # Log request details for diagnostics
             prompt_length = len(prompt)
+            
+            # Log AI model being used
+            model_info = self.ai_provider.get_model_info()
+            logger.info(f"Calling AI model for trip detection: {model_info.get('provider', 'Unknown')} - {model_info['model_name']}")
             logger.info(f"Sending AI request - Length: {prompt_length:,} characters, Booking emails: {len(emails)}, Existing trips: {len(existing_trips or [])}")
             
             # Call AI provider and get full response with token usage
@@ -85,6 +89,12 @@ class TripDetector:
             if "500" in error_msg or "internal error" in error_msg.lower() or "quota" in error_msg.lower():
                 logger.error("Critical AI API error detected - returning None to indicate failure")
                 return None
+            
+            # For parsing errors and other failures, also return None to trigger fallback
+            if "Failed to parse AI response" in error_msg or "parsing" in error_msg.lower() or "json" in error_msg.lower():
+                logger.error("AI response parsing error - returning None to trigger fallback")
+                return None
+                
             # Return existing trips for non-critical errors
             return existing_trips or []
     
@@ -147,14 +157,17 @@ Trip {idx + 1}: {trip.get('name', 'Unknown')}
             
             existing_trips_text = f"""
 CRITICAL: The following trips ALREADY EXIST in the system (from database and previous processing). You MUST:
-1. Include ALL existing trips in your response (they are the baseline)
+1. Include ALL existing trips in your response WITH ALL THEIR DETAILS (they are the baseline)
 2. Check if any NEW bookings in the current email batch belong to existing trips
 3. If new bookings belong to existing trips, ADD them to those trips and update the trip details
 4. If new bookings form separate trips, CREATE new trips
 5. Return ALL trips (existing + updated + new) - DO NOT omit any existing trips
 
-EXISTING TRIPS (MUST be included in response):
+EXISTING TRIPS SUMMARY:
 {"".join(existing_trips_summary)}
+
+COMPLETE EXISTING TRIPS DATA (MUST be included in your response with all details):
+{json.dumps(existing_trips, indent=2, default=str)}
 
 When updating existing trips with new bookings:
 - Add new segments/accommodations/activities to the appropriate existing trip
@@ -169,7 +182,7 @@ IMPORTANT: Your response must contain ALL {len(existing_trips)} existing trips p
         
         prompt = f"""You are analyzing STRUCTURED BOOKING INFORMATION that has been pre-extracted from travel emails. Your task is to detect distinct trips and organize related bookings.
 
-CRITICAL: You MUST respond with ONLY valid JSON. Do NOT include any explanatory text, comments, or markdown formatting. Output ONLY the JSON structure starting with {{ and ending with }}.
+CRITICAL: You MUST respond with ONLY valid JSON. Do NOT include any thinking process, explanatory text, comments, or markdown formatting. Do NOT use <think> tags. Output ONLY the JSON structure starting with {{ and ending with }}.
 
 The traveler lives in Zurich, so trips typically start and end there.
 {existing_trips_text}
@@ -301,7 +314,7 @@ Remember:
   * Use "straight" for your estimates
   * Never leave distance fields empty or null
 
-FINAL REMINDER: Output ONLY valid JSON starting with {{ and ending with }}. NO other text."""
+FINAL REMINDER: Output ONLY valid JSON starting with {{ and ending with }}. Do NOT include any thinking process, explanations, or additional text. Do NOT use <think> tags or any other markup. Your response must start directly with {{ and end with }}. NO other text."""
 
         return prompt
     
@@ -310,6 +323,14 @@ FINAL REMINDER: Output ONLY valid JSON starting with {{ and ending with }}. NO o
         try:
             # Extract JSON from response
             response_text = response_text.strip()
+            
+            # Remove <think> tags if present (for models like DeepSeek)
+            if '<think>' in response_text and '</think>' in response_text:
+                think_start = response_text.find('<think>')
+                think_end = response_text.find('</think>') + len('</think>')
+                if think_end > think_start:
+                    response_text = response_text[:think_start] + response_text[think_end:]
+                    response_text = response_text.strip()
             
             # First try to extract JSON from code blocks
             if '```json' in response_text:
@@ -332,7 +353,15 @@ FINAL REMINDER: Output ONLY valid JSON starting with {{ and ending with }}. NO o
                 if json_end > json_start:
                     response_text = response_text[json_start:json_end + 1]
             
-            result = json.loads(response_text.strip())
+            # Try to clean common JSON issues
+            cleaned_text = response_text.strip()
+            
+            # Remove trailing commas before closing braces/brackets
+            import re
+            cleaned_text = re.sub(r',\s*}', '}', cleaned_text)
+            cleaned_text = re.sub(r',\s*]', ']', cleaned_text)
+            
+            result = json.loads(cleaned_text)
             trips = result.get('trips', [])
             
             # Store safe metadata from AI analysis (avoid circular reference)
@@ -349,8 +378,23 @@ FINAL REMINDER: Output ONLY valid JSON starting with {{ and ending with }}. NO o
             
             return trips
             
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parsing error at line {e.lineno}, column {e.colno}: {e.msg}")
+            # Try to show the problematic part of the response
+            lines = response_text.split('\n')
+            if 0 <= e.lineno - 1 < len(lines):
+                error_line = lines[e.lineno - 1]
+                logger.error(f"Problematic line: {error_line}")
+                if e.colno > 0:
+                    logger.error(f"Error position: {' ' * (e.colno - 1)}^")
+            
+            # Log a larger portion of the response for debugging
+            logger.error(f"Response excerpt (chars {max(0, e.pos-200)} to {min(len(response_text), e.pos+200)}): ...{response_text[max(0, e.pos-200):min(len(response_text), e.pos+200)]}...")
+            
+            # Raise exception instead of returning empty list so the service knows there was an error
+            raise Exception(f"Failed to parse AI response: {str(e)}")
         except Exception as e:
             logger.error(f"Error parsing AI response: {e}")
-            logger.error(f"Response was: {response_text[:500]}...")
+            logger.error(f"Response was: {response_text[:1000]}...")
             # Raise exception instead of returning empty list so the service knows there was an error
             raise Exception(f"Failed to parse AI response: {str(e)}")

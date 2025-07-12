@@ -6,7 +6,7 @@ import os
 import logging
 import requests
 from typing import Dict, Optional
-from lib.ai.ai_provider_interface import AIProviderInterface
+from backend.lib.ai.ai_provider_interface import AIProviderInterface
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from datetime import datetime, timedelta
-from ..services.gmail_service import GmailService
+from backend.services.gmail_service import GmailService
 from ..services.email_analyzer import EmailAnalyzer
 
 router = APIRouter()

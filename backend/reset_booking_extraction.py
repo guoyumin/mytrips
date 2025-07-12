@@ -4,8 +4,8 @@ Reset all email booking extraction data to re-run with normalized array format
 """
 import logging
 from sqlalchemy import update
-from database.config import SessionLocal
-from database.models import EmailContent
+from backend.database.config import SessionLocal
+from backend.database.models import EmailContent
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

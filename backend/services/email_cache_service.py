@@ -3,10 +3,11 @@ from datetime import datetime
 from typing import Dict, List, Optional
 import threading
 import time
+import logging
 
-from lib.gmail_client import GmailClient
-from lib.email_cache_db import EmailCacheDB
-from lib.config_manager import config_manager
+from backend.lib.gmail_client import GmailClient
+from backend.lib.email_cache_db import EmailCacheDB
+from backend.lib.config_manager import config_manager
 
 class EmailCacheService:
     """Service for managing email cache operations"""
@@ -232,3 +233,47 @@ class EmailCacheService:
                     'error': str(e),
                     'message': f'Import failed: {str(e)}'
                 })
+    
+    def reset_all_emails(self) -> Dict:
+        """清除所有缓存的邮件数据"""
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # 确保没有正在运行的导入任务
+            if self.import_progress.get('is_running'):
+                return {
+                    'success': False,
+                    'message': '邮件导入正在进行中，请先停止导入'
+                }
+            
+            # 清除数据库中的所有邮件
+            deleted_count = self.email_cache.clear_all()
+            
+            # 重置导入进度
+            with self._lock:
+                self.import_progress = {
+                    'is_running': False,
+                    'current': 0,
+                    'total': 0,
+                    'finished': False,
+                    'message': '',
+                    'error': None,
+                    'new_count': 0,
+                    'skip_count': 0
+                }
+            
+            logger.info(f"成功清除 {deleted_count} 封邮件")
+            
+            return {
+                'success': True,
+                'deleted_count': deleted_count,
+                'message': f'成功清除 {deleted_count} 封邮件'
+            }
+            
+        except Exception as e:
+            logger.error(f"清除邮件失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': f'清除邮件失败: {str(e)}'
+            }

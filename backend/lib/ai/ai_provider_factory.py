@@ -5,12 +5,12 @@ import os
 import json
 import logging
 from typing import Optional, Dict
-from lib.ai.ai_provider_interface import AIProviderInterface
-from lib.ai.providers.gemini_provider import GeminiProvider
-from lib.ai.providers.openai_provider import OpenAIProvider
-from lib.ai.providers.claude_provider import ClaudeProvider
-from lib.ai.providers.gemma3_provider import Gemma3Provider
-from lib.ai.providers.deepseek_provider import DeepSeekProvider
+from backend.lib.ai.ai_provider_interface import AIProviderInterface
+from backend.lib.ai.providers.gemini_provider import GeminiProvider
+from backend.lib.ai.providers.openai_provider import OpenAIProvider
+from backend.lib.ai.providers.claude_provider import ClaudeProvider
+from backend.lib.ai.providers.gemma3_provider import Gemma3Provider
+from backend.lib.ai.providers.deepseek_provider import DeepSeekProvider
 
 logger = logging.getLogger(__name__)
 

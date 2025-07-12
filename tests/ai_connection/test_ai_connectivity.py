@@ -112,11 +112,15 @@ def _test_single_provider_connectivity(provider_name: str, tier: str) -> Dict:
         result['response_time_ms'] = int((end_time - start_time).total_seconds() * 1000)
         
         # Validate response
-        if response and response.strip():
-            result['success'] = True
-            result['response'] = response.strip()[:50]  # First 50 chars
+        if response and isinstance(response, dict) and response.get('content'):
+            content = response['content'].strip() if isinstance(response['content'], str) else str(response['content'])
+            if content:
+                result['success'] = True
+                result['response'] = content[:50]  # First 50 chars
+            else:
+                result['error'] = "Empty response content"
         else:
-            result['error'] = "Empty response received"
+            result['error'] = "Invalid or empty response received"
             
     except Exception as e:
         result['error'] = str(e)

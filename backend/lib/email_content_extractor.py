@@ -35,24 +35,41 @@ class EmailContentExtractor:
         Returns:
             包含内容和附件信息的字典
         """
-        # 获取邮件完整内容
-        message = self.gmail_client.get_message(email_id)
-        
-        if not message:
-            raise Exception(f"Failed to get message {email_id} from Gmail")
+        try:
+            # 获取邮件完整内容
+            message = self.gmail_client.get_message(email_id)
             
-        # 解析邮件内容
-        text_content, html_content = self._extract_message_content(message)
-        
-        # 处理附件
-        attachments_info = self._extract_attachments(email_id, message)
-        
-        return {
-            'text_content': text_content,
-            'html_content': html_content,
-            'attachments': attachments_info,
-            'has_attachments': len(attachments_info) > 0
-        }
+            if not message:
+                logger.error(f"Failed to get message {email_id} from Gmail - message is None")
+                # Return empty content instead of raising exception
+                return {
+                    'text_content': '',
+                    'html_content': '',
+                    'attachments': [],
+                    'has_attachments': False
+                }
+                
+            # 解析邮件内容
+            text_content, html_content = self._extract_message_content(message)
+            
+            # 处理附件
+            attachments_info = self._extract_attachments(email_id, message)
+            
+            return {
+                'text_content': text_content,
+                'html_content': html_content,
+                'attachments': attachments_info,
+                'has_attachments': len(attachments_info) > 0
+            }
+        except Exception as e:
+            logger.error(f"Error extracting email {email_id}: {e}")
+            # Return empty content on error
+            return {
+                'text_content': '',
+                'html_content': '',
+                'attachments': [],
+                'has_attachments': False
+            }
         
     def _extract_message_content(self, message: Dict) -> Tuple[str, str]:
         """

@@ -9,8 +9,8 @@ import sys
 # 添加后端目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from database.config import engine, create_tables, DATABASE_URL
-from database.models import Base
+from backend.database.config import engine, create_tables, DATABASE_URL
+from backend.database.models import Base
 
 def init_database():
     """初始化数据库"""

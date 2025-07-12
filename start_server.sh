@@ -5,11 +5,19 @@
 
 echo "Starting MyTrips server..."
 
+# Get the script directory and project root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$SCRIPT_DIR"
+
+# Set PYTHONPATH to include project root
+export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
+echo "Setting PYTHONPATH to: $PROJECT_ROOT"
+
 # Change to backend directory
-cd backend
+cd "$PROJECT_ROOT/backend"
 
 # Create logs directory if it doesn't exist
-mkdir -p ../logs
+mkdir -p "$PROJECT_ROOT/logs"
 
 # Stop any existing server
 echo "Stopping any existing server..."
@@ -18,7 +26,7 @@ sleep 2
 
 # Start server in background with logging
 echo "Starting server on http://0.0.0.0:8000"
-nohup python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000 > ../logs/server.log 2>&1 &
+nohup python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000 > "$PROJECT_ROOT/logs/server.log" 2>&1 &
 
 # Get the process ID
 SERVER_PID=$!

@@ -4,28 +4,35 @@ import threading
 import time
 import logging
 
-from lib.email_cache_db import EmailCacheDB
-from lib.email_classifier import EmailClassifier
-from lib.config_manager import config_manager
-from lib.ai.ai_provider_factory import AIProviderFactory
+from backend.lib.email_cache_db import EmailCacheDB
+from backend.lib.email_classifier import EmailClassifier
+from backend.lib.config_manager import config_manager
+from backend.lib.ai.ai_provider_with_fallback import AIProviderWithFallback
 
 # Configure logger
 logger = logging.getLogger(__name__)
 
 class EmailClassificationService:
-    """Service for classifying emails using Gemini AI"""
+    """Service for classifying emails using AI with automatic fallback"""
     
     def __init__(self):
         # Initialize email cache using database
         self.email_cache = EmailCacheDB()
         
-        # Try to initialize email classifier with fast model for cost efficiency
+        # Define fallback order for email classification
+        # Start with fast models for cost efficiency
+        self.provider_fallback_order = [
+            ('deepseek', 'powerful'),
+            ('gemma3', 'powerful')
+        ]
+        
+        # Try to initialize email classifier with fallback support
         try:
-            logger.debug("Initializing AI provider for email classification")
-            ai_provider = AIProviderFactory.create_provider(model_tier='fast')
+            logger.debug("Initializing AI provider with fallback for email classification")
+            ai_provider = AIProviderWithFallback(self.provider_fallback_order)
             self.email_classifier = EmailClassifier(ai_provider)
             model_info = ai_provider.get_model_info()
-            logger.debug(f"Email classifier initialized with {model_info['model_name']}")
+            logger.debug(f"Email classifier initialized with fallback support. Primary model: {model_info['model_name']}")
         except Exception as e:
             logger.warning(f"Email classifier not available: {e}")
             self.email_classifier = None
@@ -166,11 +173,13 @@ class EmailClassificationService:
             
             logger.info(f"Processing {len(unclassified_emails)} emails in {total_batches} batches of {batch_size} each")
             
-            # Estimate cost if using new classifier
-            if self.email_classifier:
-                cost_info = self.email_classifier.estimate_cost(len(unclassified_emails))
-                self.classification_progress['estimated_cost'] = cost_info['estimated_cost_usd']
-                logger.info(f"Estimated cost: ${cost_info['estimated_cost_usd']}")
+            # Initialize actual cost tracking
+            self.classification_progress['actual_cost'] = 0.0
+            self.classification_progress['total_tokens'] = {
+                'input': 0,
+                'output': 0,
+                'total': 0
+            }
             
             # Process in batches
             all_results = []
@@ -194,7 +203,16 @@ class EmailClassificationService:
                 # Classify batch
                 if self.email_classifier:
                     # Use new email classifier
-                    batch_results = self.email_classifier.classify_batch(batch_emails)
+                    batch_response = self.email_classifier.classify_batch(batch_emails)
+                    batch_results = batch_response['classifications']
+                    
+                    # Update cost tracking if available
+                    if batch_response.get('cost_info'):
+                        cost_info = batch_response['cost_info']
+                        self.classification_progress['actual_cost'] += cost_info.get('estimated_cost_usd', 0.0)
+                        self.classification_progress['total_tokens']['input'] += cost_info.get('input_tokens', 0)
+                        self.classification_progress['total_tokens']['output'] += cost_info.get('output_tokens', 0)
+                        self.classification_progress['total_tokens']['total'] += cost_info.get('total_tokens', 0)
                 else:
                     # Fallback to old gemini service
                     batch_results = self.gemini_service.classify_emails_batch(batch_emails)
@@ -234,7 +252,11 @@ class EmailClassificationService:
             failed_count = sum(1 for r in all_results if r['classification'] == 'classification_failed')
             successful_count = len(all_results) - failed_count
             
-            logger.info(f"Classification completed: {successful_count} successful, {failed_count} failed")
+            # Log final cost if available
+            if self.classification_progress.get('actual_cost'):
+                logger.info(f"Classification completed: {successful_count} successful, {failed_count} failed. Total cost: ${self.classification_progress['actual_cost']:.4f}")
+            else:
+                logger.info(f"Classification completed: {successful_count} successful, {failed_count} failed")
             
             if failed_count > 0:
                 logger.info(f"Found {failed_count} failed classifications - keeping as unclassified for retry")
@@ -267,3 +289,60 @@ class EmailClassificationService:
     def get_classification_stats(self) -> Dict:
         """Get statistics from email cache"""
         return self.email_cache.get_statistics()
+    
+    def reset_all_classifications(self) -> Dict:
+        """重置所有邮件分类状态"""
+        from backend.database.config import SessionLocal
+        from backend.database.models import Email, ClassificationStats
+        
+        db = SessionLocal()
+        try:
+            # 确保没有正在运行的分类任务
+            if self.classification_progress.get('is_running'):
+                return {
+                    'success': False,
+                    'message': '邮件分类正在进行中，请先停止分类'
+                }
+            
+            # 重置所有邮件的分类状态
+            reset_count = db.query(Email).update({
+                'is_classified': False,
+                'classification': None
+            }, synchronize_session=False)
+            
+            # 清除分类统计数据
+            stats_count = db.query(ClassificationStats).delete()
+            
+            db.commit()
+            
+            # 重置进度状态
+            with self._lock:
+                self.classification_progress = {
+                    'is_running': False,
+                    'total_emails': 0,
+                    'processed_emails': 0,
+                    'classified_count': 0,
+                    'finished': False,
+                    'error': None,
+                    'message': ''
+                }
+            
+            logger.info(f"成功重置 {reset_count} 封邮件的分类状态")
+            
+            return {
+                'success': True,
+                'reset_count': reset_count,
+                'stats_cleared': stats_count,
+                'message': f'成功重置 {reset_count} 封邮件的分类状态'
+            }
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"重置分类失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': f'重置分类失败: {str(e)}'
+            }
+        finally:
+            db.close()

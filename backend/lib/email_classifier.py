@@ -5,7 +5,7 @@
 import json
 import logging
 from typing import List, Dict, Optional
-from lib.ai.ai_provider_interface import AIProviderInterface
+from backend.lib.ai.ai_provider_interface import AIProviderInterface
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class EmailClassifier:
         self.ai_provider = ai_provider
         logger.info(f"EmailClassifier initialized with {ai_provider.get_model_info()['model_name']}")
     
-    def classify_batch(self, emails: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def classify_batch(self, emails: List[Dict[str, str]]) -> Dict[str, any]:
         """
         批量分类邮件
         
@@ -43,27 +43,46 @@ class EmailClassifier:
             emails: 邮件列表，每个邮件包含 email_id, subject, from 等字段
             
         Returns:
-            分类结果列表
+            包含分类结果和成本信息的字典
         """
         if not emails:
-            return []
+            return {'classifications': [], 'cost_info': None}
         
         # 创建提示
         prompt = self._create_classification_prompt(emails)
         
         try:
+            # Log AI model being used
+            model_info = self.ai_provider.get_model_info()
+            logger.info(f"Calling AI model for email classification: {model_info.get('provider', 'Unknown')} - {model_info['model_name']}")
+            
             # 调用 AI Provider
-            response_text = self.ai_provider.generate_content(prompt)
+            response = self.ai_provider.generate_content(prompt)
+            response_text = response['content']
             
             # 解析响应
             classifications = self._parse_response(response_text, emails)
             
-            return classifications
+            # 提取成本信息
+            cost_info = {
+                'input_tokens': response.get('input_tokens', 0),
+                'output_tokens': response.get('output_tokens', 0),
+                'total_tokens': response.get('total_tokens', 0),
+                'estimated_cost_usd': response.get('estimated_cost_usd', 0.0)
+            }
+            
+            return {
+                'classifications': classifications,
+                'cost_info': cost_info
+            }
             
         except Exception as e:
             logger.error(f"分类错误: {e}")
             # 返回默认分类
-            return [self._create_failed_classification(email) for email in emails]
+            return {
+                'classifications': [self._create_failed_classification(email) for email in emails],
+                'cost_info': None
+            }
     
     def _create_classification_prompt(self, emails: List[Dict[str, str]]) -> str:
         """创建分类提示"""
@@ -94,11 +113,20 @@ Categories:
 - marketing: Travel company promotions, newsletters, deals (NO specific booking info)
 - not_travel: Not travel-related at all
 
-Return ONLY a JSON array with {len(emails)} objects in this exact format:
+CRITICAL REQUIREMENTS:
+1. Return ONLY a JSON array - no other text, no explanations, no thinking
+2. Do NOT use <think> tags or any other XML/HTML tags
+3. Do NOT include any text before or after the JSON
+4. Do NOT explain your reasoning or thinking process
+5. Start your response with [ and end with ]
+
+Return EXACTLY {len(emails)} objects in this format:
 [{{"id": 1, "category": "flight"}}, {{"id": 2, "category": "not_travel"}}, ...]
 
 Emails to classify:
-{emails_text}"""
+{emails_text}
+
+REMEMBER: Your response must start with [ and contain only valid JSON."""
         
         return prompt
     
@@ -107,6 +135,14 @@ Emails to classify:
         try:
             # 清理响应文本
             response_text = response_text.strip()
+            
+            # 移除 <think> 标签（如果存在）
+            if '<think>' in response_text and '</think>' in response_text:
+                think_start = response_text.find('<think>')
+                think_end = response_text.find('</think>') + len('</think>')
+                if think_end > think_start:
+                    response_text = response_text[:think_start] + response_text[think_end:]
+                    response_text = response_text.strip()
             
             # 移除 Markdown 代码块标记
             if '```json' in response_text:
@@ -160,18 +196,3 @@ Emails to classify:
         """判断是否为旅行相关分类"""
         return category in self.TRAVEL_CATEGORIES
     
-    def estimate_cost(self, num_emails: int) -> Dict[str, float]:
-        """
-        估算分类成本
-        
-        Args:
-            num_emails: 邮件数量
-            
-        Returns:
-            成本估算信息
-        """
-        # 粗略估算：每封邮件约 50 个字符的prompt
-        estimated_prompt_length = num_emails * 50
-        
-        # 使用AI Provider的成本估算
-        return self.ai_provider.estimate_cost(estimated_prompt_length)

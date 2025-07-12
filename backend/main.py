@@ -6,11 +6,11 @@ import uvicorn
 import logging
 from pathlib import Path
 
-from api.email_router import router as email_router
-from api.auth_router import router as auth_router
-from api.content_router import router as content_router
-from api.trips_router import router as trips_router
-from lib.config_manager import config_manager
+from backend.api.email_router import router as email_router
+from backend.api.auth_router import router as auth_router
+from backend.api.content_router import router as content_router
+from backend.api.trips_router import router as trips_router
+from backend.lib.config_manager import config_manager
 
 # Configure logging from config
 log_level = getattr(logging, config_manager.get_log_level().upper(), logging.INFO)

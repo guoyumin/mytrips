@@ -12,9 +12,9 @@ from typing import Dict, List
 # 添加后端目录到Python路径
 sys.path.append(os.path.dirname(__file__))
 
-from database.config import SessionLocal, engine
-from database.models import Email, Base
-from lib.config_manager import config_manager
+from backend.database.config import SessionLocal, engine
+from backend.database.models import Email, Base
+from backend.lib.config_manager import config_manager
 import logging
 
 # 配置日志

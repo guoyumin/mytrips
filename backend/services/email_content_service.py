@@ -8,11 +8,11 @@ import threading
 from typing import Dict, List, Optional
 from datetime import datetime
 
-from lib.gmail_client import GmailClient
-from lib.email_content_extractor import EmailContentExtractor
-from lib.config_manager import config_manager
-from database.config import SessionLocal
-from database.models import Email, EmailContent
+from backend.lib.gmail_client import GmailClient
+from backend.lib.email_content_extractor import EmailContentExtractor
+from backend.lib.config_manager import config_manager
+from backend.database.config import SessionLocal
+from backend.database.models import Email, EmailContent
 
 logger = logging.getLogger(__name__)
 
@@ -80,13 +80,28 @@ class EmailContentService:
                 ~Email.email_id.in_(extracted_ids)
             ).all()
             
-            return [{
-                'email_id': email.email_id,
-                'subject': email.subject,
-                'sender': email.sender,
-                'date': email.date,
-                'classification': email.classification
-            } for email in emails]
+            result = []
+            for email in emails:
+                if not email:
+                    logger.warning("Found None email in query results")
+                    continue
+                    
+                email_dict = {
+                    'email_id': email.email_id if hasattr(email, 'email_id') else None,
+                    'subject': email.subject if hasattr(email, 'subject') else None,
+                    'sender': email.sender if hasattr(email, 'sender') else None,
+                    'date': email.date if hasattr(email, 'date') else None,
+                    'classification': email.classification if hasattr(email, 'classification') else None
+                }
+                
+                # Only add if we have a valid email_id
+                if email_dict['email_id']:
+                    result.append(email_dict)
+                else:
+                    logger.warning(f"Skipping email with no email_id: {email_dict}")
+                    
+            logger.debug(f"Returning {len(result)} emails for extraction")
+            return result
             
         finally:
             db.close()
@@ -160,6 +175,8 @@ class EmailContentService:
             # 获取需要提取的邮件
             emails = self.get_travel_emails_for_extraction()
             
+            logger.debug(f"get_travel_emails_for_extraction returned type: {type(emails)}, length: {len(emails) if emails else 0}")
+            
             if not emails:
                 with self._lock:
                     self.extraction_progress.update({
@@ -172,6 +189,7 @@ class EmailContentService:
             # 应用限制
             if limit:
                 emails = emails[:limit]
+                logger.debug(f"Applied limit {limit}, emails length now: {len(emails)}")
                 
             self.extraction_progress.update({
                 'total': len(emails),
@@ -185,10 +203,28 @@ class EmailContentService:
                 if self._stop_flag.is_set():
                     logger.info("Extraction stopped by user")
                     break
-                    
+                
+                logger.debug(f"Processing email {i+1}/{len(emails)}, email_info type: {type(email_info)}")
+                
+                # Check if email_info is valid
+                if not email_info:
+                    logger.error(f"email_info at index {i} is None or empty!")
+                    self.extraction_progress['failed_count'] += 1
+                    continue
+                
+                # Safely get subject for progress message
+                subject = email_info.get('subject', 'No subject') if isinstance(email_info, dict) else 'Invalid email_info'
+                
+                # Handle None subject
+                if subject is None:
+                    subject = 'No subject'
+                
+                # Safely slice the subject
+                display_subject = subject[:50] if subject else ''
+                
                 self.extraction_progress.update({
                     'current': i + 1,
-                    'message': f'Extracting: {email_info["subject"][:50]}...'
+                    'message': f'Extracting: {display_subject}...'
                 })
                 
                 # 提取邮件内容
@@ -210,7 +246,9 @@ class EmailContentService:
             logger.info(f"Extraction completed. Extracted: {self.extraction_progress['extracted_count']}, Failed: {self.extraction_progress['failed_count']}")
             
         except Exception as e:
+            import traceback
             logger.error(f"Extraction failed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             with self._lock:
                 self.extraction_progress.update({
                     'finished': True,
@@ -221,11 +259,23 @@ class EmailContentService:
             
     def _extract_single_email(self, email_info: Dict) -> bool:
         """提取单个邮件的内容"""
-        email_id = email_info['email_id']
+        logger.debug(f"_extract_single_email called with email_info: {email_info}")
+        
+        if not email_info:
+            logger.error("email_info is None!")
+            return False
+            
+        email_id = email_info.get('email_id')
+        if not email_id:
+            logger.error(f"No email_id in email_info: {email_info}")
+            return False
+            
         db = SessionLocal()
         email_content = None
         
         try:
+            logger.debug(f"Starting extraction for email {email_id}")
+            
             # 创建或更新EmailContent记录
             email_content = db.query(EmailContent).filter_by(email_id=email_id).first()
             if not email_content:
@@ -235,22 +285,35 @@ class EmailContentService:
             email_content.extraction_status = 'extracting'
             db.commit()
             
+            # Check if extractor exists
+            if not self.extractor:
+                logger.error("self.extractor is None!")
+                raise Exception("Email content extractor not initialized")
+            
+            logger.debug(f"Calling extractor.extract_email for {email_id}")
+            
             # 使用提取器提取内容
             extracted_data = self.extractor.extract_email(email_id)
+            
+            logger.debug(f"Extracted data type: {type(extracted_data)}, value: {extracted_data}")
+            
+            # Check if extraction returned valid data
+            if not extracted_data:
+                raise Exception(f"Extraction returned None for email {email_id}")
             
             # 保存邮件正文到文件（可选）
             content_paths = self.extractor.save_email_content(
                 email_id,
-                extracted_data['text_content'],
-                extracted_data['html_content']
+                extracted_data.get('text_content', ''),
+                extracted_data.get('html_content', '')
             )
             
-            # 更新数据库
-            email_content.content_text = extracted_data['text_content']
-            email_content.content_html = extracted_data['html_content']
-            email_content.has_attachments = extracted_data['has_attachments']
-            email_content.attachments_info = json.dumps(extracted_data['attachments'])
-            email_content.attachments_count = len(extracted_data['attachments'])
+            # 更新数据库 - use get() to avoid KeyError
+            email_content.content_text = extracted_data.get('text_content', '')
+            email_content.content_html = extracted_data.get('html_content', '')
+            email_content.has_attachments = extracted_data.get('has_attachments', False)
+            email_content.attachments_info = json.dumps(extracted_data.get('attachments', []))
+            email_content.attachments_count = len(extracted_data.get('attachments', []))
             email_content.extraction_status = 'completed'
             email_content.extracted_at = datetime.now()
             
@@ -260,7 +323,9 @@ class EmailContentService:
             return True
             
         except Exception as e:
+            import traceback
             logger.error(f"Failed to extract email {email_id}: {e}")
+            logger.error(f"Traceback for email {email_id}: {traceback.format_exc()}")
             
             # 更新失败状态
             if email_content:
@@ -343,5 +408,62 @@ class EmailContentService:
                 'extraction_rate': round(extracted_count / total_travel_emails * 100, 1) if total_travel_emails > 0 else 0
             }
             
+        finally:
+            db.close()
+    
+    def reset_all_content_extraction(self) -> Dict:
+        """重置所有内容提取状态"""
+        db = SessionLocal()
+        try:
+            # 确保没有正在运行的提取任务
+            if self.extraction_progress.get('is_running'):
+                return {
+                    'success': False,
+                    'message': '内容提取正在进行中，请先停止提取'
+                }
+            
+            # 重置所有EmailContent记录的提取状态
+            reset_count = db.query(EmailContent).update({
+                'extraction_status': 'pending',
+                'extraction_error': None,
+                'content_text': None,
+                'content_html': None,
+                'attachments_info': None,
+                'has_attachments': False,
+                'extracted_at': None,
+                'attachments_count': 0
+            }, synchronize_session=False)
+            
+            db.commit()
+            
+            # 重置进度状态
+            with self._lock:
+                self.extraction_progress = {
+                    'is_running': False,
+                    'total_emails': 0,
+                    'processed_emails': 0,
+                    'extracted_count': 0,
+                    'failed_count': 0,
+                    'finished': False,
+                    'error': None,
+                    'message': ''
+                }
+            
+            logger.info(f"成功重置 {reset_count} 条内容提取记录")
+            
+            return {
+                'success': True,
+                'reset_count': reset_count,
+                'message': f'成功重置 {reset_count} 条内容提取记录'
+            }
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"重置内容提取失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': f'重置内容提取失败: {str(e)}'
+            }
         finally:
             db.close()

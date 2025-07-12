@@ -4,9 +4,9 @@ Test the new array format for booking extraction
 """
 import json
 import logging
-from database.config import SessionLocal
-from database.models import Email, EmailContent
-from services.email_booking_extraction_service import EmailBookingExtractionService
+from backend.database.config import SessionLocal
+from backend.database.models import Email, EmailContent
+from backend.services.email_booking_extraction_service import EmailBookingExtractionService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

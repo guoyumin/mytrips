@@ -12,8 +12,8 @@ from sqlalchemy import func, and_, or_
 # 添加数据库模块路径
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from database.config import SessionLocal
-from database.models import Email
+from backend.database.config import SessionLocal
+from backend.database.models import Email, EmailContent
 import logging
 
 logger = logging.getLogger(__name__)
@@ -327,6 +327,47 @@ class EmailCacheDB:
         except Exception as e:
             logger.warning(f"Failed to parse date '{date_str}': {e}")
             return None
+    
+    def clear_all(self) -> int:
+        """
+        清除所有邮件数据
+        
+        Returns:
+            删除的记录数
+        """
+        # Use a fresh session for this operation
+        from backend.database.config import SessionLocal
+        db = SessionLocal()
+        try:
+            # 获取删除前的总数
+            total_count = db.query(Email).count()
+            
+            # 先删除 EmailContent（因为它引用 Email）
+            content_count = db.query(EmailContent).count()
+            db.query(EmailContent).delete()
+            logger.info(f"删除了 {content_count} 条 EmailContent 记录")
+            
+            # 然后删除所有邮件记录
+            db.query(Email).delete()
+            db.commit()
+            
+            logger.info(f"成功清除 {total_count} 条邮件记录")
+            
+            # Clear the cached session if any
+            if self.db_session:
+                self.db_session.close()
+                self.db_session = None
+                
+            return total_count
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"清除邮件数据失败: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise
+        finally:
+            db.close()
     
     def __enter__(self):
         """上下文管理器入口"""

@@ -5,7 +5,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Index, 
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from database.config import Base
+from backend.database.config import Base
 
 class Email(Base):
     """邮件表"""

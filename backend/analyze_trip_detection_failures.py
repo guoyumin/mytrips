@@ -4,8 +4,8 @@ import sys
 import json
 from collections import defaultdict
 from sqlalchemy import and_
-from database.config import SessionLocal
-from database.models import Email, EmailContent
+from backend.database.config import SessionLocal
+from backend.database.models import Email, EmailContent
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

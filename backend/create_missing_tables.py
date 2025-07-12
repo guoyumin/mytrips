@@ -7,8 +7,8 @@ import os
 import sys
 sys.path.append('.')
 
-from database.config import SessionLocal, engine
-from database.models import Base
+from backend.database.config import SessionLocal, engine
+from backend.database.models import Base
 
 def create_missing_tables():
     """创建所有缺失的数据库表"""

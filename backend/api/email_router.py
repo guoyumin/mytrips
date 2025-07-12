@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, List, Optional
 from sqlalchemy import or_
-from services.email_cache_service import EmailCacheService
-from services.email_classification_service import EmailClassificationService
-from lib.config_manager import config_manager
-from database.config import SessionLocal
-from database.models import Email, EmailContent, Trip
-from services.rate_limiter import get_rate_limiter
+from backend.services.email_cache_service import EmailCacheService
+from backend.services.email_classification_service import EmailClassificationService
+from backend.lib.config_manager import config_manager
+from backend.database.config import SessionLocal
+from backend.database.models import Email, EmailContent, Trip
+from backend.services.rate_limiter import get_rate_limiter
 import json
 
 router = APIRouter()
@@ -631,5 +631,29 @@ async def get_gemini_usage() -> Dict:
             'rate_limits': rate_limiter.rate_limits
         }
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/reset-all")
+async def reset_all_emails():
+    """完全重置所有邮件数据"""
+    try:
+        result = email_cache_service.reset_all_emails()
+        if result['success']:
+            return result
+        else:
+            raise HTTPException(status_code=400, detail=result['message'])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/reset-classification")
+async def reset_classification():
+    """重置邮件分类"""
+    try:
+        result = classification_service.reset_all_classifications()
+        if result['success']:
+            return result
+        else:
+            raise HTTPException(status_code=400, detail=result['message'])
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

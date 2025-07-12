@@ -3,8 +3,8 @@ Gemini Provider - Wraps existing GeminiService
 """
 import logging
 from typing import Dict
-from lib.ai.ai_provider_interface import AIProviderInterface
-from services.gemini_service import GeminiService
+from backend.lib.ai.ai_provider_interface import AIProviderInterface
+from backend.services.gemini_service import GeminiService
 
 logger = logging.getLogger(__name__)
 
