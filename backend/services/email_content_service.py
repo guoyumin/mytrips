@@ -167,18 +167,24 @@ class EmailContentService:
         """Mark non-travel emails with pending extraction status as not_required"""
         db = SessionLocal()
         try:
-            # Find non-travel emails with EmailContent records that have pending extraction status
-            updated_count = db.query(EmailContent).join(Email).filter(
-                ~Email.classification.in_(TRAVEL_CATEGORIES),
-                EmailContent.extraction_status.in_(['pending', 'failed'])
-            ).update({
-                'extraction_status': 'not_required',
-                'extraction_error': None
-            }, synchronize_session=False)
+            # First get the email IDs of non-travel emails
+            non_travel_email_ids = [row[0] for row in db.query(Email.email_id).filter(
+                ~Email.classification.in_(TRAVEL_CATEGORIES)
+            ).all()]
             
-            if updated_count > 0:
-                db.commit()
-                logger.info(f"Marked {updated_count} non-travel emails as extraction_status='not_required'")
+            if non_travel_email_ids:
+                # Find non-travel emails with EmailContent records that have pending extraction status
+                updated_count = db.query(EmailContent).filter(
+                    EmailContent.email_id.in_(non_travel_email_ids),
+                    EmailContent.extraction_status.in_(['pending', 'failed'])
+                ).update({
+                    'extraction_status': 'not_required',
+                    'extraction_error': None
+                }, synchronize_session=False)
+                
+                if updated_count > 0:
+                    db.commit()
+                    logger.info(f"Marked {updated_count} non-travel emails as extraction_status='not_required'")
             
         except Exception as e:
             db.rollback()
@@ -438,33 +444,46 @@ class EmailContentService:
                     'message': '内容提取正在进行中，请先停止提取'
                 }
             
-            # Reset travel emails to pending
-            travel_reset_count = db.query(EmailContent).join(Email).filter(
+            # Get travel and non-travel email IDs
+            travel_email_ids = [row[0] for row in db.query(Email.email_id).filter(
                 Email.classification.in_(TRAVEL_CATEGORIES)
-            ).update({
-                'extraction_status': 'pending',
-                'extraction_error': None,
-                'content_text': None,
-                'content_html': None,
-                'attachments_info': None,
-                'has_attachments': False,
-                'extracted_at': None,
-                'attachments_count': 0
-            }, synchronize_session=False)
+            ).all()]
+            
+            non_travel_email_ids = [row[0] for row in db.query(Email.email_id).filter(
+                ~Email.classification.in_(TRAVEL_CATEGORIES)
+            ).all()]
+            
+            # Reset travel emails to pending
+            travel_reset_count = 0
+            if travel_email_ids:
+                travel_reset_count = db.query(EmailContent).filter(
+                    EmailContent.email_id.in_(travel_email_ids)
+                ).update({
+                    'extraction_status': 'pending',
+                    'extraction_error': None,
+                    'content_text': None,
+                    'content_html': None,
+                    'attachments_info': None,
+                    'has_attachments': False,
+                    'extracted_at': None,
+                    'attachments_count': 0
+                }, synchronize_session=False)
             
             # Mark non-travel emails as not_required
-            non_travel_reset_count = db.query(EmailContent).join(Email).filter(
-                ~Email.classification.in_(TRAVEL_CATEGORIES)
-            ).update({
-                'extraction_status': 'not_required',
-                'extraction_error': None,
-                'content_text': None,
-                'content_html': None,
-                'attachments_info': None,
-                'has_attachments': False,
-                'extracted_at': None,
-                'attachments_count': 0
-            }, synchronize_session=False)
+            non_travel_reset_count = 0
+            if non_travel_email_ids:
+                non_travel_reset_count = db.query(EmailContent).filter(
+                    EmailContent.email_id.in_(non_travel_email_ids)
+                ).update({
+                    'extraction_status': 'not_required',
+                    'extraction_error': None,
+                    'content_text': None,
+                    'content_html': None,
+                    'attachments_info': None,
+                    'has_attachments': False,
+                    'extracted_at': None,
+                    'attachments_count': 0
+                }, synchronize_session=False)
             
             reset_count = travel_reset_count + non_travel_reset_count
             db.commit()

@@ -117,18 +117,24 @@ class EmailBookingExtractionService:
     def _sync_non_travel_emails_status(self, db: Session):
         """Sync booking extraction status for non-travel emails"""
         try:
-            # Update non-travel emails with pending booking extraction status to 'not_travel'
-            updated_count = db.query(EmailContent).join(Email).filter(
-                ~Email.classification.in_(TRAVEL_CATEGORIES),
-                EmailContent.booking_extraction_status == 'pending'
-            ).update({
-                'booking_extraction_status': 'not_travel',
-                'booking_extraction_error': 'Not a travel email'
-            }, synchronize_session=False)
+            # First get the email IDs of non-travel emails
+            non_travel_email_ids = [row[0] for row in db.query(Email.email_id).filter(
+                ~Email.classification.in_(TRAVEL_CATEGORIES)
+            ).all()]
             
-            if updated_count > 0:
-                db.commit()
-                logger.info(f"Updated {updated_count} non-travel emails to booking_extraction_status='not_travel'")
+            if non_travel_email_ids:
+                # Update non-travel emails with pending booking extraction status to 'not_travel'
+                updated_count = db.query(EmailContent).filter(
+                    EmailContent.email_id.in_(non_travel_email_ids),
+                    EmailContent.booking_extraction_status == 'pending'
+                ).update({
+                    'booking_extraction_status': 'not_travel',
+                    'booking_extraction_error': 'Not a travel email'
+                }, synchronize_session=False)
+                
+                if updated_count > 0:
+                    db.commit()
+                    logger.info(f"Updated {updated_count} non-travel emails to booking_extraction_status='not_travel'")
                 
         except Exception as e:
             db.rollback()
@@ -568,23 +574,36 @@ IMPORTANT: Return ONLY the JSON object. Do NOT include any thinking process, exp
             # Import Email model
             from backend.database.models import Email
             
-            # Reset travel emails to pending
-            travel_reset_count = db.query(EmailContent).join(Email).filter(
+            # Get travel and non-travel email IDs
+            travel_email_ids = [row[0] for row in db.query(Email.email_id).filter(
                 Email.classification.in_(TRAVEL_CATEGORIES)
-            ).update({
-                'booking_extraction_status': 'pending',
-                'booking_extraction_error': None,
-                'extracted_booking_info': None
-            }, synchronize_session=False)
+            ).all()]
+            
+            non_travel_email_ids = [row[0] for row in db.query(Email.email_id).filter(
+                ~Email.classification.in_(TRAVEL_CATEGORIES)
+            ).all()]
+            
+            # Reset travel emails to pending
+            travel_reset_count = 0
+            if travel_email_ids:
+                travel_reset_count = db.query(EmailContent).filter(
+                    EmailContent.email_id.in_(travel_email_ids)
+                ).update({
+                    'booking_extraction_status': 'pending',
+                    'booking_extraction_error': None,
+                    'extracted_booking_info': None
+                }, synchronize_session=False)
             
             # Mark non-travel emails as not_travel
-            non_travel_reset_count = db.query(EmailContent).join(Email).filter(
-                ~Email.classification.in_(TRAVEL_CATEGORIES)
-            ).update({
-                'booking_extraction_status': 'not_travel',
-                'booking_extraction_error': 'Not a travel email',
-                'extracted_booking_info': None
-            }, synchronize_session=False)
+            non_travel_reset_count = 0
+            if non_travel_email_ids:
+                non_travel_reset_count = db.query(EmailContent).filter(
+                    EmailContent.email_id.in_(non_travel_email_ids)
+                ).update({
+                    'booking_extraction_status': 'not_travel',
+                    'booking_extraction_error': 'Not a travel email',
+                    'extracted_booking_info': None
+                }, synchronize_session=False)
             
             reset_count = travel_reset_count + non_travel_reset_count
             db.commit()
