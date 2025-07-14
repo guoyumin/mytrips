@@ -102,7 +102,7 @@ class EmailImportApp {
         document.getElementById('extract-section').style.display = 'none';
         document.getElementById('travel-emails-section').style.display = 'none';
         document.getElementById('status-section').style.display = 'none';
-        document.getElementById('gemini-usage-section').style.display = 'none';
+        // Removed gemini-usage-section as it no longer exists
         document.getElementById('booking-extraction-section').style.display = 'none';
         document.getElementById('trip-detection-section').style.display = 'none';
         document.getElementById('my-trips-section').style.display = 'none';
@@ -144,9 +144,9 @@ class EmailImportApp {
 
     showStatusSection() {
         document.getElementById('status-section').style.display = 'block';
-        document.getElementById('gemini-usage-section').style.display = 'block';
+        // Removed Gemini usage section display
         this.loadStatusData();
-        this.loadGeminiUsageData();
+        // Removed loadGeminiUsageData call
     }
 
     showBookingExtractionSection() {
@@ -1172,6 +1172,15 @@ class EmailImportApp {
         
         statusContent.innerHTML = `
             <div class="status-overview">
+                <!-- Date Range (moved to top) -->
+                ${stats.date_range ? `
+                <div class="date-range-card">
+                    <h3>📅 Date Range</h3>
+                    <p><strong>From:</strong> ${stats.date_range.oldest}</p>
+                    <p><strong>To:</strong> ${stats.date_range.newest}</p>
+                </div>
+                ` : '<div class="date-range-card"><h3>📅 No Date Range Available</h3></div>'}
+
                 <!-- Basic Stats -->
                 <div class="stats-grid">
                     <div class="stat-card primary">
@@ -1192,16 +1201,7 @@ class EmailImportApp {
                     </div>
                 </div>
 
-                <!-- Date Range -->
-                ${stats.date_range ? `
-                <div class="date-range-card">
-                    <h3>📅 Date Range</h3>
-                    <p><strong>From:</strong> ${stats.date_range.oldest}</p>
-                    <p><strong>To:</strong> ${stats.date_range.newest}</p>
-                </div>
-                ` : '<div class="date-range-card"><h3>📅 No Date Range Available</h3></div>'}
-
-                <!-- Content Extraction Stats -->
+                <!-- Content Extraction Stats (with not_required added) -->
                 <div class="extraction-stats-card">
                     <h3>📄 Content Extraction Status</h3>
                     <div class="extraction-grid">
@@ -1221,10 +1221,14 @@ class EmailImportApp {
                             <span class="extraction-number">${stats.content_extraction.pending}</span>
                             <span class="extraction-label">Pending</span>
                         </div>
+                        <div class="extraction-item not-required">
+                            <span class="extraction-number">${stats.content_extraction.not_required || 0}</span>
+                            <span class="extraction-label">Not Required</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Booking Extraction Stats -->
+                <!-- Booking Extraction Stats (with not_travel and no_booking added) -->
                 ${stats.booking_extraction ? `
                 <div class="extraction-stats-card">
                     <h3>🔍 Booking Extraction Status</h3>
@@ -1244,6 +1248,14 @@ class EmailImportApp {
                         <div class="extraction-item pending">
                             <span class="extraction-number">${stats.booking_extraction.pending || 0}</span>
                             <span class="extraction-label">Pending</span>
+                        </div>
+                        <div class="extraction-item not-travel">
+                            <span class="extraction-number">${stats.booking_extraction.not_travel || 0}</span>
+                            <span class="extraction-label">Not Travel</span>
+                        </div>
+                        <div class="extraction-item no-booking">
+                            <span class="extraction-number">${stats.booking_extraction.no_booking || 0}</span>
+                            <span class="extraction-label">No Booking</span>
                         </div>
                     </div>
                 </div>

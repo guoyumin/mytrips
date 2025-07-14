@@ -503,10 +503,13 @@ async def get_detailed_email_stats() -> Dict:
         content_failed_count = 0
         content_extracting_count = 0
         content_pending_count = 0
+        content_not_required_count = 0
         booking_completed_count = 0
         booking_failed_count = 0
         booking_extracting_count = 0
         booking_pending_count = 0
+        booking_not_travel_count = 0
+        booking_no_booking_count = 0
         
         try:
             # 检查EmailContent表是否有新字段
@@ -529,6 +532,18 @@ async def get_detailed_email_stats() -> Dict:
             content_extracting_count = db.query(EmailContent).filter(
                 EmailContent.extraction_status == 'extracting',
                 EmailContent.email_id.in_(travel_email_ids_list)
+            ).count()
+            
+            # Count not_required status for non-travel emails
+            non_travel_email_ids_list = [
+                row[0] for row in db.query(Email.email_id).filter(
+                    ~Email.classification.in_(TRAVEL_CATEGORIES)
+                ).all()
+            ]
+            
+            content_not_required_count = db.query(EmailContent).filter(
+                EmailContent.extraction_status == 'not_required',
+                EmailContent.email_id.in_(non_travel_email_ids_list)
             ).count()
             
             content_pending_count = total_travel_emails - content_extracted_count - content_failed_count - content_extracting_count
@@ -554,6 +569,12 @@ async def get_detailed_email_stats() -> Dict:
                 booking_no_booking_count = db.query(EmailContent).filter(
                     EmailContent.booking_extraction_status == 'no_booking',
                     EmailContent.email_id.in_(travel_email_ids_list)
+                ).count()
+                
+                # 查询not_travel状态的数量
+                booking_not_travel_count = db.query(EmailContent).filter(
+                    EmailContent.booking_extraction_status == 'not_travel',
+                    EmailContent.email_id.in_(non_travel_email_ids_list)
                 ).count()
                 
                 # 真正的pending数量应该直接查询
@@ -590,11 +611,13 @@ async def get_detailed_email_stats() -> Dict:
                 'failed': content_failed_count,
                 'extracting': content_extracting_count,
                 'pending': content_pending_count if content_pending_count > 0 else 0,
+                'not_required': content_not_required_count,
                 'extraction_rate': round(content_extracted_count / total_travel_emails * 100, 1) if total_travel_emails > 0 else 0
             },
             'booking_extraction': {
                 'completed': booking_completed_count,
                 'no_booking': booking_no_booking_count if 'booking_no_booking_count' in locals() else 0,
+                'not_travel': booking_not_travel_count if 'booking_not_travel_count' in locals() else 0,
                 'failed': booking_failed_count,
                 'extracting': booking_extracting_count,
                 'pending': booking_pending_count if booking_pending_count > 0 else 0,

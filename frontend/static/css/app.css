@@ -778,6 +778,21 @@ button:disabled {
     border-color: #f39c12;
 }
 
+.extraction-item.not-required {
+    background: #e8e8e8;
+    border-color: #999;
+}
+
+.extraction-item.not-travel {
+    background: #f0e5ff;
+    border-color: #8b5cf6;
+}
+
+.extraction-item.no-booking {
+    background: #e0f2fe;
+    border-color: #0ea5e9;
+}
+
 .extraction-number {
     font-size: 1.8rem;
     font-weight: bold;
@@ -798,6 +813,18 @@ button:disabled {
 
 .extraction-item.pending .extraction-number {
     color: #f39c12;
+}
+
+.extraction-item.not-required .extraction-number {
+    color: #666;
+}
+
+.extraction-item.not-travel .extraction-number {
+    color: #8b5cf6;
+}
+
+.extraction-item.no-booking .extraction-number {
+    color: #0ea5e9;
 }
 
 .extraction-label {
