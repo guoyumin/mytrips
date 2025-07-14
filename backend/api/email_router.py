@@ -6,7 +6,6 @@ from backend.services.email_classification_service import EmailClassificationSer
 from backend.lib.config_manager import config_manager
 from backend.database.config import SessionLocal
 from backend.database.models import Email, EmailContent, Trip
-from backend.services.rate_limiter import get_rate_limiter
 from backend.constants import TRAVEL_CATEGORIES
 import json
 
@@ -159,7 +158,6 @@ async def start_email_import_date_range(request: dict) -> Dict:
     """Start email import process with date range support"""
     try:
         from datetime import datetime
-        from backend.services.orchestrators.email_processing_orchestrator import EmailProcessingOrchestrator
         
         # Parse dates
         start_date_str = request.get('start_date')
@@ -169,27 +167,23 @@ async def start_email_import_date_range(request: dict) -> Dict:
             raise HTTPException(status_code=400, detail="start_date and end_date are required")
         
         try:
+            # Handle both YYYY-MM-DD and ISO datetime formats
+            if 'T' not in start_date_str:
+                start_date_str += 'T00:00:00'
+            if 'T' not in end_date_str:
+                end_date_str += 'T23:59:59'
+                
             start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
             end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")
         
-        # Options
-        process_immediately = request.get('process_immediately', True)
-        auto_continue = request.get('auto_continue', True)
-        
-        # Create orchestrator and start import
-        orchestrator = EmailProcessingOrchestrator()
-        result = orchestrator.import_and_process_date_range(
-            start_date, 
-            end_date, 
-            process_immediately=process_immediately
-        )
+        # Use EmailCacheService for background import
+        message = email_cache_service.start_import_date_range(start_date, end_date)
         
         return {
             "started": True,
-            "message": f"Import started for {result['new_count']} new emails",
-            "import_result": result,
+            "message": message,
             "date_range": {
                 "start": start_date.isoformat(),
                 "end": end_date.isoformat()
@@ -204,28 +198,16 @@ async def start_email_import_date_range(request: dict) -> Dict:
 async def start_email_import_days(request: dict) -> Dict:
     """Start email import for last N days (new endpoint)"""
     try:
-        from datetime import datetime, timedelta
-        from backend.services.orchestrators.email_processing_orchestrator import EmailProcessingOrchestrator
-        
         days = request.get('days', 7)  # Default to 1 week
         if not isinstance(days, int) or days < 1:
             raise HTTPException(status_code=400, detail="days must be a positive integer")
         
-        # Options
-        process_immediately = request.get('process_immediately', True)
-        auto_continue = request.get('auto_continue', True)
-        
-        # Create orchestrator and start import
-        orchestrator = EmailProcessingOrchestrator()
-        result = orchestrator.import_and_process_days(
-            days,
-            process_immediately=process_immediately
-        )
+        # Use EmailCacheService for background import
+        message = email_cache_service.start_import(days)
         
         return {
             "started": True,
-            "message": f"Import started for {result['new_count']} new emails",
-            "import_result": result,
+            "message": message,
             "days": days
         }
     except HTTPException:
@@ -817,30 +799,11 @@ async def get_detailed_email_stats() -> Dict:
     finally:
         db.close()
 
-@router.get("/gemini-usage")
-async def get_gemini_usage() -> Dict:
-    """Get current Gemini API usage statistics"""
-    try:
-        rate_limiter = get_rate_limiter()
-        usage_stats = rate_limiter.get_usage_stats()
-        
-        # Calculate summary statistics
-        total_rpm = sum(stats.get('requests_last_minute', 0) for stats in usage_stats.values())
-        total_rpd = sum(stats.get('requests_today', 0) for stats in usage_stats.values())
-        total_tokens = sum(stats.get('tokens_last_minute', 0) for stats in usage_stats.values())
-        
-        return {
-            'summary': {
-                'total_requests_last_minute': total_rpm,
-                'total_requests_today': total_rpd,
-                'total_tokens_last_minute': total_tokens
-            },
-            'by_model': usage_stats,
-            'rate_limits': rate_limiter.rate_limits
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @router.get("/gemini-usage")
+# async def get_gemini_usage() -> Dict:
+#     """Get current Gemini API usage statistics"""
+#     # This endpoint is disabled - rate_limiter service has been removed
+#     raise HTTPException(status_code=501, detail="Usage statistics endpoint is currently disabled")
 
 @router.post("/reset-all")
 async def reset_all_emails():

@@ -108,19 +108,39 @@
                     <p>Import emails from Gmail to build your travel history database.</p>
                     
                     <div class="control-group">
-                        <div class="time-range-selector">
-                            <label for="timeRange">Import Range:</label>
-                            <select id="timeRange">
-                                <option value="1">Last 1 day</option>
-                                <option value="3">Last 3 days</option>
-                                <option value="10">Last 10 days</option>
-                                <option value="30" selected>Last month</option>
-                                <option value="90">Last 3 months</option>
-                                <option value="180">Last 6 months</option>
-                                <option value="365">Last 1 year</option>
-                                <option value="730">Last 2 years</option>
-                                <option value="1095">Last 3 years</option>
-                            </select>
+                        <!-- Date Range Selection -->
+                        <div class="date-range-section">
+                            <h3>Date Range Import</h3>
+                            <div class="date-range-inputs">
+                                <div class="date-input-group">
+                                    <label for="startDate">Start Date:</label>
+                                    <input type="date" id="startDate" name="startDate">
+                                </div>
+                                <div class="date-input-group">
+                                    <label for="endDate">End Date:</label>
+                                    <input type="date" id="endDate" name="endDate">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Selection -->
+                        <div class="quick-select-section">
+                            <h3>Quick Select</h3>
+                            <div class="time-range-selector">
+                                <label for="timeRange">Import Range:</label>
+                                <select id="timeRange" onchange="updateDateRangeFromQuickSelect()">
+                                    <option value="">Custom date range</option>
+                                    <option value="1">Last 1 day</option>
+                                    <option value="3">Last 3 days</option>
+                                    <option value="10">Last 10 days</option>
+                                    <option value="30" selected>Last month</option>
+                                    <option value="90">Last 3 months</option>
+                                    <option value="180">Last 6 months</option>
+                                    <option value="365">Last 1 year</option>
+                                    <option value="730">Last 2 years</option>
+                                    <option value="1095">Last 3 years</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <div class="button-group">

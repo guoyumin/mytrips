@@ -20,7 +20,8 @@ async def start_booking_extraction(request: dict) -> Dict:
     """Start booking information extraction process (Step 1)"""
     try:
         date_range = request.get('date_range')
-        result = booking_extraction_service.start_extraction(date_range)
+        email_ids = request.get('email_ids')  # Optional list of email IDs
+        result = booking_extraction_service.start_extraction(date_range=date_range, email_ids=email_ids)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

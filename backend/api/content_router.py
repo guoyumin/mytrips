@@ -15,7 +15,8 @@ async def start_content_extraction(request: dict) -> Dict:
     """开始提取旅行邮件内容"""
     try:
         limit = request.get('limit')  # None表示提取所有
-        result = content_service.start_extraction(limit)
+        email_ids = request.get('email_ids')  # 可选的邮件ID列表
+        result = content_service.start_extraction(limit=limit, email_ids=email_ids)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

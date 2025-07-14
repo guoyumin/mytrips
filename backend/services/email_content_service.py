@@ -59,6 +59,47 @@ class EmailContentService:
         self._extraction_thread = None
         self._lock = threading.Lock()  # Add thread lock for safety
         
+    def _get_emails_by_ids(self, email_ids: List[str]) -> List[Dict]:
+        """根据邮件ID列表获取邮件信息
+        
+        Args:
+            email_ids: 邮件ID列表
+            
+        Returns:
+            邮件信息列表
+        """
+        db = SessionLocal()
+        try:
+            emails = db.query(Email).filter(
+                Email.email_id.in_(email_ids)
+            ).all()
+            
+            result = []
+            for email in emails:
+                if not email:
+                    logger.warning("Found None email in query results")
+                    continue
+                    
+                email_dict = {
+                    'email_id': email.email_id if hasattr(email, 'email_id') else None,
+                    'subject': email.subject if hasattr(email, 'subject') else None,
+                    'sender': email.sender if hasattr(email, 'sender') else None,
+                    'date': email.date if hasattr(email, 'date') else None,
+                    'classification': email.classification if hasattr(email, 'classification') else None
+                }
+                
+                # Only add if we have a valid email_id
+                if email_dict['email_id']:
+                    result.append(email_dict)
+                else:
+                    logger.warning(f"Skipping email with no email_id: {email_dict}")
+                    
+            logger.debug(f"Returning {len(result)} emails for extraction")
+            return result
+            
+        finally:
+            db.close()
+    
     def get_travel_emails_for_extraction(self) -> List[Dict]:
         """获取需要提取内容的旅行相关邮件"""
         db = SessionLocal()
@@ -102,8 +143,13 @@ class EmailContentService:
         finally:
             db.close()
             
-    def start_extraction(self, limit: Optional[int] = None) -> Dict:
-        """开始提取邮件内容"""
+    def start_extraction(self, limit: Optional[int] = None, email_ids: Optional[List[str]] = None) -> Dict:
+        """开始提取邮件内容
+        
+        Args:
+            limit: 限制提取数量（仅在未指定email_ids时生效）
+            email_ids: 指定要提取的邮件ID列表，如果为空则从数据库查询
+        """
         with self._lock:
             if self.extraction_progress.get('is_running'):
                 return {"started": False, "message": "Extraction already in progress"}
@@ -132,12 +178,13 @@ class EmailContentService:
             # 启动后台线程
             self._extraction_thread = threading.Thread(
                 target=self._background_extraction,
-                args=(limit,),
+                args=(limit, email_ids),
                 daemon=True
             )
             self._extraction_thread.start()
             
-            return {"started": True, "message": f"Started extracting content for travel emails"}
+            message = f"Started extracting content for {len(email_ids) if email_ids else 'travel'} emails"
+            return {"started": True, "message": message}
         
     def stop_extraction(self) -> str:
         """停止提取进程"""
@@ -192,16 +239,27 @@ class EmailContentService:
         finally:
             db.close()
         
-    def _background_extraction(self, limit: Optional[int] = None):
-        """后台提取线程"""
+    def _background_extraction(self, limit: Optional[int] = None, email_ids: Optional[List[str]] = None):
+        """后台提取线程
+        
+        Args:
+            limit: 限制提取数量（仅在未指定email_ids时生效）
+            email_ids: 指定要提取的邮件ID列表，如果为空则从数据库查询
+        """
         try:
-            logger.info(f"Starting email content extraction (limit: {limit})")
+            logger.info(f"Starting email content extraction (limit: {limit}, email_ids: {len(email_ids) if email_ids else 'None'})")
             
             # First, mark non-travel emails as not_required
             self._mark_non_travel_emails_as_not_required()
             
             # 获取需要提取的邮件
-            emails = self.get_travel_emails_for_extraction()
+            if email_ids:
+                # 使用指定的邮件ID列表
+                emails = self._get_emails_by_ids(email_ids)
+                logger.info(f"Using specified email IDs: {len(emails)} emails found")
+            else:
+                # 从数据库查询需要提取的旅行邮件
+                emails = self.get_travel_emails_for_extraction()
             
             logger.debug(f"get_travel_emails_for_extraction returned type: {type(emails)}, length: {len(emails) if emails else 0}")
             
@@ -329,7 +387,7 @@ class EmailContentService:
             if not extracted_data:
                 raise Exception(f"Extraction returned None for email {email_id}")
             
-            # 保存邮件正文到文件（可选）
+            # 保存邮件正文到文件（microservice只读不写，所以这里需要保存）
             content_paths = self.extractor.save_email_content(
                 email_id,
                 extracted_data.get('text_content', ''),

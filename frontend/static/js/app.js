@@ -163,20 +163,42 @@ class EmailImportApp {
         this.updateUIForImporting(true);
 
         try {
-            // Get selected time range
-            const timeRange = document.getElementById('timeRange').value;
-            const days = parseInt(timeRange);
+            // Check if we have specific date range
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+            
+            let endpoint, body, statusMessage;
+            
+            if (startDate && endDate) {
+                // Use date range endpoint
+                endpoint = '/api/emails/import/date-range';
+                body = JSON.stringify({ 
+                    start_date: startDate,
+                    end_date: endDate 
+                });
+                statusMessage = `Starting import for ${startDate} to ${endDate}...`;
+            } else {
+                // Fall back to days-based import
+                const timeRange = document.getElementById('timeRange').value;
+                const days = parseInt(timeRange) || 30; // Default to 30 days
+                
+                endpoint = '/api/emails/import/days';
+                body = JSON.stringify({ days: days });
+                statusMessage = `Starting import for ${this.getTimeRangeLabel(days)}...`;
+            }
             
             // Update status to show selected range
-            this.displayStatus(`Starting import for ${this.getTimeRangeLabel(days)}...`, 'loading');
+            this.displayStatus(statusMessage, 'loading');
             
             // Start import
-            const response = await fetch('/api/emails/import', {
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ days: days })
+                body: body
             });
 
             const data = await response.json();
@@ -2333,7 +2355,55 @@ function filterTravelEmails() {
     app.applyTravelEmailFilter();
 }
 
+// Helper function to update date range when quick select changes
+function updateDateRangeFromQuickSelect() {
+    const timeRange = document.getElementById('timeRange').value;
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    
+    if (!timeRange) {
+        // Custom date range selected, clear dates
+        startDateInput.value = '';
+        endDateInput.value = '';
+        return;
+    }
+    
+    const days = parseInt(timeRange);
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    
+    // Format dates as YYYY-MM-DD
+    startDateInput.value = startDate.toISOString().split('T')[0];
+    endDateInput.value = endDate.toISOString().split('T')[0];
+}
+
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     app = new EmailImportApp();
+    
+    // Add event listeners for date inputs
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const timeRangeSelect = document.getElementById('timeRange');
+    
+    if (startDateInput && endDateInput) {
+        // When user manually selects dates, clear the quick select
+        startDateInput.addEventListener('change', () => {
+            if (startDateInput.value && endDateInput.value) {
+                timeRangeSelect.value = '';
+            }
+        });
+        
+        endDateInput.addEventListener('change', () => {
+            if (startDateInput.value && endDateInput.value) {
+                timeRangeSelect.value = '';
+            }
+        });
+    }
+    
+    // Initialize date range based on default selection
+    if (timeRangeSelect && timeRangeSelect.value) {
+        updateDateRangeFromQuickSelect();
+    }
 });

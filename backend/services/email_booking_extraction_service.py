@@ -58,8 +58,13 @@ class EmailBookingExtractionService:
         self._extraction_thread = None
         self._lock = threading.Lock()
     
-    def start_extraction(self, date_range: Optional[Dict] = None) -> Dict:
-        """Start booking information extraction process"""
+    def start_extraction(self, date_range: Optional[Dict] = None, email_ids: Optional[List[str]] = None) -> Dict:
+        """Start booking information extraction process
+        
+        Args:
+            date_range: Optional date range filter (ignored if email_ids provided)
+            email_ids: Optional list of specific email IDs to process
+        """
         with self._lock:
             if self.extraction_progress.get('is_running', False):
                 return {"started": False, "message": "Booking extraction already in progress"}
@@ -89,12 +94,13 @@ class EmailBookingExtractionService:
             # Start background thread
             self._extraction_thread = threading.Thread(
                 target=self._background_extraction,
-                args=(date_range,),
+                args=(date_range, email_ids),
                 daemon=True
             )
             self._extraction_thread.start()
             
-            return {"started": True, "message": "Booking extraction started"}
+            message = f"Booking extraction started for {len(email_ids) if email_ids else 'all eligible'} emails"
+            return {"started": True, "message": message}
     
     def stop_extraction(self) -> str:
         """Stop ongoing extraction process"""
@@ -145,28 +151,41 @@ class EmailBookingExtractionService:
             logger.error(f"Failed to sync non-travel emails status: {e}")
             raise
     
-    def _background_extraction(self, date_range: Optional[Dict] = None):
-        """Background process for booking extraction"""
+    def _background_extraction(self, date_range: Optional[Dict] = None, email_ids: Optional[List[str]] = None):
+        """Background process for booking extraction
+        
+        Args:
+            date_range: Optional date range filter (ignored if email_ids provided)
+            email_ids: Optional list of specific email IDs to process
+        """
         db = SessionLocal()
         try:
             # First, sync non-travel emails that have pending booking extraction status
             self._sync_non_travel_emails_status(db)
             
-            # Fetch all travel-related emails with content but no booking extraction
-            query = db.query(Email).join(EmailContent).filter(
-                Email.classification.in_(TRAVEL_CATEGORIES),
-                EmailContent.extraction_status == 'completed',
-                EmailContent.booking_extraction_status.in_(['pending', 'failed'])
-            )
-            
-            if date_range:
-                if 'start_date' in date_range:
-                    query = query.filter(Email.timestamp >= date_range['start_date'])
-                if 'end_date' in date_range:
-                    query = query.filter(Email.timestamp <= date_range['end_date'])
-            
-            # Order by timestamp for chronological processing
-            emails = query.order_by(Email.timestamp.asc()).all()
+            if email_ids:
+                # Use specific email IDs provided
+                emails = db.query(Email).join(EmailContent).filter(
+                    Email.email_id.in_(email_ids),
+                    EmailContent.extraction_status == 'completed'
+                ).order_by(Email.timestamp.asc()).all()
+                logger.info(f"Processing {len(emails)} specific emails for booking extraction")
+            else:
+                # Fetch all travel-related emails with content but no booking extraction
+                query = db.query(Email).join(EmailContent).filter(
+                    Email.classification.in_(TRAVEL_CATEGORIES),
+                    EmailContent.extraction_status == 'completed',
+                    EmailContent.booking_extraction_status.in_(['pending', 'failed'])
+                )
+                
+                if date_range:
+                    if 'start_date' in date_range:
+                        query = query.filter(Email.timestamp >= date_range['start_date'])
+                    if 'end_date' in date_range:
+                        query = query.filter(Email.timestamp <= date_range['end_date'])
+                
+                # Order by timestamp for chronological processing
+                emails = query.order_by(Email.timestamp.asc()).all()
             
             if not emails:
                 with self._lock:

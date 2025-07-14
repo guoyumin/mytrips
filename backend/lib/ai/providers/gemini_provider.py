@@ -1,10 +1,11 @@
 """
-Gemini Provider - Wraps existing GeminiService
+Gemini Provider - Direct implementation using Google Generative AI
 """
 import logging
+import os
+import json
 from typing import Dict
 from backend.lib.ai.ai_provider_interface import AIProviderInterface
-from backend.services.gemini_service import GeminiService
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +15,19 @@ class GeminiProvider(AIProviderInterface):
     
     def __init__(self, model_version: str = 'gemini-2.5-flash'):
         self.model_version = model_version
-        self.gemini_service = None
+        self.model = None
         self.config = self._load_config()
         
         try:
-            self.gemini_service = GeminiService(model_version)
+            import google.generativeai as genai
+            
+            # Get API key from config or environment
+            api_key = self.config.get('api_key') or os.getenv('GEMINI_API_KEY')
+            if not api_key:
+                raise ValueError("Gemini API key not found in config or environment")
+            
+            genai.configure(api_key=api_key)
+            self.model = genai.GenerativeModel(model_version)
             logger.info(f"Initialized Gemini provider: {model_version}")
         except Exception as e:
             logger.error(f"Failed to initialize Gemini provider: {e}")
@@ -26,8 +35,6 @@ class GeminiProvider(AIProviderInterface):
     
     def _load_config(self) -> Dict:
         """Load Gemini configuration from config file"""
-        import os
-        import json
         # Get project root (4 levels up from backend/lib/ai/providers/)
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
         config_path = os.path.join(project_root, 'config', 'gemini_config.json')
@@ -40,7 +47,7 @@ class GeminiProvider(AIProviderInterface):
     def generate_content(self, prompt: str) -> Dict:
         """Generate content using Gemini and return response with token usage"""
         try:
-            response = self.gemini_service.model.generate_content(prompt)
+            response = self.model.generate_content(prompt)
             
             # Extract content
             content = response.text if hasattr(response, 'text') else str(response)
@@ -138,8 +145,8 @@ class GeminiProvider(AIProviderInterface):
         """Count tokens for Gemini (optional implementation)"""
         try:
             # Try to use Gemini's count_tokens method if available
-            if hasattr(self.gemini_service.model, 'count_tokens'):
-                result = self.gemini_service.model.count_tokens(text)
+            if hasattr(self.model, 'count_tokens'):
+                result = self.model.count_tokens(text)
                 return result.total_tokens
         except Exception as e:
             logger.warning(f"Error counting tokens with Gemini API: {e}")
