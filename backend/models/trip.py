@@ -48,8 +48,9 @@ class TransportSegment(BaseModel):
     
     @validator('arrival_datetime')
     def validate_arrival_after_departure(cls, v, values):
-        if 'departure_datetime' in values and v <= values['departure_datetime']:
-            raise ValueError('Arrival datetime must be after departure datetime')
+        # Skip validation for cross-timezone travel
+        # In cross-timezone scenarios, arrival time might appear earlier than departure time
+        # Example: Tokyo 23:00 -> Los Angeles 16:00 (same day)
         return v
     
     @validator('distance_type')
@@ -124,6 +125,8 @@ class Accommodation(BaseModel):
     
     @validator('check_out_date')
     def validate_checkout_after_checkin(cls, v, values):
+        # Keep validation for accommodations as they typically use local time
+        # and check-out should always be after check-in
         if 'check_in_date' in values and v <= values['check_in_date']:
             raise ValueError('Check-out date must be after check-in date')
         return v

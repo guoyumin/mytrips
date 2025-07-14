@@ -9,7 +9,7 @@ import json
 
 router = APIRouter()
 
-CLIENT_SECRETS_FILE = "credentials.json"
+CLIENT_SECRETS_FILE = "../config/credentials.json"
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 REDIRECT_URI = "http://localhost:8000/api/auth/callback"
 
@@ -53,7 +53,7 @@ async def callback(request: Request):
         'scopes': credentials.scopes
     }
     
-    with open('token.json', 'w') as token_file:
+    with open('../config/token.json', 'w') as token_file:
         json.dump(token_data, token_file)
     
     return RedirectResponse(url="/dashboard")
@@ -61,8 +61,8 @@ async def callback(request: Request):
 @router.get("/status")
 async def auth_status():
     try:
-        if os.path.exists('token.json'):
-            with open('token.json', 'r') as token_file:
+        if os.path.exists('../config/token.json'):
+            with open('../config/token.json', 'r') as token_file:
                 token_data = json.load(token_file)
                 return {"authenticated": True}
         return {"authenticated": False}
