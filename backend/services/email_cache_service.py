@@ -55,7 +55,7 @@ class EmailCacheService:
         return self.email_cache.get_statistics()
     
     def start_import(self, days: int = 365) -> str:
-        """Start importing emails from Gmail"""
+        """Start importing emails from Gmail (legacy method using thread)"""
         with self._lock:
             if self.import_progress.get('is_running'):
                 return "Import is already running"

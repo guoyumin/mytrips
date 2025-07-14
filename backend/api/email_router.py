@@ -146,11 +146,90 @@ def _create_booking_summary(booking_info: dict) -> dict:
 
 @router.post("/import") 
 async def start_email_import(request: dict) -> Dict:
-    """Start email import process"""
+    """Start email import process (legacy endpoint - supports days only)"""
     try:
         days = request.get('days', 365)  # Default to 1 year
         message = email_cache_service.start_import(days)
         return {"started": True, "message": message, "days": days}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/import/date-range")
+async def start_email_import_date_range(request: dict) -> Dict:
+    """Start email import process with date range support"""
+    try:
+        from datetime import datetime
+        from backend.services.orchestrators.email_processing_orchestrator import EmailProcessingOrchestrator
+        
+        # Parse dates
+        start_date_str = request.get('start_date')
+        end_date_str = request.get('end_date')
+        
+        if not start_date_str or not end_date_str:
+            raise HTTPException(status_code=400, detail="start_date and end_date are required")
+        
+        try:
+            start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+            end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")
+        
+        # Options
+        process_immediately = request.get('process_immediately', True)
+        auto_continue = request.get('auto_continue', True)
+        
+        # Create orchestrator and start import
+        orchestrator = EmailProcessingOrchestrator()
+        result = orchestrator.import_and_process_date_range(
+            start_date, 
+            end_date, 
+            process_immediately=process_immediately
+        )
+        
+        return {
+            "started": True,
+            "message": f"Import started for {result['new_count']} new emails",
+            "import_result": result,
+            "date_range": {
+                "start": start_date.isoformat(),
+                "end": end_date.isoformat()
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/import/days")
+async def start_email_import_days(request: dict) -> Dict:
+    """Start email import for last N days (new endpoint)"""
+    try:
+        from datetime import datetime, timedelta
+        from backend.services.orchestrators.email_processing_orchestrator import EmailProcessingOrchestrator
+        
+        days = request.get('days', 7)  # Default to 1 week
+        if not isinstance(days, int) or days < 1:
+            raise HTTPException(status_code=400, detail="days must be a positive integer")
+        
+        # Options
+        process_immediately = request.get('process_immediately', True)
+        auto_continue = request.get('auto_continue', True)
+        
+        # Create orchestrator and start import
+        orchestrator = EmailProcessingOrchestrator()
+        result = orchestrator.import_and_process_days(
+            days,
+            process_immediately=process_immediately
+        )
+        
+        return {
+            "started": True,
+            "message": f"Import started for {result['new_count']} new emails",
+            "import_result": result,
+            "days": days
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -182,11 +261,117 @@ async def get_cache_stats() -> Dict:
 # Classification endpoints
 @router.post("/classify/test")
 async def start_test_classification(request: dict) -> Dict:
-    """Start test classification of emails"""
+    """Start test classification of emails (legacy endpoint)"""
     try:
         limit = request.get('limit')  # None means classify all
         result = classification_service.start_test_classification(limit)
         return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/process/classify")
+async def process_classification(request: dict) -> Dict:
+    """Process email classification using new orchestrator"""
+    try:
+        from backend.services.orchestrators.email_processing_orchestrator import EmailProcessingOrchestrator
+        
+        email_ids = request.get('email_ids', None)
+        limit = request.get('limit', None)
+        auto_continue = request.get('auto_continue', True)
+        
+        orchestrator = EmailProcessingOrchestrator()
+        result = orchestrator.process_classification(
+            email_ids=email_ids,
+            limit=limit,
+            auto_continue=auto_continue
+        )
+        
+        return {
+            "success": True,
+            "message": f"Classified {len(result.get('classifications', []))} emails",
+            "result": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/process/content-extraction")
+async def process_content_extraction(request: dict) -> Dict:
+    """Process content extraction for travel emails"""
+    try:
+        from backend.services.orchestrators.email_processing_orchestrator import EmailProcessingOrchestrator
+        
+        email_ids = request.get('email_ids', None)
+        limit = request.get('limit', None)
+        auto_continue = request.get('auto_continue', True)
+        
+        orchestrator = EmailProcessingOrchestrator()
+        result = orchestrator.process_content_extraction(
+            email_ids=email_ids,
+            limit=limit,
+            auto_continue=auto_continue
+        )
+        
+        return {
+            "success": True,
+            "message": f"Extracted content from {result.get('success_count', 0)} emails",
+            "result": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/process/booking-extraction")
+async def process_booking_extraction(request: dict) -> Dict:
+    """Process booking extraction"""
+    try:
+        from backend.services.orchestrators.email_processing_orchestrator import EmailProcessingOrchestrator
+        
+        email_ids = request.get('email_ids', None)
+        limit = request.get('limit', None)
+        
+        orchestrator = EmailProcessingOrchestrator()
+        result = orchestrator.process_booking_extraction(
+            email_ids=email_ids,
+            limit=limit
+        )
+        
+        return {
+            "success": True,
+            "message": f"Extracted bookings from {result.get('success_count', 0)} emails",
+            "result": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/process/full-pipeline")
+async def process_full_pipeline(request: dict) -> Dict:
+    """Run the full processing pipeline"""
+    try:
+        from datetime import datetime
+        from backend.services.orchestrators.email_processing_orchestrator import EmailProcessingOrchestrator
+        
+        # Parse dates
+        start_date_str = request.get('start_date')
+        end_date_str = request.get('end_date')
+        
+        if not start_date_str or not end_date_str:
+            raise HTTPException(status_code=400, detail="start_date and end_date are required")
+        
+        try:
+            start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+            end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS")
+        
+        orchestrator = EmailProcessingOrchestrator()
+        result = orchestrator.process_full_pipeline(start_date, end_date)
+        
+        return {
+            "success": True,
+            "message": "Full pipeline completed",
+            "result": result
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

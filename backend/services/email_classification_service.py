@@ -60,7 +60,7 @@ class EmailClassificationService:
             self.gemini_service = None
     
     def start_test_classification(self, limit: int = 1000) -> Dict:
-        """Start test classification of emails in background"""
+        """Start test classification of emails in background (legacy method using thread)"""
         logger.debug(f"Starting test classification with limit: {limit}")
         
         with self._lock:
