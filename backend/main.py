@@ -10,6 +10,7 @@ from backend.api.email_router import router as email_router
 from backend.api.auth_router import router as auth_router
 from backend.api.content_router import router as content_router
 from backend.api.trips_router import router as trips_router
+from backend.api.pipeline_router import router as pipeline_router
 from backend.lib.config_manager import config_manager
 
 # Configure logging from config
@@ -42,6 +43,7 @@ app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(email_router, prefix="/api/emails", tags=["Email Management"])
 app.include_router(content_router, prefix="/api/content", tags=["Email Content"])
 app.include_router(trips_router, prefix="/api/trips", tags=["Trip Management"])
+app.include_router(pipeline_router, prefix="/api/pipeline", tags=["Pipeline Management"])
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
