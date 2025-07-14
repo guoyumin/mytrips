@@ -110,7 +110,24 @@ class EmailProcessingOrchestrator:
                     ).first()
                     
                     if not existing:
-                        email = Email(**email_data)
+                        # Map fields correctly (from -> sender)
+                        email_fields = {
+                            'email_id': email_data['email_id'],
+                            'subject': email_data.get('subject'),
+                            'sender': email_data.get('from'),  # Map 'from' to 'sender'
+                            'date': email_data.get('date'),
+                            'classification': 'unclassified'
+                        }
+                        
+                        # Parse timestamp if date is available
+                        if email_fields['date']:
+                            try:
+                                from email.utils import parsedate_to_datetime
+                                email_fields['timestamp'] = parsedate_to_datetime(email_fields['date'])
+                            except Exception as e:
+                                logger.warning(f"Failed to parse date for email {email_data['email_id']}: {e}")
+                        
+                        email = Email(**email_fields)
                         db.add(email)
                         email_ids.append(email_data['email_id'])
                         saved_count += 1
