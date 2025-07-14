@@ -28,6 +28,7 @@ class BookingStatus(str, Enum):
     CANCELLED = "cancelled"
     MODIFIED = "modified"
     PENDING = "pending"
+    UNKNOWN = "unknown"
 
 
 class NonBookingType(str, Enum):
@@ -67,7 +68,7 @@ class BookingInfo(BaseModel):
     booking_type: Optional[BookingType] = None
     non_booking_type: Optional[NonBookingType] = None
     reason: Optional[str] = None  # For non-booking emails
-    status: BookingStatus = BookingStatus.CONFIRMED
+    status: BookingStatus = BookingStatus.UNKNOWN
     confirmation_numbers: List[str] = Field(default_factory=list)
     original_booking_reference: Optional[str] = None  # For cancellations/changes
     
@@ -318,10 +319,69 @@ class BookingInfo(BaseModel):
         """Create BookingInfo from JSON string"""
         try:
             data = json.loads(json_str)
+            # Fix any fixable errors before creating the object
+            data = cls._fix_booking_data(data)
             return cls.from_dict(data)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error: {e}")
+            logger.error(f"Invalid JSON string: {json_str[:500]}...")
+            raise
         except Exception as e:
             logger.error(f"Error parsing booking JSON: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise
+    
+    @classmethod
+    def _fix_booking_data(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Fix common fixable errors in booking data.
+        This method handles data normalization and fixes common AI response issues.
+        
+        Raises:
+            ValueError: If critical data is missing or unfixable
+        """
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected dict, got {type(data)}")
+        
+        # Fix 1: Convert null list fields to empty lists
+        list_fields = ['transport_segments', 'accommodations', 'activities', 'cruises', 'confirmation_numbers']
+        for field in list_fields:
+            if data.get(field) is None:
+                data[field] = []
+                logger.debug(f"Fixed: Converted null '{field}' to empty list")
+        
+        # Fix 2: Ensure status field has a valid default if missing or null
+        if not data.get('status'):
+            data['status'] = 'unknown'
+            logger.debug("Fixed: Set missing/null status to 'unknown'")
+        
+        # Fix 3: Ensure cost_info has proper structure if present
+        if data.get('cost_info'):
+            cost_info = data['cost_info']
+            if not isinstance(cost_info, dict):
+                logger.warning(f"cost_info is not a dict: {type(cost_info)}, removing it")
+                data['cost_info'] = None
+            else:
+                if cost_info.get('total_cost') is None:
+                    cost_info['total_cost'] = 0.0
+                    logger.debug("Fixed: Set null total_cost to 0.0")
+                if cost_info.get('cost_breakdown') is None:
+                    cost_info['cost_breakdown'] = {}
+                    logger.debug("Fixed: Set null cost_breakdown to empty dict")
+        
+        # Fix 4: Convert single confirmation_number string to list
+        if isinstance(data.get('confirmation_numbers'), str):
+            data['confirmation_numbers'] = [data['confirmation_numbers']]
+            logger.debug("Fixed: Converted single confirmation_number string to list")
+        
+        # Fix 5: Validate critical fields based on booking type
+        if data.get('is_travel') is True and data.get('booking_type') is not None:
+            # This is a booking email - no critical validation needed here
+            # The validation will happen in validate_for_trip_detection()
+            pass
+        
+        return data
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'BookingInfo':
@@ -440,13 +500,17 @@ class BookingInfo(BaseModel):
         if not email_content.extracted_booking_info:
             return None
         
+        # Ensure email_content has email_id
+        if not hasattr(email_content, 'email_id'):
+            raise ValueError("EmailContent object must have email_id attribute")
+        
         try:
             booking = cls.from_json(email_content.extracted_booking_info)
             booking.email_id = email_content.email_id
             booking.extracted_at = email_content.updated_at
             return booking
         except Exception as e:
-            logger.error(f"Error creating BookingInfo from EmailContent: {e}")
+            logger.error(f"Error creating BookingInfo from EmailContent for email {email_content.email_id}: {e}")
             return None
     
     def to_json(self) -> str:

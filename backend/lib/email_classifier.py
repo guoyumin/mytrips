@@ -6,6 +6,7 @@ import json
 import logging
 from typing import List, Dict, Optional
 from backend.lib.ai.ai_provider_interface import AIProviderInterface
+from backend.constants import TRAVEL_CATEGORIES_SET, NON_TRAVEL_CATEGORIES_SET
 
 logger = logging.getLogger(__name__)
 
@@ -13,17 +14,9 @@ logger = logging.getLogger(__name__)
 class EmailClassifier:
     """邮件分类器 - 使用依赖注入的AI Provider"""
     
-    # 旅行相关分类
-    TRAVEL_CATEGORIES = {
-        'flight', 'hotel', 'car_rental', 'train', 'cruise',
-        'tour', 'travel_insurance', 'flight_change',
-        'hotel_change', 'other_travel'
-    }
-    
-    # 非旅行分类
-    NON_TRAVEL_CATEGORIES = {
-        'marketing', 'not_travel', 'classification_failed'
-    }
+    # Use constants from central location
+    TRAVEL_CATEGORIES = TRAVEL_CATEGORIES_SET
+    NON_TRAVEL_CATEGORIES = NON_TRAVEL_CATEGORIES_SET
     
     def __init__(self, ai_provider: AIProviderInterface):
         """

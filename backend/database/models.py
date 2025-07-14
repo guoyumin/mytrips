@@ -130,11 +130,11 @@ class EmailContent(Base):
     attachments_count = Column(Integer, default=0)
     
     # 提取状态
-    extraction_status = Column(String(50), default='pending')  # pending, extracting, completed, failed
+    extraction_status = Column(String(50), default='pending')  # pending, extracting, completed, failed, not_required
     extraction_error = Column(Text)  # 错误信息（如果有）
     
     # 预订信息提取（第一步）
-    booking_extraction_status = Column(String(50), default='pending')  # pending, extracting, completed, failed
+    booking_extraction_status = Column(String(50), default='pending')  # pending, extracting, completed, failed, no_booking, not_travel
     extracted_booking_info = Column(Text)  # JSON格式的提取预订信息
     booking_extraction_error = Column(Text)  # 预订信息提取错误信息
     

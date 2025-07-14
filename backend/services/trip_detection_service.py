@@ -18,6 +18,7 @@ from backend.lib.ai.ai_provider_with_fallback import AIProviderWithFallback
 from backend.lib.trip_detector import TripDetector
 from backend.models.trip import Trip
 from backend.models.booking import BookingInfo
+from backend.constants import TRAVEL_CATEGORIES
 from backend.models.repositories.trip_repository import TripRepository
 
 logger = logging.getLogger(__name__)
@@ -33,9 +34,9 @@ class TripDetectionService:
         
         # Define fallback order for trip detection
         self.provider_fallback_order = [
-            ('openai', 'fast'),
             ('gemini', 'fast'),
-            ('deepseek', 'fast')
+            ('openai', 'fast')
+            
         ]
         
         try:
@@ -172,15 +173,9 @@ class TripDetectionService:
                     return  # Exit early to prevent data loss
             
             # Fetch all travel-related emails with extracted content
-            travel_categories = [
-                'flight', 'hotel', 'car_rental', 'train', 'cruise', 
-                'tour', 'travel_insurance', 'flight_change', 
-                'hotel_change', 'other_travel'
-            ]
-            
             # Check for stuck emails in processing status
             stuck_count = db.query(Email).join(EmailContent).filter(
-                Email.classification.in_(travel_categories),
+                Email.classification.in_(TRAVEL_CATEGORIES),
                 EmailContent.extraction_status == 'completed',
                 EmailContent.booking_extraction_status == 'completed',
                 EmailContent.trip_detection_status == 'processing'
@@ -192,7 +187,7 @@ class TripDetectionService:
                 db.query(EmailContent).filter(
                     EmailContent.email_id.in_(
                         db.query(Email.email_id).join(EmailContent).filter(
-                            Email.classification.in_(travel_categories),
+                            Email.classification.in_(TRAVEL_CATEGORIES),
                             EmailContent.extraction_status == 'completed',
                             EmailContent.booking_extraction_status == 'completed',
                             EmailContent.trip_detection_status == 'processing'
@@ -208,7 +203,7 @@ class TripDetectionService:
             # Only get emails that have actual booking information
             # Filter out non-booking emails directly in the database
             query = db.query(Email).join(EmailContent).filter(
-                Email.classification.in_(travel_categories),
+                Email.classification.in_(TRAVEL_CATEGORIES),
                 EmailContent.extraction_status == 'completed',
                 EmailContent.booking_extraction_status == 'completed',  # This excludes 'no_booking' status
                 EmailContent.trip_detection_status.in_(['pending', 'failed']),  # Only pending and failed, since we reset stuck ones
@@ -533,16 +528,10 @@ class TripDetectionService:
             trip_repository.delete_all()
             
             # Reset all email trip detection status
-            travel_categories = [
-                'flight', 'hotel', 'car_rental', 'train', 'cruise', 
-                'tour', 'travel_insurance', 'flight_change', 
-                'hotel_change', 'other_travel'
-            ]
-            
             # Reset all travel emails with completed booking extraction
             # First get the email IDs that need to be reset
             email_ids_to_reset = db.query(Email.email_id).join(EmailContent).filter(
-                Email.classification.in_(travel_categories),
+                Email.classification.in_(TRAVEL_CATEGORIES),
                 EmailContent.extraction_status == 'completed',
                 EmailContent.booking_extraction_status.in_(['completed', 'no_booking'])
             ).all()

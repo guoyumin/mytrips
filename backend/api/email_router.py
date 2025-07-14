@@ -7,6 +7,7 @@ from backend.lib.config_manager import config_manager
 from backend.database.config import SessionLocal
 from backend.database.models import Email, EmailContent, Trip
 from backend.services.rate_limiter import get_rate_limiter
+from backend.constants import TRAVEL_CATEGORIES
 import json
 
 router = APIRouter()
@@ -291,12 +292,7 @@ async def list_emails(
         if classification:
             if classification.lower() == 'travel':
                 # Include all travel-related classifications
-                travel_categories = [
-                    'flight', 'hotel', 'car_rental', 'train', 'cruise', 
-                    'tour', 'travel_insurance', 'flight_change', 
-                    'hotel_change', 'other_travel'
-                ]
-                query = query.filter(Email.classification.in_(travel_categories))
+                query = query.filter(Email.classification.in_(TRAVEL_CATEGORIES))
             else:
                 query = query.filter(Email.classification == classification)
         
@@ -486,16 +482,10 @@ async def get_detailed_email_stats() -> Dict:
             classification_stats[classification] = count
         
         # 旅行相关分类统计
-        travel_categories = [
-            'flight', 'hotel', 'car_rental', 'train', 'cruise', 
-            'tour', 'travel_insurance', 'flight_change', 
-            'hotel_change', 'other_travel'
-        ]
-        
         travel_stats = {}
         total_travel_emails = 0
         
-        for category in travel_categories:
+        for category in TRAVEL_CATEGORIES:
             count = classification_stats.get(category, 0)
             travel_stats[category] = count
             total_travel_emails += count
@@ -504,7 +494,7 @@ async def get_detailed_email_stats() -> Dict:
         # 首先获取所有旅行相关邮件的ID列表
         travel_email_ids_list = [
             row[0] for row in db.query(Email.email_id).filter(
-                Email.classification.in_(travel_categories)
+                Email.classification.in_(TRAVEL_CATEGORIES)
             ).all()
         ]
         
@@ -560,8 +550,17 @@ async def get_detailed_email_stats() -> Dict:
                     EmailContent.email_id.in_(travel_email_ids_list)
                 ).count()
                 
-                # 已提取内容但尚未进行booking extraction的数量
-                booking_pending_count = content_extracted_count - booking_completed_count - booking_failed_count - booking_extracting_count
+                # 查询no_booking状态的数量
+                booking_no_booking_count = db.query(EmailContent).filter(
+                    EmailContent.booking_extraction_status == 'no_booking',
+                    EmailContent.email_id.in_(travel_email_ids_list)
+                ).count()
+                
+                # 真正的pending数量应该直接查询
+                booking_pending_count = db.query(EmailContent).filter(
+                    EmailContent.booking_extraction_status == 'pending',
+                    EmailContent.email_id.in_(travel_email_ids_list)
+                ).count()
                 
             except Exception as e:
                 # booking extraction字段不存在，所有已提取内容的邮件都标记为待处理
@@ -595,10 +594,11 @@ async def get_detailed_email_stats() -> Dict:
             },
             'booking_extraction': {
                 'completed': booking_completed_count,
+                'no_booking': booking_no_booking_count if 'booking_no_booking_count' in locals() else 0,
                 'failed': booking_failed_count,
                 'extracting': booking_extracting_count,
                 'pending': booking_pending_count if booking_pending_count > 0 else 0,
-                'completion_rate': round(booking_completed_count / content_extracted_count * 100, 1) if content_extracted_count > 0 else 0
+                'completion_rate': round((booking_completed_count + booking_no_booking_count if 'booking_no_booking_count' in locals() else 0) / content_extracted_count * 100, 1) if content_extracted_count > 0 else 0
             },
             'trip_detection': get_trip_detection_stats(db, booking_completed_count)
         }

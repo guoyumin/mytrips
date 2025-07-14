@@ -13,6 +13,7 @@ from backend.lib.email_content_extractor import EmailContentExtractor
 from backend.lib.config_manager import config_manager
 from backend.database.config import SessionLocal
 from backend.database.models import Email, EmailContent
+from backend.constants import TRAVEL_CATEGORIES, is_travel_category
 
 logger = logging.getLogger(__name__)
 
@@ -63,20 +64,15 @@ class EmailContentService:
         db = SessionLocal()
         try:
             # 查询所有旅行相关邮件，且还未成功提取内容的
-            travel_categories = [
-                'flight', 'hotel', 'car_rental', 'train', 'cruise', 
-                'tour', 'travel_insurance', 'flight_change', 
-                'hotel_change', 'other_travel'
-            ]
             
-            # 使用子查询找出已成功提取的邮件ID
+            # 使用子查询找出已成功提取或不需要提取的邮件ID
             extracted_ids = db.query(EmailContent.email_id).filter(
-                EmailContent.extraction_status == 'completed'
+                EmailContent.extraction_status.in_(['completed', 'not_required'])
             ).subquery()
             
             # 查询旅行邮件且不在已提取列表中
             emails = db.query(Email).filter(
-                Email.classification.in_(travel_categories),
+                Email.classification.in_(TRAVEL_CATEGORIES),
                 ~Email.email_id.in_(extracted_ids)
             ).all()
             
@@ -167,10 +163,36 @@ class EmailContentService:
             
         return progress
         
+    def _mark_non_travel_emails_as_not_required(self):
+        """Mark non-travel emails with pending extraction status as not_required"""
+        db = SessionLocal()
+        try:
+            # Find non-travel emails with EmailContent records that have pending extraction status
+            updated_count = db.query(EmailContent).join(Email).filter(
+                ~Email.classification.in_(TRAVEL_CATEGORIES),
+                EmailContent.extraction_status.in_(['pending', 'failed'])
+            ).update({
+                'extraction_status': 'not_required',
+                'extraction_error': None
+            }, synchronize_session=False)
+            
+            if updated_count > 0:
+                db.commit()
+                logger.info(f"Marked {updated_count} non-travel emails as extraction_status='not_required'")
+            
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to mark non-travel emails as not_required: {e}")
+        finally:
+            db.close()
+        
     def _background_extraction(self, limit: Optional[int] = None):
         """后台提取线程"""
         try:
             logger.info(f"Starting email content extraction (limit: {limit})")
+            
+            # First, mark non-travel emails as not_required
+            self._mark_non_travel_emails_as_not_required()
             
             # 获取需要提取的邮件
             emails = self.get_travel_emails_for_extraction()
@@ -377,14 +399,8 @@ class EmailContentService:
         db = SessionLocal()
         try:
             # 统计旅行邮件
-            travel_categories = [
-                'flight', 'hotel', 'car_rental', 'train', 'cruise', 
-                'tour', 'travel_insurance', 'flight_change', 
-                'hotel_change', 'other_travel'
-            ]
-            
             total_travel_emails = db.query(Email).filter(
-                Email.classification.in_(travel_categories)
+                Email.classification.in_(TRAVEL_CATEGORIES)
             ).count()
             
             # 统计已提取的
@@ -422,8 +438,10 @@ class EmailContentService:
                     'message': '内容提取正在进行中，请先停止提取'
                 }
             
-            # 重置所有EmailContent记录的提取状态
-            reset_count = db.query(EmailContent).update({
+            # Reset travel emails to pending
+            travel_reset_count = db.query(EmailContent).join(Email).filter(
+                Email.classification.in_(TRAVEL_CATEGORIES)
+            ).update({
                 'extraction_status': 'pending',
                 'extraction_error': None,
                 'content_text': None,
@@ -434,6 +452,21 @@ class EmailContentService:
                 'attachments_count': 0
             }, synchronize_session=False)
             
+            # Mark non-travel emails as not_required
+            non_travel_reset_count = db.query(EmailContent).join(Email).filter(
+                ~Email.classification.in_(TRAVEL_CATEGORIES)
+            ).update({
+                'extraction_status': 'not_required',
+                'extraction_error': None,
+                'content_text': None,
+                'content_html': None,
+                'attachments_info': None,
+                'has_attachments': False,
+                'extracted_at': None,
+                'attachments_count': 0
+            }, synchronize_session=False)
+            
+            reset_count = travel_reset_count + non_travel_reset_count
             db.commit()
             
             # 重置进度状态
@@ -449,12 +482,14 @@ class EmailContentService:
                     'message': ''
                 }
             
-            logger.info(f"成功重置 {reset_count} 条内容提取记录")
+            logger.info(f"成功重置 {reset_count} 条内容提取记录 (旅行邮件: {travel_reset_count}, 非旅行邮件: {non_travel_reset_count})")
             
             return {
                 'success': True,
                 'reset_count': reset_count,
-                'message': f'成功重置 {reset_count} 条内容提取记录'
+                'travel_reset_count': travel_reset_count,
+                'non_travel_reset_count': non_travel_reset_count,
+                'message': f'成功重置 {reset_count} 条内容提取记录 (旅行邮件: {travel_reset_count}, 非旅行邮件: {non_travel_reset_count})'
             }
             
         except Exception as e:

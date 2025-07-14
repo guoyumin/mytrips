@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from backend.database.config import SessionLocal
 from backend.database.models import Email, EmailContent
 from backend.lib.ai.ai_provider_with_fallback import AIProviderWithFallback
+from backend.constants import TRAVEL_CATEGORIES
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,6 @@ class EmailBookingExtractionService:
         
         # Provider fallback order: deepseek-powerful -> gemini-fast -> openai-fast
         self.provider_fallback_order = [
-            ('gemma3', 'powerful'),
-            ('deepseek', 'powerful'),
             ('gemini', 'fast'),
             ('openai', 'fast')
         ]
@@ -115,20 +114,37 @@ class EmailBookingExtractionService:
             
         return progress
     
+    def _sync_non_travel_emails_status(self, db: Session):
+        """Sync booking extraction status for non-travel emails"""
+        try:
+            # Update non-travel emails with pending booking extraction status to 'not_travel'
+            updated_count = db.query(EmailContent).join(Email).filter(
+                ~Email.classification.in_(TRAVEL_CATEGORIES),
+                EmailContent.booking_extraction_status == 'pending'
+            ).update({
+                'booking_extraction_status': 'not_travel',
+                'booking_extraction_error': 'Not a travel email'
+            }, synchronize_session=False)
+            
+            if updated_count > 0:
+                db.commit()
+                logger.info(f"Updated {updated_count} non-travel emails to booking_extraction_status='not_travel'")
+                
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to sync non-travel emails status: {e}")
+            raise
     
     def _background_extraction(self, date_range: Optional[Dict] = None):
         """Background process for booking extraction"""
         db = SessionLocal()
         try:
-            # Fetch all travel-related emails with content but no booking extraction
-            travel_categories = [
-                'flight', 'hotel', 'car_rental', 'train', 'cruise', 
-                'tour', 'travel_insurance', 'flight_change', 
-                'hotel_change', 'other_travel'
-            ]
+            # First, sync non-travel emails that have pending booking extraction status
+            self._sync_non_travel_emails_status(db)
             
+            # Fetch all travel-related emails with content but no booking extraction
             query = db.query(Email).join(EmailContent).filter(
-                Email.classification.in_(travel_categories),
+                Email.classification.in_(TRAVEL_CATEGORIES),
                 EmailContent.extraction_status == 'completed',
                 EmailContent.booking_extraction_status.in_(['pending', 'failed'])
             )
@@ -248,9 +264,28 @@ class EmailBookingExtractionService:
             booking_info = self._parse_booking_response(response_text)
             
             if booking_info:
+                # First check if this email was correctly classified as travel
+                if booking_info.get('is_travel') == False:
+                    # This email is not travel-related, update classification
+                    logger.warning(f"Email {email.email_id} was misclassified as travel. Actual category: {booking_info.get('actual_category', 'not_travel')}")
+                    
+                    # Update email classification in database
+                    email.classification = booking_info.get('actual_category', 'not_travel')
+                    db.commit()
+                    
+                    # Mark as non-travel in both extraction and booking extraction
+                    content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
+                    content.booking_extraction_status = 'not_travel'
+                    content.booking_extraction_error = booking_info.get('reason', 'Not a travel email')
+                    content.extraction_status = 'not_required'  # Also update extraction status
+                    db.commit()
+                    
+                    logger.info(f"Email {email.email_id} reclassified as: {email.classification}")
+                    return True
+                    
                 # Check if this is a non-booking email
-                if booking_info.get('booking_type') is None:
-                    # This is a non-booking email (reminder, marketing, etc.)
+                elif booking_info.get('booking_type') is None:
+                    # This is a non-booking travel email (reminder, marketing, etc.)
                     content.extracted_booking_info = json.dumps(booking_info, ensure_ascii=False)
                     content.booking_extraction_status = 'no_booking'
                     content.booking_extraction_error = booking_info.get('reason', 'Non-booking email')
@@ -293,26 +328,25 @@ class EmailBookingExtractionService:
             except:
                 pass
         
-        prompt = f"""You are tasked with analyzing a travel-related email to determine if it contains actual booking information. This extracted information will later be used for:
-1. Trip boundary detection (identifying which bookings belong to the same trip)
-2. Booking relationship analysis (original bookings vs. changes/cancellations)
-3. Duplicate detection and merging
-4. Cost calculation and distance analysis
+        prompt = f"""You are tasked with analyzing an email. Follow these steps:
 
-CRITICAL: First determine if this email contains actual booking information or if it's a NON-BOOKING email such as:
-- Check-in reminders or notifications
-- Travel tips or general information
-- Marketing emails from travel companies
-- Flight status updates without booking details
-- Seat selection reminders
-- Baggage information
-- General travel advisories
-- Survey requests
-- Program enrollment confirmations (frequent flyer, hotel loyalty, etc.)
+STEP 1: VERIFY TRAVEL CLASSIFICATION
+First, determine if this email is actually travel-related. Look for:
+- Travel bookings (flights, hotels, car rentals, trains, cruises, tours)
+- Travel confirmations, tickets, or itineraries
+- Travel changes or cancellations
+- Travel insurance policies
 
-For NON-BOOKING emails, return: {{"booking_type": null, "non_booking_type": "reminder|marketing|status_update|check_in|general_info|survey|program_enrollment", "reason": "Brief explanation why this is not a booking"}}
+If the email is NOT travel-related (e.g., general marketing, non-travel purchases, personal emails, work emails, newsletters, etc.), return:
+{{"is_travel": false, "actual_category": "not_travel", "reason": "Brief explanation why this is not travel-related"}}
 
-For ACTUAL BOOKING emails, extract ALL relevant booking details, especially:
+STEP 2: FOR TRAVEL EMAILS - DETERMINE BOOKING STATUS
+If the email IS travel-related, then determine if it contains actual booking information.
+
+For NON-BOOKING travel emails (reminders, tips, status updates without booking details), return:
+{{"is_travel": true, "booking_type": null, "non_booking_type": "reminder|marketing|status_update|check_in|general_info|survey|program_enrollment", "reason": "Brief explanation why this is not a booking"}}
+
+For ACTUAL BOOKING emails, extract ALL relevant booking details:
 - Confirmation numbers/booking references (crucial for linking related emails)
 - Dates and times (for trip boundary detection)
 - Locations (departure/arrival cities, hotel addresses)
@@ -337,8 +371,16 @@ Attachment Information:
 
 Analyze the email and return a JSON object with this structure:
 
-For NON-BOOKING emails:
+For NON-TRAVEL emails:
 {{
+  "is_travel": false,
+  "actual_category": "not_travel",
+  "reason": "Brief explanation why this is not travel-related"
+}}
+
+For NON-BOOKING travel emails:
+{{
+  "is_travel": true,
   "booking_type": null,
   "non_booking_type": "reminder|marketing|status_update|check_in|general_info|survey|program_enrollment",
   "reason": "Brief explanation why this is not a booking email"
@@ -346,6 +388,7 @@ For NON-BOOKING emails:
 
 For ACTUAL BOOKING emails:
 {{
+  "is_travel": true,
   "booking_type": "flight|hotel|car_rental|train|cruise|tour|travel_insurance|cancellation|modification",
   "status": "confirmed|cancelled|modified|pending",
   "confirmation_numbers": ["ABC123", "DEF456"],
@@ -437,16 +480,26 @@ For ACTUAL BOOKING emails:
 }}
 
 CRITICAL REQUIREMENTS:
-1. FIRST AND MOST IMPORTANT: Determine if this is a booking email or non-booking email
+1. FIRST: Verify if this email is actually travel-related
+   - If NOT travel-related → Return "is_travel": false with actual_category and reason
+   - If travel-related → Continue to step 2
+
+2. FOR TRAVEL EMAILS: Determine if this is a booking email or non-booking email
    - NON-BOOKING: Check-in reminders, status updates, marketing, surveys, etc. → Return booking_type: null
    - BOOKING: Actual reservations, confirmations, cancellations, modifications → Extract full details
 
-2. For NON-BOOKING emails:
+3. For NON-TRAVEL emails:
+   - Set "is_travel": false
+   - Set "actual_category": "not_travel"
+   - Provide brief "reason" explaining why it's not travel-related
+
+4. For NON-BOOKING travel emails:
+   - Set "is_travel": true
    - Set "booking_type": null
    - Specify "non_booking_type" (reminder|marketing|status_update|check_in|general_info|survey|program_enrollment)
    - Provide brief "reason" explaining why it's not a booking
 
-3. For BOOKING emails only:
+5. For BOOKING emails only:
    - ARRAY FORMAT IS MANDATORY: ALL booking details MUST be in arrays (transport_segments, accommodations, activities, cruises)
    - Even for single items, use an array with one element: transport_segments: [{{...}}] NOT transport_details: {{...}}
    - CONFIRMATION NUMBERS are EXTREMELY IMPORTANT - Extract ALL confirmation numbers/booking references mentioned in the email
@@ -512,13 +565,28 @@ IMPORTANT: Return ONLY the JSON object. Do NOT include any thinking process, exp
                     'message': 'Booking提取正在进行中，请先停止提取'
                 }
             
-            # 重置所有EmailContent记录的booking提取状态
-            reset_count = db.query(EmailContent).update({
+            # Import Email model
+            from backend.database.models import Email
+            
+            # Reset travel emails to pending
+            travel_reset_count = db.query(EmailContent).join(Email).filter(
+                Email.classification.in_(TRAVEL_CATEGORIES)
+            ).update({
                 'booking_extraction_status': 'pending',
                 'booking_extraction_error': None,
                 'extracted_booking_info': None
             }, synchronize_session=False)
             
+            # Mark non-travel emails as not_travel
+            non_travel_reset_count = db.query(EmailContent).join(Email).filter(
+                ~Email.classification.in_(TRAVEL_CATEGORIES)
+            ).update({
+                'booking_extraction_status': 'not_travel',
+                'booking_extraction_error': 'Not a travel email',
+                'extracted_booking_info': None
+            }, synchronize_session=False)
+            
+            reset_count = travel_reset_count + non_travel_reset_count
             db.commit()
             
             # 重置进度状态
@@ -534,12 +602,14 @@ IMPORTANT: Return ONLY the JSON object. Do NOT include any thinking process, exp
                     'message': ''
                 }
             
-            logger.info(f"成功重置 {reset_count} 条booking提取记录")
+            logger.info(f"成功重置 {reset_count} 条booking提取记录 (旅行邮件: {travel_reset_count}, 非旅行邮件: {non_travel_reset_count})")
             
             return {
                 'success': True,
                 'reset_count': reset_count,
-                'message': f'成功重置 {reset_count} 条booking提取记录'
+                'travel_reset_count': travel_reset_count,
+                'non_travel_reset_count': non_travel_reset_count,
+                'message': f'成功重置 {reset_count} 条booking提取记录 (旅行邮件: {travel_reset_count}, 非旅行邮件: {non_travel_reset_count})'
             }
             
         except Exception as e:
