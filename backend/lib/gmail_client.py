@@ -218,9 +218,31 @@ class GmailClient:
             logger.error(f"Failed to download attachment: {error}")
             return None
     
+    def search_emails_by_date_range(self, start_date: datetime, end_date: datetime) -> List[Dict[str, str]]:
+        """
+        搜索指定日期范围内的邮件
+        
+        Args:
+            start_date: 开始日期 (inclusive)
+            end_date: 结束日期 (inclusive)
+            
+        Returns:
+            所有在指定时间范围内的邮件列表
+        """
+        # Gmail 查询格式: after:2024/1/1 before:2024/1/31
+        # Note: Gmail's 'before' is exclusive, so we add one day
+        after_date = start_date.strftime('%Y/%m/%d')
+        before_date = (end_date + timedelta(days=1)).strftime('%Y/%m/%d')
+        query = f'after:{after_date} before:{before_date}'
+        
+        logger.info(f"Searching emails with query: {query}")
+        
+        # 获取所有匹配的邮件，不设置人为限制
+        return self.list_messages_all(query)
+    
     def search_emails_by_date(self, days_back: int = 365) -> List[Dict[str, str]]:
         """
-        搜索指定天数内的邮件
+        搜索指定天数内的邮件 (backward compatibility)
         
         Args:
             days_back: 搜索多少天前的邮件
@@ -228,12 +250,9 @@ class GmailClient:
         Returns:
             所有在指定时间范围内的邮件列表
         """
-        # 计算日期范围
-        after_date = (datetime.now() - timedelta(days=days_back)).strftime('%Y/%m/%d')
-        query = f'after:{after_date}'
-        
-        # 获取所有匹配的邮件，不设置人为限制
-        return self.list_messages_all(query)
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days_back)
+        return self.search_emails_by_date_range(start_date, end_date)
     
     def batch_get_headers(self, message_ids: List[str], batch_size: int = 100) -> List[Dict[str, str]]:
         """
