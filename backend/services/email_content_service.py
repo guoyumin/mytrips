@@ -7,6 +7,7 @@ import logging
 import threading
 from typing import Dict, List, Optional
 from datetime import datetime
+from sqlalchemy import or_
 
 from backend.lib.gmail_client import GmailClient
 from backend.lib.email_content_extractor import EmailContentExtractor
@@ -70,8 +71,16 @@ class EmailContentService:
         """
         db = SessionLocal()
         try:
+            # Only get emails that don't have content or failed extraction
             emails = db.query(Email).filter(
                 Email.email_id.in_(email_ids)
+            ).outerjoin(
+                EmailContent, Email.email_id == EmailContent.email_id
+            ).filter(
+                or_(
+                    EmailContent.email_id == None,  # No content record
+                    EmailContent.extraction_status.in_(['pending', 'failed'])  # Or needs retry
+                )
             ).all()
             
             result = []

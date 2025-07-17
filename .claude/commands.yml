@@ -1,0 +1,20 @@
+commands:
+  reset_all:
+    description: "Reset all email and trips data in the database"
+    steps:
+      - command: "curl -X POST http://localhost:8000/api/emails/reset-all"
+        description: "Clear all emails from the database"
+      - command: "curl -X POST http://localhost:8000/api/trips/detection/reset"
+        description: "Clear all trip detection data"
+
+  reset_emails:
+    description: "Reset all email data in the database"
+    steps:
+      - command: "curl -X POST http://localhost:8000/api/emails/reset-all"
+        description: "Clear all emails from the database"
+      
+  reset_trips:
+    description: "Reset only trip data, keeping emails intact"
+    steps:
+      - command: "curl -X POST http://localhost:8000/api/trips/detection/reset"
+        description: "Clear all trip detection data while preserving emails"

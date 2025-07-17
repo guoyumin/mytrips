@@ -22,6 +22,14 @@ mkdir -p "$PROJECT_ROOT/logs"
 # Stop any existing server
 echo "Stopping any existing server..."
 pkill -f "uvicorn main:app" 2>/dev/null || true
+
+# Also kill any process using port 8000
+echo "Checking for processes using port 8000..."
+PORT_PID=$(lsof -ti :8000)
+if [ ! -z "$PORT_PID" ]; then
+    echo "Found process $PORT_PID using port 8000, killing it..."
+    kill -9 $PORT_PID 2>/dev/null || true
+fi
 sleep 2
 
 # Start server in background with logging

@@ -218,6 +218,44 @@ class GmailClient:
             logger.error(f"Failed to download attachment: {error}")
             return None
     
+    def search_emails_by_date_range_paginated(self, start_date: datetime, end_date: datetime, 
+                                              page_token: Optional[str] = None, 
+                                              max_results: int = 100) -> Dict[str, any]:
+        """
+        搜索指定日期范围内的邮件（分页版本）
+        
+        Args:
+            start_date: 开始日期 (inclusive)
+            end_date: 结束日期 (inclusive)
+            page_token: 分页token，用于获取下一页
+            max_results: 每页最大结果数
+            
+        Returns:
+            包含邮件列表和下一页token的字典
+        """
+        after_date = start_date.strftime('%Y/%m/%d')
+        before_date = (end_date + timedelta(days=1)).strftime('%Y/%m/%d')
+        query = f'after:{after_date} before:{before_date}'
+        
+        logger.info(f"Searching emails with query: {query}, page_token: {page_token}")
+        
+        try:
+            response = self.service.users().messages().list(
+                userId='me',
+                q=query,
+                pageToken=page_token,
+                maxResults=max_results
+            ).execute()
+            
+            return {
+                'messages': response.get('messages', []),
+                'nextPageToken': response.get('nextPageToken'),
+                'resultSizeEstimate': response.get('resultSizeEstimate', 0)
+            }
+        except Exception as error:
+            logger.error(f'An error occurred: {error}')
+            return {'messages': [], 'nextPageToken': None, 'resultSizeEstimate': 0}
+    
     def search_emails_by_date_range(self, start_date: datetime, end_date: datetime) -> List[Dict[str, str]]:
         """
         搜索指定日期范围内的邮件

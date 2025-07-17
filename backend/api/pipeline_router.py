@@ -4,12 +4,12 @@ Endpoints for running the full email processing pipeline
 """
 from fastapi import APIRouter, HTTPException
 from typing import Dict
-from backend.services.email_pipeline_service import EmailPipelineService
+from backend.services.email_pipeline_service_v2 import EmailPipelineServiceV2
 
 router = APIRouter()
 
 # Global service instance
-pipeline_service = EmailPipelineService()
+pipeline_service = EmailPipelineServiceV2()
 
 @router.post("/start")
 async def start_pipeline(request: dict) -> Dict:
@@ -45,10 +45,14 @@ async def get_pipeline_progress() -> Dict:
 @router.post("/stop")
 async def stop_pipeline() -> Dict:
     """Stop the running pipeline"""
+    print("[DEBUG] /api/pipeline/stop endpoint called")
     try:
+        print("[DEBUG] Calling pipeline_service.stop_pipeline()")
         result = pipeline_service.stop_pipeline()
+        print(f"[DEBUG] stop_pipeline result: {result}")
         return result
     except Exception as e:
+        print(f"[DEBUG] Error in stop_pipeline: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/status")

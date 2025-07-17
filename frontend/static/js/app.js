@@ -91,6 +91,9 @@ class EmailImportApp {
             case 'my-trips':
                 this.showMyTripsSection();
                 break;
+            case 'full-pipeline':
+                this.showFullPipelineSection();
+                break;
         }
         
         this.currentSection = functionName;
@@ -107,6 +110,7 @@ class EmailImportApp {
         document.getElementById('trip-detection-section').style.display = 'none';
         document.getElementById('my-trips-section').style.display = 'none';
         document.getElementById('trip-detail-section').style.display = 'none';
+        document.getElementById('full-pipeline-section').style.display = 'none';
         document.getElementById('progress-section').style.display = 'none';
         document.getElementById('stats').style.display = 'none';
     }
@@ -151,6 +155,12 @@ class EmailImportApp {
 
     showBookingExtractionSection() {
         document.getElementById('booking-extraction-section').style.display = 'block';
+    }
+
+    showFullPipelineSection() {
+        document.getElementById('full-pipeline-section').style.display = 'block';
+        // Initialize date range with last month by default
+        updatePipelineDateRangeFromQuickSelect();
     }
 
     async importEmails() {
@@ -2376,6 +2386,216 @@ function updateDateRangeFromQuickSelect() {
     // Format dates as YYYY-MM-DD
     startDateInput.value = startDate.toISOString().split('T')[0];
     endDateInput.value = endDate.toISOString().split('T')[0];
+}
+
+// Helper function for pipeline date range
+function updatePipelineDateRangeFromQuickSelect() {
+    const timeRange = document.getElementById('pipelineTimeRange').value;
+    const startDateInput = document.getElementById('pipelineStartDate');
+    const endDateInput = document.getElementById('pipelineEndDate');
+    
+    if (!timeRange) {
+        // Custom date range selected, clear dates
+        startDateInput.value = '';
+        endDateInput.value = '';
+        return;
+    }
+    
+    const days = parseInt(timeRange);
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    
+    // Format dates as YYYY-MM-DD
+    startDateInput.value = startDate.toISOString().split('T')[0];
+    endDateInput.value = endDate.toISOString().split('T')[0];
+}
+
+// Pipeline functions
+let pipelineProgressInterval = null;
+
+async function startFullPipeline() {
+    const startDate = document.getElementById('pipelineStartDate').value;
+    const endDate = document.getElementById('pipelineEndDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('Please select a date range');
+        return;
+    }
+    
+    try {
+        // Disable start button, show stop button
+        document.getElementById('startPipelineBtn').style.display = 'none';
+        document.getElementById('stopPipelineBtn').style.display = 'inline-flex';
+        
+        // Show progress section
+        document.getElementById('pipeline-progress-section').style.display = 'block';
+        
+        // Start pipeline
+        const response = await fetch('/api/pipeline/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                date_range: {
+                    start_date: startDate,
+                    end_date: endDate
+                }
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.started) {
+            document.getElementById('pipelineMessage').textContent = result.message;
+            // Start monitoring progress
+            monitorPipelineProgress();
+        } else {
+            throw new Error(result.message || 'Failed to start pipeline');
+        }
+        
+    } catch (error) {
+        console.error('Error starting pipeline:', error);
+        alert('Failed to start pipeline: ' + error.message);
+        resetPipelineUI();
+    }
+}
+
+async function stopFullPipeline() {
+    console.log('stopFullPipeline called');
+    try {
+        console.log('Sending POST request to /api/pipeline/stop');
+        const response = await fetch('/api/pipeline/stop', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        console.log('Response status:', response.status);
+        const result = await response.json();
+        console.log('Response result:', result);
+        
+        document.getElementById('pipelineMessage').textContent = result.message || 'Pipeline stopped';
+        
+        // Reset UI if pipeline was actually stopped
+        if (result.stopped) {
+            setTimeout(() => {
+                resetPipelineUI();
+            }, 2000);
+        }
+        
+    } catch (error) {
+        console.error('Error stopping pipeline:', error);
+        alert('Failed to stop pipeline: ' + error.message);
+    }
+}
+
+function monitorPipelineProgress() {
+    // Clear any existing interval
+    if (pipelineProgressInterval) {
+        clearInterval(pipelineProgressInterval);
+    }
+    
+    // Update progress immediately
+    updatePipelineProgress();
+    
+    // Then update every 2 seconds
+    pipelineProgressInterval = setInterval(updatePipelineProgress, 2000);
+}
+
+async function updatePipelineProgress() {
+    try {
+        const response = await fetch('/api/pipeline/status');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const status = await response.json();
+        
+        // Update overall progress
+        const overallProgress = status.overall_progress || 0;
+        document.getElementById('overallProgressPercent').textContent = `${overallProgress}%`;
+        document.getElementById('overallProgressBar').style.width = `${overallProgress}%`;
+        
+        // Update stage progress
+        const stages = status.stages || {};
+        
+        // Import stage
+        if (stages.import) {
+            const importProgress = stages.import.progress || 0;
+            document.getElementById('importProgressBar').style.width = `${importProgress}%`;
+            document.getElementById('importStats').textContent = 
+                `Status: ${stages.import.status} | Processed: ${stages.import.processed} / ${stages.import.total}`;
+        }
+        
+        // Classification stage
+        if (stages.classification) {
+            const classProgress = stages.classification.progress || 0;
+            document.getElementById('classificationProgressBar').style.width = `${classProgress}%`;
+            document.getElementById('classificationStats').textContent = 
+                `Status: ${stages.classification.status} | Processed: ${stages.classification.processed} / ${stages.classification.total} | Travel: ${stages.classification.travel_count || 0}`;
+        }
+        
+        // Content stage
+        if (stages.content) {
+            const contentProgress = stages.content.progress || 0;
+            document.getElementById('contentProgressBar').style.width = `${contentProgress}%`;
+            document.getElementById('contentStats').textContent = 
+                `Status: ${stages.content.status} | Processed: ${stages.content.processed} / ${stages.content.total}`;
+        }
+        
+        // Booking stage
+        if (stages.booking) {
+            const bookingProgress = stages.booking.progress || 0;
+            document.getElementById('bookingProgressBar').style.width = `${bookingProgress}%`;
+            document.getElementById('bookingStats').textContent = 
+                `Status: ${stages.booking.status} | Processed: ${stages.booking.processed} / ${stages.booking.total} | Bookings Found: ${stages.booking.bookings_found || 0}`;
+        }
+        
+        // Update message
+        document.getElementById('pipelineMessage').textContent = status.message || '';
+        
+        // Show errors if any
+        if (status.errors && status.errors.length > 0) {
+            const errorDiv = document.getElementById('pipelineErrors');
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML = '<h4>Errors:</h4>' + 
+                status.errors.map(e => `<div>${e.stage}: ${e.error}</div>`).join('');
+        }
+        
+        // Check if pipeline is complete
+        if (!status.is_running) {
+            // Only reset UI if we have a clear completion or stop message
+            if (status.message && (status.message.includes('completed') || status.message.includes('stopped'))) {
+                clearInterval(pipelineProgressInterval);
+                pipelineProgressInterval = null;
+                resetPipelineUI();
+                
+                // Show completion message
+                const summary = status.summary;
+                if (summary) {
+                    document.getElementById('pipelineMessage').innerHTML = `
+                        <h3>Pipeline Complete!</h3>
+                        <p>Emails Imported: ${summary.emails_imported}</p>
+                        <p>Emails Classified: ${summary.emails_classified}</p>
+                        <p>Travel Emails: ${summary.travel_emails_found}</p>
+                        <p>Content Extracted: ${summary.content_extracted}</p>
+                        <p>Bookings Extracted: ${summary.bookings_extracted}</p>
+                        <p>Total Bookings Found: ${summary.bookings_found}</p>
+                    `;
+                }
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error updating pipeline progress:', error);
+    }
+}
+
+function resetPipelineUI() {
+    document.getElementById('startPipelineBtn').style.display = 'inline-flex';
+    document.getElementById('stopPipelineBtn').style.display = 'none';
 }
 
 // Initialize app when DOM is loaded

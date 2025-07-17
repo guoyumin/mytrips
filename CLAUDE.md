@@ -29,6 +29,7 @@ pytest tests/booking_extraction/
 pytest tests/content_extraction/
 pytest tests/email_import/
 pytest tests/unit/
+pytest tests/microservices/
 
 # Run with verbose output
 pytest tests/ -v
@@ -36,14 +37,26 @@ pytest tests/ -v
 # Run a specific test file
 pytest tests/email_classification/test_classification_workflow.py
 
+# Run tests with coverage
+pytest tests/ --cov=backend
+
 # Quick test utility
 python tests/utils/quick_test.py
+
+# Generate trip detection test summary
+python tests/trip_detection/generate_summary.py
 ```
 
 ### Development Tools
 ```bash
 # Install dependencies
 pip install -r requirements.txt
+
+# Install minimal dependencies (without optional AI providers)
+pip install -r requirements-minimal.txt
+
+# Install web scraping dependencies
+pip install -r requirements-web.txt
 
 # Code formatting
 black backend/
@@ -52,32 +65,58 @@ black backend/
 flake8 backend/
 ```
 
+### Data Management
+```bash
+# Reset all email data (clear database)
+curl -X POST http://localhost:8000/api/emails/reset-all
+
+# Reset only email classifications
+curl -X POST http://localhost:8000/api/emails/reset-classification
+
+# Reset content extraction
+curl -X POST http://localhost:8000/api/content/reset
+
+# Reset booking extraction
+curl -X POST http://localhost:8000/api/content/reset-booking
+
+# Reset trip detection
+curl -X POST http://localhost:8000/api/trips/detection/reset
+
+# Quick reset commands (if .claude/commands.yml is configured)
+claude reset_all    # Reset all email and trip data
+claude reset_emails # Reset only email data
+claude reset_trips  # Reset only trip data
+```
+
 ## Architecture Overview
 
 ### Core Components
 - **FastAPI Backend** (`backend/main.py`): Main application server serving both API and frontend at port 8000
 - **Database Layer** (`backend/database/`): SQLAlchemy models for emails, trips, and content
 - **AI Services** (`backend/lib/ai/`): Multi-provider AI system supporting Gemini, OpenAI, Claude, and local models
-- **Email Processing** (`backend/services/`): Gmail integration, classification, and trip detection
+- **Email Processing Pipeline** (`backend/services/pipeline/`): Parallel processing pipeline with stages
 - **Frontend** (`frontend/`): Static HTML/CSS/JS interface served by FastAPI
 
 ### Key Services
-1. **Email Classification Service**: Categorizes emails as travel-related using AI
-2. **Trip Detection Service**: Extracts trip information from classified emails
-3. **Content Extraction Service**: Processes email content for structured data
-4. **Email Booking Extraction Service**: Parses booking details from emails
-5. **Rate Limiter**: Manages API rate limits across different AI providers
-6. **Gmail Service**: Handles OAuth2 authentication and email fetching
+1. **Email Pipeline Service V2** (`backend/services/email_pipeline_service_v2.py`): Orchestrates the entire email processing flow
+2. **Pipeline Stages** (`backend/services/pipeline/`): 
+   - Import Stage: Fetches emails from Gmail
+   - Classification Stage: Categorizes travel-related emails
+   - Content Extraction Stage: Extracts structured data
+   - Booking Extraction Stage: Parses booking details
+   - Trip Detection Stage: Groups bookings into trips
+3. **Microservices** (`backend/services/micro/`): Base classes for microservice architecture
+4. **Gmail Client** (`backend/lib/gmail_client.py`): Handles OAuth2 authentication and email fetching
 
 ### AI Provider System
-The application uses a factory pattern for AI providers with automatic fallback:
+The application uses a factory pattern (`backend/lib/ai/ai_provider_factory.py`) with automatic fallback:
 - **GeminiProvider**: Google Gemini models (default)
-- **OpenAIProvider**: GPT models
+- **OpenAIProvider**: GPT models  
 - **ClaudeProvider**: Anthropic Claude models
 - **DeepSeekProvider**: DeepSeek models
 - **LocalProviders**: Gemma3 and other local models
 
-Models are organized by tiers (fast, standard, advanced) with automatic fallback.
+Models are organized by tiers (fast, standard, advanced) with automatic fallback and rate limiting.
 
 ### Database Schema
 - **emails**: Gmail message storage with classification status (indexes on date/classification)
@@ -133,42 +172,47 @@ Models are organized by tiers (fast, standard, advanced) with automatic fallback
 
 ## Development Notes
 
-### Email Processing Flow
-1. Gmail API fetches emails via OAuth2
-2. Email classification service categorizes messages
-3. Trip detection service extracts travel information
-4. Content extraction service parses booking details
-5. Results stored in database for frontend display
+### Email Processing Pipeline
+The system uses a parallel processing pipeline with queue-based communication:
+1. **Import Stage**: Fetches emails from Gmail API via OAuth2
+2. **Classification Stage**: AI categorizes emails as travel-related
+3. **Content Extraction Stage**: Extracts structured data from email HTML/text
+4. **Booking Extraction Stage**: Parses specific booking details (flights, hotels, etc.)
+5. **Trip Detection Stage**: Groups related bookings into coherent trips
+
+Each stage can be stopped/started independently and processes data in parallel batches.
 
 ### AI Integration
-- Use the AI provider factory for consistent AI interactions
-- Implement proper error handling and rate limiting
-- Consider model tiers when selecting providers for different tasks
-- Provider fallback chain: Gemini → OpenAI → Claude → DeepSeek
+- Use `AIProviderFactory.get_provider()` for AI interactions
+- Providers support different model tiers: fast, standard, advanced
+- Automatic fallback chain: Gemini → OpenAI → Claude → DeepSeek → Local
+- Rate limiting and error handling built into provider system
+- Model pricing tracked in `config/gemini_pricing.json`
 
 ### Database Operations
-- Use SQLAlchemy ORM for all database interactions
-- Database includes proper indexing for performance
-- Handle concurrent access with appropriate locking
-- Chinese comments in models.py indicate internationalization support
+- SQLAlchemy ORM with proper session management
+- Tables include indexes for performance (email date, classification status)
+- Support for incremental updates and batch operations
+- Transaction support for data consistency
 
 ### Frontend Integration
-- FastAPI serves static files from `frontend/static/`
-- API endpoints are prefixed with `/api/`
-- OAuth redirect URI: `http://localhost:8000/api/auth/callback`
-- Interactive API docs available at `/docs`
+- Single-page application served at `/`
+- Real-time progress updates via WebSocket/polling
+- API endpoints prefixed with `/api/`
+- Interactive Swagger docs at `/docs`
 
 ### Gmail OAuth Setup
-1. Create project in Google Cloud Console
+1. Create project in [Google Cloud Console](https://console.cloud.google.com/)
 2. Enable Gmail API
-3. Create OAuth 2.0 credentials
+3. Create OAuth 2.0 credentials (Web application type)
 4. Download as `credentials.json` to project root
-5. Add redirect URI: `http://localhost:8000/api/auth/callback`
+5. Add authorized redirect URI: `http://localhost:8000/api/auth/callback`
+6. First run will open browser for authorization
 
-### Trip Detection Levels
-The test suite includes 5 levels of complexity:
-- Level 1: Single booking scenarios
-- Level 2: Multi-booking trips
-- Level 3: Existing trip modifications
-- Level 4: Complex relationships (cancellations, modifications)
-- Level 5: Edge cases (cross-year trips, same-day trips)
+### Testing Strategy
+The test suite is organized by functionality and complexity:
+- **Unit Tests**: Model and utility function tests
+- **Integration Tests**: API endpoint and service tests
+- **AI Provider Tests**: Multi-provider compatibility testing
+- **Trip Detection Levels** (1-5): Progressive complexity from single bookings to edge cases
+- Test data based on real email structures for accuracy

@@ -69,6 +69,10 @@
                 <div class="function-group" data-function="my-trips">
                     <h3>✈️ My Trips</h3>
                 </div>
+
+                <div class="function-group" data-function="full-pipeline">
+                    <h3>🚀 Full Pipeline</h3>
+                </div>
             </nav>
 
             <!-- Right Panel -->
@@ -291,10 +295,99 @@
                         <!-- Trip details will be loaded here -->
                     </div>
                 </div>
+
+                <!-- Full Pipeline Section -->
+                <div id="full-pipeline-section" class="function-section" style="display:none;">
+                    <h2>🚀 Process Full Pipeline</h2>
+                    <p>Import emails and process them through the complete pipeline: Classification → Content Extraction → Booking Extraction</p>
+                    
+                    <div class="control-group">
+                        <!-- Date Range Selection -->
+                        <div class="date-range-section">
+                            <h3>Date Range Selection</h3>
+                            <div class="date-range-inputs">
+                                <div class="date-input-group">
+                                    <label for="pipelineStartDate">Start Date:</label>
+                                    <input type="date" id="pipelineStartDate" name="pipelineStartDate">
+                                </div>
+                                <div class="date-input-group">
+                                    <label for="pipelineEndDate">End Date:</label>
+                                    <input type="date" id="pipelineEndDate" name="pipelineEndDate">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Selection -->
+                        <div class="quick-select-section">
+                            <h3>Quick Select</h3>
+                            <div class="time-range-selector">
+                                <label for="pipelineTimeRange">Process Range:</label>
+                                <select id="pipelineTimeRange" onchange="updatePipelineDateRangeFromQuickSelect()">
+                                    <option value="">Custom date range</option>
+                                    <option value="7">Last week</option>
+                                    <option value="30" selected>Last month</option>
+                                    <option value="90">Last 3 months</option>
+                                    <option value="180">Last 6 months</option>
+                                    <option value="365">Last year</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <button id="startPipelineBtn" onclick="startFullPipeline()" class="action-btn primary">
+                            <span>🚀 Start Full Pipeline</span>
+                        </button>
+                        <button id="stopPipelineBtn" onclick="stopFullPipeline()" class="action-btn danger" style="display:none;">
+                            <span>⏹️ Stop Pipeline</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Pipeline Progress -->
+                    <div id="pipeline-progress-section" style="display:none; margin-top: 20px;">
+                        <h3>Pipeline Progress</h3>
+                        <div class="pipeline-stages">
+                            <div class="stage-progress">
+                                <h4>📥 Import Emails</h4>
+                                <div class="progress">
+                                    <div id="importProgressBar" class="progress-bar"></div>
+                                </div>
+                                <div id="importStats" class="stage-stats"></div>
+                            </div>
+                            <div class="stage-progress">
+                                <h4>🏷️ Classification</h4>
+                                <div class="progress">
+                                    <div id="classificationProgressBar" class="progress-bar"></div>
+                                </div>
+                                <div id="classificationStats" class="stage-stats"></div>
+                            </div>
+                            <div class="stage-progress">
+                                <h4>📄 Content Extraction</h4>
+                                <div class="progress">
+                                    <div id="contentProgressBar" class="progress-bar"></div>
+                                </div>
+                                <div id="contentStats" class="stage-stats"></div>
+                            </div>
+                            <div class="stage-progress">
+                                <h4>🔍 Booking Extraction</h4>
+                                <div class="progress">
+                                    <div id="bookingProgressBar" class="progress-bar"></div>
+                                </div>
+                                <div id="bookingStats" class="stage-stats"></div>
+                            </div>
+                        </div>
+                        <div id="pipelineOverallProgress" class="overall-progress" style="margin-top: 20px;">
+                            <h3>Overall Progress: <span id="overallProgressPercent">0%</span></h3>
+                            <div class="progress">
+                                <div id="overallProgressBar" class="progress-bar"></div>
+                            </div>
+                        </div>
+                        <div id="pipelineMessage" class="status-message"></div>
+                        <div id="pipelineErrors" class="error-message" style="display:none;"></div>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
 
-    <script src="/static/js/app.js?v=19"></script>
+    <script src="/static/js/app.js?v=20"></script>
 </body>
 </html>

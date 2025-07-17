@@ -164,12 +164,13 @@ class EmailBookingExtractionService:
             self._sync_non_travel_emails_status(db)
             
             if email_ids:
-                # Use specific email IDs provided
+                # Use specific email IDs provided, but only those that need booking extraction
                 emails = db.query(Email).join(EmailContent).filter(
                     Email.email_id.in_(email_ids),
-                    EmailContent.extraction_status == 'completed'
+                    EmailContent.extraction_status == 'completed',
+                    EmailContent.booking_extraction_status.in_(['pending', 'failed'])
                 ).order_by(Email.timestamp.asc()).all()
-                logger.info(f"Processing {len(emails)} specific emails for booking extraction")
+                logger.info(f"Processing {len(emails)} specific emails for booking extraction (filtered from {len(email_ids)} provided)")
             else:
                 # Fetch all travel-related emails with content but no booking extraction
                 query = db.query(Email).join(EmailContent).filter(

@@ -11,7 +11,6 @@ from backend.lib.ai.ai_provider_with_fallback import AIProviderWithFallback
 from backend.services.micro.classification_micro_service import ClassificationMicroService
 from backend.database.config import SessionLocal
 from backend.database.models import Email, ClassificationStats
-from backend.constants import TRAVEL_CATEGORIES_SET, is_travel_category
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -127,7 +126,11 @@ class EmailClassificationService:
                 'finished': False,
                 'error': None,
                 'start_time': datetime.now(),
-                'estimated_cost': None
+                'estimated_cost': None,
+                'second_tier_verified': 0,
+                'second_tier_changes': 0,
+                'second_tier_cost': 0.0,
+                'second_tier_tokens': {'input': 0, 'output': 0, 'total': 0}
             }
         
             # Start classification thread
@@ -167,76 +170,13 @@ class EmailClassificationService:
         
         return progress
     
-    def _classify_batch_with_microservice(self, 
-                                         microservice: ClassificationMicroService,
-                                         batch_email_ids: List[str],
-                                         batch_size: int,
-                                         tier_name: str) -> Dict:
-        """
-        Helper method to classify a batch of emails using a microservice
-        
-        Args:
-            microservice: The classification microservice to use
-            batch_email_ids: List of email IDs to classify
-            batch_size: Batch size for microservice processing
-            tier_name: Name of tier for logging (e.g., "First tier", "Second tier")
-            
-        Returns:
-            Dict with classifications, cost_info, and errors
-        """
-        logger.info(f"{tier_name} classification for {len(batch_email_ids)} emails...")
-        
-        try:
-            result = microservice.classify_emails(
-                email_ids=batch_email_ids,
-                batch_size=batch_size
-            )
-            
-            classifications = result.get('classifications', [])
-            
-            # Log results
-            if tier_name == "First tier":
-                travel_count = sum(1 for c in classifications if is_travel_category(c.get('classification', '')))
-                logger.info(f"{tier_name} identified {travel_count} potential travel emails out of {len(batch_email_ids)}")
-            else:
-                travel_count = sum(1 for c in classifications if is_travel_category(c.get('classification', '')))
-                logger.info(f"{tier_name} verified {travel_count} out of {len(batch_email_ids)} as actual travel emails")
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error in {tier_name} classification: {e}")
-            # Return error result
-            return {
-                'classifications': [],
-                'cost_info': None,
-                'errors': [{
-                    'tier': tier_name,
-                    'error': str(e),
-                    'email_ids': batch_email_ids
-                }]
-            }
-    
-    def _update_cost_tracking(self, cost_info: Optional[Dict]):
-        """
-        Update cost tracking from classification result
-        
-        Args:
-            cost_info: Cost information from classification result
-        """
-        if cost_info:
-            self.classification_progress['actual_cost'] += cost_info.get('estimated_cost_usd', 0.0)
-            self.classification_progress['total_tokens']['input'] += cost_info.get('input_tokens', 0)
-            self.classification_progress['total_tokens']['output'] += cost_info.get('output_tokens', 0)
-            self.classification_progress['total_tokens']['total'] += cost_info.get('total_tokens', 0)
-    
     def _background_classification(self, limit: int):
-        """Background classification process using two-tier ClassificationMicroService"""
+        """Background classification process using ClassificationMicroService"""
         try:
-            logger.info(f"Starting two-tier classification of emails (limit: {limit})")
+            logger.info(f"Starting classification of emails (limit: {limit})")
             
-            if not self.classification_micro or not self.second_tier_micro:
-                raise Exception("Classification services not initialized")
+            if not self.classification_micro:
+                raise Exception("Classification service not initialized")
             
             # Reset any previously failed classifications so they can be retried
             reset_count = self.email_cache.reset_failed_classifications()
@@ -280,8 +220,6 @@ class EmailClassificationService:
                 'total': 0
             }
             
-            # Initialize tracking variables
-            
             # Process in batches
             all_results = []
             total_errors = []
@@ -300,75 +238,36 @@ class EmailClassificationService:
                 
                 self.classification_progress.update({
                     'current_batch': batch_num + 1,
-                    'message': f'Processing batch {batch_num + 1}/{total_batches} ({len(batch_emails)} emails) - First tier...'
+                    'message': f'Processing batch {batch_num + 1}/{total_batches} ({len(batch_emails)} emails)...'
                 })
                 
-                logger.info(f"Processing batch {batch_num + 1}/{total_batches} ({len(batch_emails)} emails) - First tier classification...")
+                logger.info(f"Processing batch {batch_num + 1}/{total_batches} ({len(batch_emails)} emails)...")
                 
-                # First tier classification - use local model for initial screening
+                # Use microservice to classify this batch
                 try:
-                    first_tier_result = self._classify_batch_with_microservice(
-                        self.classification_micro,
-                        batch_email_ids,
-                        batch_size,
-                        "First tier"
+                    batch_result = self.classification_micro.classify_emails(
+                        email_ids=batch_email_ids,
+                        batch_size=batch_size  # This will be one batch in microservice
                     )
                     
-                    # Update cost tracking for first tier
-                    self._update_cost_tracking(first_tier_result.get('cost_info'))
+                    # Process batch results
+                    classifications = batch_result.get('classifications', [])
                     
-                    # Filter travel-related emails from first tier
-                    first_tier_classifications = first_tier_result.get('classifications', [])
-                    travel_email_ids = []
-                    first_tier_travel_map = {}  # Map email_id to first tier classification
+                    # Update cost tracking if available
+                    if batch_result.get('cost_info'):
+                        cost_info = batch_result['cost_info']
+                        self.classification_progress['actual_cost'] += cost_info.get('estimated_cost_usd', 0.0)
+                        self.classification_progress['total_tokens']['input'] += cost_info.get('input_tokens', 0)
+                        self.classification_progress['total_tokens']['output'] += cost_info.get('output_tokens', 0)
+                        self.classification_progress['total_tokens']['total'] += cost_info.get('total_tokens', 0)
                     
-                    for classification in first_tier_classifications:
-                        if is_travel_category(classification.get('classification', '')):
-                            travel_email_ids.append(classification['email_id'])
-                            first_tier_travel_map[classification['email_id']] = classification['classification']
+                    # Perform second-tier verification on travel emails
+                    if self.second_tier_micro and classifications:
+                        self.classification_progress['message'] = f'Processing batch {batch_num + 1}/{total_batches} - Running second-tier verification...'
+                        classifications = self._perform_second_tier_verification(classifications)
                     
-                    # Second tier classification - only for travel emails
-                    final_classifications = []
-                    
-                    if travel_email_ids:
-                        self.classification_progress.update({
-                            'message': f'Processing batch {batch_num + 1}/{total_batches} - Second tier verification for {len(travel_email_ids)} emails...'
-                        })
-                        
-                        second_tier_result = self._classify_batch_with_microservice(
-                            self.second_tier_micro,
-                            travel_email_ids,
-                            batch_size,
-                            "Second tier"
-                        )
-                        
-                        # Update cost tracking for second tier
-                        self._update_cost_tracking(second_tier_result.get('cost_info'))
-                        
-                        # Use second tier results for travel emails
-                        second_tier_classifications = second_tier_result.get('classifications', [])
-                        second_tier_map = {c['email_id']: c for c in second_tier_classifications}
-                    else:
-                        second_tier_map = {}
-                    
-                    # Combine results: use second tier for travel emails, mark others as not_travel
-                    for classification in first_tier_classifications:
-                        email_id = classification['email_id']
-                        
-                        if email_id in second_tier_map:
-                            # Use second tier result for emails that went through second tier
-                            final_classification = second_tier_map[email_id]
-                        else:
-                            # Non-travel emails from first tier
-                            final_classification = {
-                                'email_id': email_id,
-                                'classification': 'not_travel'  # First tier said not travel
-                            }
-                        
-                        final_classifications.append(final_classification)
-                    
-                    # Process results for progress tracking
-                    for classification in final_classifications:
+                    # Process results for backward compatibility
+                    for classification in classifications:
                         # Get email details from original list
                         email_data = next((e for e in batch_emails if e['email_id'] == classification['email_id']), {})
                         processed_result = {
@@ -380,18 +279,16 @@ class EmailClassificationService:
                         all_results.append(processed_result)
                     
                     # Collect errors
-                    if first_tier_result.get('errors'):
-                        total_errors.extend(first_tier_result['errors'])
-                    if 'second_tier_result' in locals() and second_tier_result.get('errors'):
-                        total_errors.extend(second_tier_result['errors'])
+                    if batch_result.get('errors'):
+                        total_errors.extend(batch_result['errors'])
                     
                     # Update progress
                     self.classification_progress['processed'] = len(all_results)
                     logger.info(f"Completed batch {batch_num + 1}/{total_batches}, processed {len(all_results)}/{len(unclassified_emails)} emails")
                     
-                    # Save final classifications to database
-                    if final_classifications:
-                        self._save_batch_classifications(final_classifications)
+                    # Save batch results to database immediately
+                    if classifications:
+                        self._save_batch_classifications(classifications)
                     
                 except Exception as e:
                     logger.error(f"Error processing batch {batch_num + 1}: {e}")
@@ -419,25 +316,36 @@ class EmailClassificationService:
                 
             # Log final cost if available
             if self.classification_progress.get('actual_cost'):
-                logger.info(f"Two-tier classification completed: {successful_count} successful, {failed_count} failed. Total cost: ${self.classification_progress['actual_cost']:.4f}")
+                total_cost = self.classification_progress['actual_cost']
+                second_tier_cost = self.classification_progress.get('second_tier_cost', 0.0)
+                first_tier_cost = total_cost - second_tier_cost
+                logger.info(f"Classification completed: {successful_count} successful, {failed_count} failed.")
+                logger.info(f"Cost breakdown - First tier: ${first_tier_cost:.4f}, Second tier: ${second_tier_cost:.4f}, Total: ${total_cost:.4f}")
             else:
-                logger.info(f"Two-tier classification completed: {successful_count} successful, {failed_count} failed")
+                logger.info(f"Classification completed: {successful_count} successful, {failed_count} failed")
             
             if failed_count > 0:
                 logger.info(f"Found {failed_count} failed classifications - keeping as unclassified for retry")
             
-            # Count travel-related emails in final results
-            travel_count = sum(1 for r in all_results if is_travel_category(r['classification']))
+            # Count travel-related emails
+            travel_categories = {'flight', 'hotel', 'car_rental', 'train', 'cruise', 'tour', 'travel_insurance', 'flight_change', 'hotel_change', 'other_travel'}
+            travel_count = sum(1 for r in all_results if r['classification'] in travel_categories)
+            
+            # Log second-tier verification summary
+            if self.classification_progress.get('second_tier_verified', 0) > 0:
+                verified = self.classification_progress['second_tier_verified']
+                changes = self.classification_progress.get('second_tier_changes', 0)
+                logger.info(f"Second-tier verification: {verified} emails verified, {changes} classifications changed")
             
             with self._lock:
                 self.classification_progress.update({
                     'is_running': False,
                     'finished': True,
                     'classified_count': len(all_results),
-                    'message': f'Two-tier classification completed. {travel_count} travel-related emails found.'
+                    'message': f'Classification completed. {travel_count} travel-related emails found.'
                 })
             
-            logger.info(f"Two-tier classification completed. {travel_count} travel-related emails found.")
+            logger.info(f"Classification completed. {travel_count} travel-related emails found.")
             
         except Exception as e:
             logger.error(f"Classification error: {e}")
@@ -450,6 +358,56 @@ class EmailClassificationService:
                     'error': str(e),
                     'message': f'Classification failed: {str(e)}'
                 })
+    
+    def _perform_second_tier_verification(self, first_tier_results: List[Dict]) -> List[Dict]:
+        """Perform second-tier verification on travel-related emails"""
+        from backend.constants import TRAVEL_CATEGORIES
+        
+        # Filter travel emails from first tier
+        travel_email_ids = [c['email_id'] for c in first_tier_results 
+                           if c.get('classification') in TRAVEL_CATEGORIES]
+        
+        if not travel_email_ids:
+            return first_tier_results
+        
+        logger.info(f"Running second-tier verification on {len(travel_email_ids)} travel emails")
+        
+        try:
+            # Call second tier only for travel emails
+            second_tier_result = self.second_tier_micro.classify_emails(
+                email_ids=travel_email_ids,
+                batch_size=len(travel_email_ids)
+            )
+            
+            # Update cost tracking
+            if cost_info := second_tier_result.get('cost_info'):
+                self.classification_progress['actual_cost'] += cost_info.get('estimated_cost_usd', 0.0)
+                self.classification_progress.setdefault('second_tier_cost', 0.0)
+                self.classification_progress['second_tier_cost'] += cost_info.get('estimated_cost_usd', 0.0)
+            
+            # Map second-tier results
+            second_tier_map = {c['email_id']: c['classification'] 
+                              for c in second_tier_result.get('classifications', [])}
+            
+            # Update results
+            changes = 0
+            for classification in first_tier_results:
+                if classification['email_id'] in second_tier_map:
+                    new_class = second_tier_map[classification['email_id']]
+                    if new_class != classification['classification']:
+                        logger.info(f"Email {classification['email_id']}: {classification['classification']} → {new_class}")
+                        changes += 1
+                    classification['classification'] = new_class
+            
+            logger.info(f"Second-tier complete: {len(travel_email_ids)} verified, {changes} changed")
+            self.classification_progress.setdefault('second_tier_verified', 0)
+            self.classification_progress['second_tier_verified'] += len(travel_email_ids)
+            
+            return first_tier_results
+            
+        except Exception as e:
+            logger.error(f"Second-tier verification failed: {e}")
+            return first_tier_results
     
     def _save_batch_classifications(self, classifications: List[Dict]):
         """Save classification results to database"""
