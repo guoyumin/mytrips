@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyTrips - Travel Email Manager</title>
-    <link rel="stylesheet" href="/static/css/app.css?v=9">
+    <link rel="stylesheet" href="/static/css/app.css?v=10">
     <style>
         /* Emergency CSS fix for layout */
         .main-content { 
@@ -68,6 +68,10 @@
 
                 <div class="function-group" data-function="my-trips">
                     <h3>✈️ My Trips</h3>
+                </div>
+
+                <div class="function-group" data-function="calendar-view">
+                    <h3>📅 Calendar View</h3>
                 </div>
 
                 <div class="function-group" data-function="full-pipeline">
@@ -296,6 +300,30 @@
                     </div>
                 </div>
 
+                <!-- Calendar View Section -->
+                <div id="calendar-section" class="function-section" style="display:none;">
+                    <div class="calendar-container">
+                        <div class="timeline-view">
+                            <div class="timeline-header">
+                                <h2>📅 Calendar View</h2>
+                                <button onclick="refreshTimeline()" class="refresh-btn">🔄 Refresh</button>
+                            </div>
+                            <div id="timeline-content" class="timeline-content">
+                                <div class="timeline-connector"></div>
+                                <!-- Timeline items will be dynamically inserted here -->
+                            </div>
+                        </div>
+                        <div class="calendar-sidebar">
+                            <div class="calendar-nav-header">
+                                <h3>Jump to Date</h3>
+                            </div>
+                            <div id="year-month-selector" class="year-month-selector">
+                                <!-- Year/Month navigation will be dynamically generated -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Full Pipeline Section -->
                 <div id="full-pipeline-section" class="function-section" style="display:none;">
                     <h2>🚀 Process Full Pipeline</h2>
@@ -388,6 +416,6 @@
         </div>
     </div>
 
-    <script src="/static/js/app.js?v=20"></script>
+    <script src="/static/js/app.js?v=23"></script>
 </body>
 </html>

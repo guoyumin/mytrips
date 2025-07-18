@@ -91,6 +91,9 @@ class EmailImportApp {
             case 'my-trips':
                 this.showMyTripsSection();
                 break;
+            case 'calendar-view':
+                this.showCalendarView();
+                break;
             case 'full-pipeline':
                 this.showFullPipelineSection();
                 break;
@@ -110,6 +113,7 @@ class EmailImportApp {
         document.getElementById('trip-detection-section').style.display = 'none';
         document.getElementById('my-trips-section').style.display = 'none';
         document.getElementById('trip-detail-section').style.display = 'none';
+        document.getElementById('calendar-section').style.display = 'none';
         document.getElementById('full-pipeline-section').style.display = 'none';
         document.getElementById('progress-section').style.display = 'none';
         document.getElementById('stats').style.display = 'none';
@@ -1707,6 +1711,419 @@ class EmailImportApp {
         this.loadTrips();
     }
 
+    // Calendar View methods
+    showCalendarView() {
+        document.getElementById('calendar-section').style.display = 'block';
+        this.loadTimelineData();
+    }
+
+    async loadTimelineData() {
+        try {
+            const response = await fetch('/api/trips/timeline');
+            const data = await response.json();
+
+            if (response.ok) {
+                // Store trips data for later use
+                this.timelineTrips = data.trips || {};
+                this.timelineActivities = data.activities || [];
+                
+                this.renderTimeline(this.timelineActivities);
+                this.renderYearMonthNav(this.timelineActivities);
+            } else {
+                throw new Error('Failed to load timeline data');
+            }
+        } catch (error) {
+            console.error('Error loading timeline:', error);
+            this.displayTimelineError();
+        }
+    }
+
+    renderTimeline(activities) {
+        const timelineContent = document.getElementById('timeline-content');
+        
+        if (!activities || activities.length === 0) {
+            timelineContent.innerHTML = `
+                <div class="timeline-connector"></div>
+                <div class="timeline-empty">
+                    <h3>No Activities Found</h3>
+                    <p>Run booking extraction and trip detection to see your travel timeline.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Group activities by date
+        const groupedActivities = this.groupActivitiesByDate(activities);
+        
+        // Clear existing content but keep the connector
+        timelineContent.innerHTML = '<div class="timeline-connector"></div>';
+        
+        // Generate trip colors
+        const tripColors = this.generateTripColors();
+        
+        // Render each date group
+        Object.entries(groupedActivities).forEach(([date, dayActivities]) => {
+            const dateElement = document.createElement('div');
+            dateElement.className = 'timeline-date';
+            dateElement.id = `date-${date.replace(/\s/g, '-')}`;
+            dateElement.textContent = this.formatTimelineDate(date);
+            timelineContent.appendChild(dateElement);
+            
+            // Group activities by trip for this date
+            const tripGroups = this.groupActivitiesByTrip(dayActivities);
+            
+            // Render activities grouped by trip
+            tripGroups.forEach(group => {
+                if (group.activities.length > 0) {
+                    // Create trip group container
+                    const tripGroup = document.createElement('div');
+                    tripGroup.className = 'trip-group';
+                    
+                    // Add trip header if it's a trip
+                    if (group.tripId && this.timelineTrips[group.tripId]) {
+                        const trip = this.timelineTrips[group.tripId];
+                        const tripHeader = document.createElement('div');
+                        tripHeader.className = 'trip-group-header';
+                        tripHeader.style.backgroundColor = tripColors[group.tripId] || '#f0f0f0';
+                        tripHeader.innerHTML = `
+                            <span class="trip-name">${trip.name}</span>
+                            <span class="trip-destination">${trip.destination}</span>
+                        `;
+                        tripGroup.appendChild(tripHeader);
+                    }
+                    
+                    // Add activities container with background color
+                    const activitiesContainer = document.createElement('div');
+                    activitiesContainer.className = 'trip-activities';
+                    if (group.tripId) {
+                        activitiesContainer.style.backgroundColor = `${tripColors[group.tripId]}20` || '#f9f9f9';
+                        activitiesContainer.style.borderLeft = `3px solid ${tripColors[group.tripId] || '#ccc'}`;
+                    }
+                    
+                    group.activities.forEach(activity => {
+                        const activityElement = this.createTimelineItem(activity);
+                        activitiesContainer.appendChild(activityElement);
+                    });
+                    
+                    tripGroup.appendChild(activitiesContainer);
+                    timelineContent.appendChild(tripGroup);
+                }
+            });
+        });
+    }
+
+    groupActivitiesByDate(activities) {
+        const grouped = {};
+        
+        activities.forEach(activity => {
+            const date = new Date(activity.datetime).toDateString();
+            if (!grouped[date]) {
+                grouped[date] = [];
+            }
+            grouped[date].push(activity);
+        });
+        
+        // Sort by time within each date (descending order)
+        Object.keys(grouped).forEach(date => {
+            grouped[date].sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+        });
+        
+        // Return grouped object with dates in order (activities are already sorted desc)
+        const sortedGrouped = {};
+        const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+        sortedDates.forEach(date => {
+            sortedGrouped[date] = grouped[date];
+        });
+        
+        return sortedGrouped;
+    }
+
+    formatTimelineDate(dateString) {
+        const date = new Date(dateString);
+        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+        return date.toLocaleDateString('en-US', options);
+    }
+
+    createTimelineItem(activity) {
+        const item = document.createElement('div');
+        item.className = 'timeline-item';
+        
+        // Create icon
+        const icon = document.createElement('div');
+        icon.className = `timeline-icon ${activity.type}`;
+        icon.innerHTML = this.getActivityIcon(activity.type);
+        
+        // Create content
+        const content = document.createElement('div');
+        content.className = 'timeline-content-item';
+        
+        // Time and primary info
+        const timeInfo = document.createElement('div');
+        timeInfo.className = 'timeline-time';
+        const time = new Date(activity.datetime).toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+        });
+        
+        if (activity.type === 'flight') {
+            timeInfo.innerHTML = `
+                <span class="activity-time">${time}</span>
+                <span class="activity-code">${activity.airline_code || 'Flight'}</span>
+            `;
+        } else {
+            timeInfo.innerHTML = `<span class="activity-time">${time}</span>`;
+        }
+        
+        // Activity details
+        const details = document.createElement('div');
+        details.className = 'timeline-details';
+        details.innerHTML = this.getActivityDetails(activity);
+        
+        content.appendChild(timeInfo);
+        content.appendChild(details);
+        
+        item.appendChild(icon);
+        item.appendChild(content);
+        
+        // Add click handler
+        item.addEventListener('click', () => this.showActivityDetails(activity));
+        
+        return item;
+    }
+
+    getActivityIcon(type) {
+        const icons = {
+            'flight': '✈️',
+            'hotel': '🏨',
+            'tour': '🎫',
+            'train': '🚂',
+            'cruise': '🚢',
+            'car_rental': '🚗'
+        };
+        return icons[type] || '📍';
+    }
+
+    getActivityDetails(activity) {
+        switch (activity.type) {
+            case 'flight':
+                return `
+                    <div class="activity-title">Flight ${activity.flight_number || ''}</div>
+                    <div class="activity-subtitle">Confirmation: ${activity.confirmation_number || 'N/A'}</div>
+                    <div class="activity-route">${activity.departure_location || 'Unknown'} → ${activity.arrival_location || 'Unknown'}</div>
+                    ${activity.arrival_datetime ? `<div class="activity-arrival">Arrive ${this.formatArrivalTime(activity.arrival_datetime)}</div>` : ''}
+                `;
+            
+            case 'hotel':
+                return `
+                    <div class="activity-title">${activity.property_name || 'Hotel'}</div>
+                    <div class="activity-subtitle">${activity.check_type === 'check_in' ? 'Check in' : 'Check out'} ${this.formatCheckTime(activity.datetime)}</div>
+                    <div class="activity-location">${activity.address || activity.city || 'Location unknown'}</div>
+                `;
+            
+            case 'tour':
+                return `
+                    <div class="activity-title">${activity.activity_name || 'Tour/Activity'}</div>
+                    <div class="activity-subtitle">Confirmation: ${activity.confirmation_number || 'N/A'}</div>
+                    <div class="activity-location">${activity.location || activity.city || ''}</div>
+                `;
+            
+            default:
+                return `
+                    <div class="activity-title">${activity.name || activity.type}</div>
+                    <div class="activity-subtitle">${activity.description || ''}</div>
+                `;
+        }
+    }
+
+    formatArrivalTime(datetime) {
+        const date = new Date(datetime);
+        const time = date.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+        });
+        
+        // Check if arrival is on a different date
+        const arrivalDate = date.toDateString();
+        const today = new Date().toDateString();
+        
+        if (arrivalDate !== today) {
+            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return `${dateStr} ${time}`;
+        }
+        
+        return time;
+    }
+
+    formatCheckTime(datetime) {
+        const date = new Date(datetime);
+        return date.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+        });
+    }
+
+    groupActivitiesByTrip(activities) {
+        const groups = [];
+        const tripMap = new Map();
+        
+        activities.forEach(activity => {
+            const tripId = activity.trip_id;
+            
+            if (tripId) {
+                if (!tripMap.has(tripId)) {
+                    tripMap.set(tripId, []);
+                }
+                tripMap.get(tripId).push(activity);
+            } else {
+                // Activities without trips
+                groups.push({
+                    tripId: null,
+                    activities: [activity]
+                });
+            }
+        });
+        
+        // Convert map to array
+        tripMap.forEach((activities, tripId) => {
+            groups.push({
+                tripId: tripId,
+                activities: activities
+            });
+        });
+        
+        return groups;
+    }
+
+    generateTripColors() {
+        const colors = [
+            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6',
+            '#1abc9c', '#34495e', '#e67e22', '#16a085', '#27ae60',
+            '#2980b9', '#8e44ad', '#2c3e50', '#f1c40f', '#c0392b'
+        ];
+        
+        const tripColors = {};
+        let colorIndex = 0;
+        
+        Object.keys(this.timelineTrips).forEach(tripId => {
+            tripColors[tripId] = colors[colorIndex % colors.length];
+            colorIndex++;
+        });
+        
+        return tripColors;
+    }
+
+    renderYearMonthNav(activities) {
+        const selector = document.getElementById('year-month-selector');
+        
+        if (!activities || activities.length === 0) {
+            selector.innerHTML = '<div class="no-dates">No dates to display</div>';
+            return;
+        }
+        
+        // Extract unique years and months
+        const yearMonths = {};
+        activities.forEach(activity => {
+            const date = new Date(activity.datetime);
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            
+            if (!yearMonths[year]) {
+                yearMonths[year] = new Set();
+            }
+            yearMonths[year].add(month);
+        });
+        
+        // Sort years in descending order (newest first)
+        const sortedYears = Object.keys(yearMonths).sort((a, b) => b - a);
+        
+        selector.innerHTML = '';
+        
+        sortedYears.forEach((year, index) => {
+            const yearDiv = document.createElement('div');
+            yearDiv.className = 'year-section';
+            
+            const yearHeader = document.createElement('div');
+            yearHeader.className = 'year-header';
+            yearHeader.innerHTML = `
+                <span class="year-toggle">▼</span>
+                <span class="year-label">${year}</span>
+            `;
+            yearHeader.addEventListener('click', () => this.toggleYearSection(yearDiv));
+            
+            const monthList = document.createElement('div');
+            monthList.className = 'month-list';
+            
+            // Sort months in descending order (newest first)
+            const months = Array.from(yearMonths[year]).sort((a, b) => b - a);
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            
+            months.forEach(monthIndex => {
+                const monthDiv = document.createElement('div');
+                monthDiv.className = 'month-item';
+                monthDiv.textContent = monthNames[monthIndex];
+                monthDiv.addEventListener('click', () => this.scrollToMonth(year, monthIndex));
+                monthList.appendChild(monthDiv);
+            });
+            
+            yearDiv.appendChild(yearHeader);
+            yearDiv.appendChild(monthList);
+            selector.appendChild(yearDiv);
+            
+            // Collapse all years except the first (most recent)
+            if (index > 0) {
+                yearDiv.classList.add('collapsed');
+                yearDiv.querySelector('.year-toggle').textContent = '▶';
+            }
+        });
+    }
+
+    toggleYearSection(yearDiv) {
+        yearDiv.classList.toggle('collapsed');
+        const toggle = yearDiv.querySelector('.year-toggle');
+        toggle.textContent = yearDiv.classList.contains('collapsed') ? '▶' : '▼';
+    }
+
+    scrollToMonth(year, month) {
+        // Find the first date in this month
+        const activities = this.timelineActivities.filter(activity => {
+            const date = new Date(activity.datetime);
+            return date.getFullYear() === parseInt(year) && date.getMonth() === parseInt(month);
+        });
+        
+        if (activities.length > 0) {
+            // Find the first activity's date
+            const firstDate = new Date(activities[0].datetime).toDateString();
+            const targetId = `date-${firstDate.replace(/\s/g, '-')}`;
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Highlight briefly
+                targetElement.classList.add('highlight');
+                setTimeout(() => targetElement.classList.remove('highlight'), 2000);
+            }
+        }
+    }
+
+    showActivityDetails(activity) {
+        // TODO: Show modal or expand details for the activity
+        console.log('Activity details:', activity);
+    }
+
+    displayTimelineError() {
+        const timelineContent = document.getElementById('timeline-content');
+        timelineContent.innerHTML = `
+            <div class="timeline-connector"></div>
+            <div class="timeline-error">
+                <h3>Error Loading Timeline</h3>
+                <p>Could not load your travel timeline. Please try refreshing.</p>
+            </div>
+        `;
+    }
+
     async detectTrips() {
         if (this.isDetectingTrips) {
             console.log('Trip detection already in progress');
@@ -2355,6 +2772,10 @@ function backToTripList() {
 
 function refreshTrips() {
     app.refreshTrips();
+}
+
+function refreshTimeline() {
+    app.loadTimelineData();
 }
 
 function viewBookingInfo(emailId) {

@@ -3,7 +3,7 @@ Trip Management API Endpoints
 """
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, time
 from backend.database.config import SessionLocal
 from backend.database.models import Trip, TransportSegment, Accommodation, TourActivity, Cruise
 from backend.services.trip_detection_service import TripDetectionService
@@ -140,6 +140,150 @@ async def list_trips(
             trip_list.append(trip_dict)
         
         return trip_list
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@router.get("/timeline")
+async def get_timeline(
+    start_date: Optional[datetime] = Query(None, description="Filter activities starting after this date"),
+    end_date: Optional[datetime] = Query(None, description="Filter activities ending before this date")
+) -> Dict:
+    """Get all activities in chronological order for timeline view with trip information"""
+    db = SessionLocal()
+    try:
+        activities = []
+        
+        # First get all trips to create a mapping
+        trips_map = {}
+        trips = db.query(Trip).all()
+        for trip in trips:
+            trips_map[trip.id] = {
+                'id': trip.id,
+                'name': trip.name,
+                'destination': trip.destination,
+                'start_date': trip.start_date.isoformat() if trip.start_date else None,
+                'end_date': trip.end_date.isoformat() if trip.end_date else None
+            }
+        
+        # Get all transport segments
+        query = db.query(TransportSegment)
+        if start_date:
+            query = query.filter(TransportSegment.departure_datetime >= start_date)
+        if end_date:
+            query = query.filter(TransportSegment.departure_datetime <= end_date)
+        
+        for segment in query.all():
+            activities.append({
+                'id': f'transport_{segment.id}',
+                'type': segment.segment_type or 'flight',
+                'datetime': segment.departure_datetime.isoformat(),
+                'airline_code': segment.carrier_name,
+                'flight_number': segment.segment_number,
+                'departure_location': segment.departure_location,
+                'arrival_location': segment.arrival_location,
+                'arrival_datetime': segment.arrival_datetime.isoformat() if segment.arrival_datetime else None,
+                'confirmation_number': segment.confirmation_number,
+                'status': segment.status,
+                'trip_id': segment.trip_id
+            })
+        
+        # Get all accommodations (check-in and check-out as separate events)
+        query = db.query(Accommodation)
+        if start_date:
+            query = query.filter(Accommodation.check_in_date >= start_date.date())
+        if end_date:
+            query = query.filter(Accommodation.check_out_date <= end_date.date())
+        
+        for accommodation in query.all():
+            # Check-in event
+            if accommodation.check_in_date:
+                check_in_datetime = datetime.combine(accommodation.check_in_date, time(14, 0))
+                activities.append({
+                    'id': f'hotel_checkin_{accommodation.id}',
+                    'type': 'hotel',
+                    'check_type': 'check_in',
+                    'datetime': check_in_datetime.isoformat(),
+                    'property_name': accommodation.property_name,
+                    'address': accommodation.address,
+                    'city': accommodation.city,
+                    'country': accommodation.country,
+                    'confirmation_number': accommodation.confirmation_number,
+                    'status': accommodation.status,
+                    'trip_id': accommodation.trip_id
+                })
+            
+            # Check-out event
+            if accommodation.check_out_date:
+                check_out_datetime = datetime.combine(accommodation.check_out_date, time(12, 0))
+                activities.append({
+                    'id': f'hotel_checkout_{accommodation.id}',
+                    'type': 'hotel',
+                    'check_type': 'check_out',
+                    'datetime': check_out_datetime.isoformat(),
+                    'property_name': accommodation.property_name,
+                    'address': accommodation.address,
+                    'city': accommodation.city,
+                    'country': accommodation.country,
+                    'confirmation_number': accommodation.confirmation_number,
+                    'status': accommodation.status,
+                    'trip_id': accommodation.trip_id
+                })
+        
+        # Get all tour activities
+        query = db.query(TourActivity)
+        if start_date:
+            query = query.filter(TourActivity.start_datetime >= start_date)
+        if end_date:
+            query = query.filter(TourActivity.end_datetime <= end_date)
+        
+        for tour in query.all():
+            activities.append({
+                'id': f'tour_{tour.id}',
+                'type': 'tour',
+                'datetime': tour.start_datetime.isoformat() if tour.start_datetime else None,
+                'activity_name': tour.activity_name,
+                'description': tour.description,
+                'location': tour.location,
+                'city': tour.city,
+                'confirmation_number': tour.confirmation_number,
+                'status': tour.status,
+                'trip_id': tour.trip_id
+            })
+        
+        # Get all cruises
+        query = db.query(Cruise)
+        if start_date:
+            query = query.filter(Cruise.departure_datetime >= start_date)
+        if end_date:
+            query = query.filter(Cruise.arrival_datetime <= end_date)
+        
+        for cruise in query.all():
+            activities.append({
+                'id': f'cruise_{cruise.id}',
+                'type': 'cruise',
+                'datetime': cruise.departure_datetime.isoformat() if cruise.departure_datetime else None,
+                'cruise_line': cruise.cruise_line,
+                'ship_name': cruise.ship_name,
+                'departure_port': cruise.departure_port,
+                'arrival_port': cruise.arrival_port,
+                'confirmation_number': cruise.confirmation_number,
+                'status': cruise.status,
+                'trip_id': cruise.trip_id
+            })
+        
+        # Sort all activities by datetime in descending order (newest first)
+        activities.sort(key=lambda x: x.get('datetime', ''), reverse=True)
+        
+        # Filter out activities with invalid status
+        activities = [a for a in activities if a.get('status') != 'cancelled']
+        
+        return {
+            'activities': activities,
+            'trips': trips_map
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
