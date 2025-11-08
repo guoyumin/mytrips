@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyTrips - Travel Email Manager</title>
-    <link rel="stylesheet" href="/static/css/app.css?v=10">
+    <link rel="stylesheet" href="/static/css/app.css?v=12">
     <style>
         /* Emergency CSS fix for layout */
         .main-content { 
@@ -72,6 +72,10 @@
 
                 <div class="function-group" data-function="calendar-view">
                     <h3>📅 Calendar View</h3>
+                </div>
+
+                <div class="function-group" data-function="statistics">
+                    <h3>📊 Statistics</h3>
                 </div>
 
                 <div class="function-group" data-function="full-pipeline">
@@ -324,6 +328,93 @@
                     </div>
                 </div>
 
+                <!-- Statistics Section -->
+                <div id="statistics-section" class="function-section" style="display:none;">
+                    <div class="statistics-header">
+                        <h2>📊 Travel Statistics</h2>
+                        <div class="stats-controls">
+                            <select id="stats-year-filter" onchange="updateStatistics()">
+                                <option value="all">All Time</option>
+                                <!-- Years will be dynamically populated -->
+                            </select>
+                            <button onclick="refreshStatistics()" class="refresh-btn">🔄 Refresh</button>
+                        </div>
+                    </div>
+                    
+                    <div id="statistics-content">
+                        <!-- Overall Summary -->
+                        <div class="stats-summary">
+                            <div class="stat-card">
+                                <div class="stat-icon">✈️</div>
+                                <div class="stat-value" id="total-flights">0</div>
+                                <div class="stat-label">Total Flights</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🌍</div>
+                                <div class="stat-value" id="total-distance">0 km</div>
+                                <div class="stat-label">Total Distance</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🏨</div>
+                                <div class="stat-value" id="hotel-nights">0</div>
+                                <div class="stat-label">Hotel Nights</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🌎</div>
+                                <div class="stat-value" id="countries-visited">0</div>
+                                <div class="stat-label">Countries Visited</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🏙️</div>
+                                <div class="stat-value" id="cities-visited">0</div>
+                                <div class="stat-label">Cities Visited</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🚂</div>
+                                <div class="stat-value" id="train-distance">0 km</div>
+                                <div class="stat-label">Train Distance</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">💰</div>
+                                <div class="stat-value" id="total-cost">$0</div>
+                                <div class="stat-label">Total Cost</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">📅</div>
+                                <div class="stat-value" id="total-trips">0</div>
+                                <div class="stat-label">Total Trips</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Detailed Statistics -->
+                        <div class="stats-details">
+                            <!-- Transport Breakdown -->
+                            <div class="stats-section">
+                                <h3>🚀 Transport Breakdown</h3>
+                                <div id="transport-breakdown" class="breakdown-content">
+                                    <!-- Will be populated dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Top Destinations -->
+                            <div class="stats-section">
+                                <h3>📍 Top Destinations</h3>
+                                <div id="top-destinations" class="breakdown-content">
+                                    <!-- Will be populated dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Monthly Distribution -->
+                            <div class="stats-section">
+                                <h3>📅 Monthly Distribution</h3>
+                                <div id="monthly-distribution" class="breakdown-content">
+                                    <!-- Will be populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Full Pipeline Section -->
                 <div id="full-pipeline-section" class="function-section" style="display:none;">
                     <h2>🚀 Process Full Pipeline</h2>
@@ -416,6 +507,19 @@
         </div>
     </div>
 
-    <script src="/static/js/app.js?v=23"></script>
+    <!-- Statistics Detail Modal -->
+    <div id="stats-detail-modal" class="modal" style="display: none;">
+        <div class="modal-content stats-modal">
+            <div class="modal-header">
+                <h2 id="stats-detail-title">Detail View</h2>
+                <span class="close-btn" onclick="closeStatsDetail()">&times;</span>
+            </div>
+            <div class="modal-body" id="stats-detail-content">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js?v=25"></script>
 </body>
 </html>

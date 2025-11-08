@@ -3,7 +3,9 @@ Trip Management API Endpoints
 """
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, List, Optional
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
+from sqlalchemy import func, extract
+from collections import defaultdict
 from backend.database.config import SessionLocal
 from backend.database.models import Trip, TransportSegment, Accommodation, TourActivity, Cruise
 from backend.services.trip_detection_service import TripDetectionService
@@ -283,6 +285,509 @@ async def get_timeline(
         return {
             'activities': activities,
             'trips': trips_map
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@router.get("/statistics")
+async def get_travel_statistics(
+    year: Optional[int] = Query(None, description="Filter statistics by year")
+) -> Dict:
+    """Get comprehensive travel statistics"""
+    db = SessionLocal()
+    try:
+        # Build base queries with optional year filter
+        trips_query = db.query(Trip)
+        transport_query = db.query(TransportSegment).filter(TransportSegment.status != 'cancelled')
+        accommodation_query = db.query(Accommodation).filter(Accommodation.status != 'cancelled')
+        tour_query = db.query(TourActivity).filter(TourActivity.status != 'cancelled')
+        cruise_query = db.query(Cruise).filter(Cruise.status != 'cancelled')
+        
+        if year:
+            # Filter by year
+            start_date = datetime(year, 1, 1)
+            end_date = datetime(year, 12, 31, 23, 59, 59)
+            
+            trips_query = trips_query.filter(
+                Trip.start_date >= start_date,
+                Trip.start_date <= end_date
+            )
+            transport_query = transport_query.filter(
+                TransportSegment.departure_datetime >= start_date,
+                TransportSegment.departure_datetime <= end_date
+            )
+            accommodation_query = accommodation_query.filter(
+                Accommodation.check_in_date >= start_date.date(),
+                Accommodation.check_in_date <= end_date.date()
+            )
+            tour_query = tour_query.filter(
+                TourActivity.start_datetime >= start_date,
+                TourActivity.start_datetime <= end_date
+            )
+            cruise_query = cruise_query.filter(
+                Cruise.departure_datetime >= start_date,
+                Cruise.departure_datetime <= end_date
+            )
+        
+        # Basic counts
+        total_trips = trips_query.count()
+        total_cost = db.query(func.sum(Trip.total_cost)).scalar() or 0
+        
+        # Transport statistics
+        transport_segments = transport_query.all()
+        total_flights = sum(1 for t in transport_segments if t.segment_type == 'flight')
+        total_trains = sum(1 for t in transport_segments if t.segment_type == 'train')
+        total_distance = sum(t.distance_km or 0 for t in transport_segments)
+        flight_distance = sum(t.distance_km or 0 for t in transport_segments if t.segment_type == 'flight')
+        train_distance = sum(t.distance_km or 0 for t in transport_segments if t.segment_type == 'train')
+        
+        # Accommodation statistics
+        accommodations = accommodation_query.all()
+        hotel_nights = sum(
+            (acc.check_out_date - acc.check_in_date).days 
+            for acc in accommodations 
+            if acc.check_out_date and acc.check_in_date
+        )
+        
+        # Countries and cities visited
+        countries = set()
+        cities = set()
+        
+        # From accommodations
+        for acc in accommodations:
+            if acc.country:
+                countries.add(acc.country)
+            if acc.city:
+                cities.add(acc.city)
+        
+        # From transport segments
+        for seg in transport_segments:
+            # Parse locations to extract cities/countries
+            if seg.departure_location:
+                parts = seg.departure_location.split(',')
+                if len(parts) > 1:
+                    cities.add(parts[0].strip())
+            if seg.arrival_location:
+                parts = seg.arrival_location.split(',')
+                if len(parts) > 1:
+                    cities.add(parts[0].strip())
+        
+        # From trips
+        trips = trips_query.all()
+        for trip in trips:
+            if trip.cities_visited:
+                import json
+                try:
+                    visited = json.loads(trip.cities_visited)
+                    cities.update(visited)
+                except:
+                    pass
+        
+        # Get available years for filter
+        years_with_trips = db.query(
+            extract('year', Trip.start_date).label('year')
+        ).distinct().order_by('year').all()
+        available_years = [y.year for y in years_with_trips if y.year]
+        
+        # Transport breakdown by type
+        transport_breakdown = defaultdict(lambda: {'count': 0, 'distance': 0})
+        for seg in transport_segments:
+            seg_type = seg.segment_type or 'other'
+            transport_breakdown[seg_type]['count'] += 1
+            transport_breakdown[seg_type]['distance'] += seg.distance_km or 0
+        
+        # Top destinations (by frequency)
+        destination_count = defaultdict(int)
+        for trip in trips:
+            if trip.destination:
+                destination_count[trip.destination] += 1
+        
+        top_destinations = sorted(
+            destination_count.items(), 
+            key=lambda x: x[1], 
+            reverse=True
+        )[:10]
+        
+        # Monthly distribution
+        monthly_trips = defaultdict(int)
+        for trip in trips:
+            if trip.start_date:
+                month_key = trip.start_date.strftime('%Y-%m')
+                monthly_trips[month_key] += 1
+        
+        # Build response
+        statistics = {
+            'summary': {
+                'total_trips': total_trips,
+                'total_cost': round(total_cost, 2),
+                'total_flights': total_flights,
+                'total_trains': total_trains,
+                'total_distance': round(total_distance, 0),
+                'flight_distance': round(flight_distance, 0),
+                'train_distance': round(train_distance, 0),
+                'hotel_nights': hotel_nights,
+                'countries_visited': len(countries),
+                'cities_visited': len(cities),
+                'countries_list': sorted(list(countries)),
+                'cities_list': sorted(list(cities))
+            },
+            'transport_breakdown': dict(transport_breakdown),
+            'top_destinations': [
+                {'destination': dest, 'count': count} 
+                for dest, count in top_destinations
+            ],
+            'monthly_distribution': dict(monthly_trips),
+            'available_years': available_years,
+            'current_filter': {
+                'year': year,
+                'description': f"Year {year}" if year else "All Time"
+            }
+        }
+        
+        return statistics
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@router.get("/statistics/flights")
+async def get_flight_statistics_detail(
+    year: Optional[int] = Query(None, description="Filter by year")
+) -> Dict:
+    """Get detailed flight statistics"""
+    db = SessionLocal()
+    try:
+        query = db.query(TransportSegment).filter(
+            TransportSegment.segment_type == 'flight',
+            TransportSegment.status != 'cancelled'
+        )
+        
+        if year:
+            start_date = datetime(year, 1, 1)
+            end_date = datetime(year, 12, 31, 23, 59, 59)
+            query = query.filter(
+                TransportSegment.departure_datetime >= start_date,
+                TransportSegment.departure_datetime <= end_date
+            )
+        
+        flights = query.order_by(TransportSegment.departure_datetime.desc()).all()
+        
+        # Airline statistics
+        airline_stats = defaultdict(lambda: {'count': 0, 'distance': 0, 'routes': set()})
+        route_stats = defaultdict(int)
+        monthly_flights = defaultdict(int)
+        class_distribution = defaultdict(int)
+        
+        flight_details = []
+        total_distance = 0
+        
+        for flight in flights:
+            # Add to flight details
+            flight_dict = {
+                'id': flight.id,
+                'date': flight.departure_datetime.isoformat(),
+                'flight_number': f"{flight.carrier_name or ''} {flight.segment_number or ''}".strip(),
+                'route': f"{flight.departure_location} → {flight.arrival_location}",
+                'distance': flight.distance_km or 0,
+                'duration': flight.duration_minutes,
+                'cost': flight.cost or 0,
+                'confirmation': flight.confirmation_number,
+                'status': flight.status
+            }
+            flight_details.append(flight_dict)
+            
+            # Aggregate statistics
+            if flight.carrier_name:
+                airline = flight.carrier_name.split()[0] if flight.carrier_name else 'Unknown'
+                airline_stats[airline]['count'] += 1
+                airline_stats[airline]['distance'] += flight.distance_km or 0
+                route = f"{flight.departure_location} - {flight.arrival_location}"
+                airline_stats[airline]['routes'].add(route)
+            
+            # Route statistics
+            route_key = f"{flight.departure_location} → {flight.arrival_location}"
+            route_stats[route_key] += 1
+            
+            # Monthly distribution
+            month_key = flight.departure_datetime.strftime('%Y-%m')
+            monthly_flights[month_key] += 1
+            
+            total_distance += flight.distance_km or 0
+        
+        # Convert sets to lists for JSON serialization
+        for airline in airline_stats:
+            airline_stats[airline]['routes'] = list(airline_stats[airline]['routes'])
+        
+        # Top routes
+        top_routes = sorted(route_stats.items(), key=lambda x: x[1], reverse=True)[:10]
+        
+        return {
+            'summary': {
+                'total_flights': len(flights),
+                'total_distance': round(total_distance, 0),
+                'average_distance': round(total_distance / len(flights), 0) if flights else 0,
+                'total_cost': sum(f.cost or 0 for f in flights),
+                'airlines_used': len(airline_stats)
+            },
+            'airline_breakdown': dict(airline_stats),
+            'top_routes': [{'route': route, 'count': count} for route, count in top_routes],
+            'monthly_distribution': dict(monthly_flights),
+            'recent_flights': flight_details[:20],  # Last 20 flights
+            'all_flights': flight_details
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@router.get("/statistics/hotels")
+async def get_hotel_statistics_detail(
+    year: Optional[int] = Query(None, description="Filter by year")
+) -> Dict:
+    """Get detailed hotel statistics"""
+    db = SessionLocal()
+    try:
+        query = db.query(Accommodation).filter(
+            Accommodation.status != 'cancelled'
+        )
+        
+        if year:
+            start_date = datetime(year, 1, 1).date()
+            end_date = datetime(year, 12, 31).date()
+            query = query.filter(
+                Accommodation.check_in_date >= start_date,
+                Accommodation.check_in_date <= end_date
+            )
+        
+        hotels = query.order_by(Accommodation.check_in_date.desc()).all()
+        
+        # City statistics
+        city_stats = defaultdict(lambda: {'count': 0, 'nights': 0, 'properties': set()})
+        property_stats = defaultdict(int)
+        monthly_nights = defaultdict(int)
+        
+        hotel_details = []
+        total_nights = 0
+        total_cost = 0
+        
+        for hotel in hotels:
+            nights = 0
+            if hotel.check_out_date and hotel.check_in_date:
+                nights = (hotel.check_out_date - hotel.check_in_date).days
+            
+            # Add to hotel details
+            hotel_dict = {
+                'id': hotel.id,
+                'property_name': hotel.property_name,
+                'city': hotel.city,
+                'country': hotel.country,
+                'check_in': hotel.check_in_date.isoformat() if hotel.check_in_date else None,
+                'check_out': hotel.check_out_date.isoformat() if hotel.check_out_date else None,
+                'nights': nights,
+                'cost': hotel.cost or 0,
+                'cost_per_night': round((hotel.cost or 0) / nights, 2) if nights > 0 else 0,
+                'confirmation': hotel.confirmation_number,
+                'address': hotel.address
+            }
+            hotel_details.append(hotel_dict)
+            
+            # Aggregate statistics
+            if hotel.city:
+                city_stats[hotel.city]['count'] += 1
+                city_stats[hotel.city]['nights'] += nights
+                city_stats[hotel.city]['properties'].add(hotel.property_name)
+            
+            if hotel.property_name:
+                property_stats[hotel.property_name] += 1
+            
+            # Monthly distribution
+            if hotel.check_in_date:
+                month_key = hotel.check_in_date.strftime('%Y-%m')
+                monthly_nights[month_key] += nights
+            
+            total_nights += nights
+            total_cost += hotel.cost or 0
+        
+        # Convert sets to counts for JSON
+        for city in city_stats:
+            city_stats[city]['unique_properties'] = len(city_stats[city]['properties'])
+            del city_stats[city]['properties']
+        
+        # Top cities by nights
+        top_cities = sorted(
+            [(city, stats['nights']) for city, stats in city_stats.items()],
+            key=lambda x: x[1],
+            reverse=True
+        )[:10]
+        
+        # Favorite properties (stayed more than once)
+        favorite_properties = [(prop, count) for prop, count in property_stats.items() if count > 1]
+        favorite_properties.sort(key=lambda x: x[1], reverse=True)
+        
+        return {
+            'summary': {
+                'total_stays': len(hotels),
+                'total_nights': total_nights,
+                'total_cost': round(total_cost, 2),
+                'average_cost_per_night': round(total_cost / total_nights, 2) if total_nights > 0 else 0,
+                'unique_cities': len(city_stats),
+                'unique_properties': len(property_stats)
+            },
+            'city_breakdown': dict(city_stats),
+            'top_cities': [{'city': city, 'nights': nights} for city, nights in top_cities],
+            'favorite_properties': [{'property': prop, 'stays': count} for prop, count in favorite_properties],
+            'monthly_distribution': dict(monthly_nights),
+            'recent_stays': hotel_details[:20],
+            'all_stays': hotel_details
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@router.get("/statistics/costs")
+async def get_cost_statistics_detail(
+    year: Optional[int] = Query(None, description="Filter by year")
+) -> Dict:
+    """Get detailed cost breakdown statistics"""
+    db = SessionLocal()
+    try:
+        # Initialize queries
+        transport_query = db.query(TransportSegment).filter(TransportSegment.status != 'cancelled')
+        accommodation_query = db.query(Accommodation).filter(Accommodation.status != 'cancelled')
+        tour_query = db.query(TourActivity).filter(TourActivity.status != 'cancelled')
+        cruise_query = db.query(Cruise).filter(Cruise.status != 'cancelled')
+        
+        if year:
+            start_date = datetime(year, 1, 1)
+            end_date = datetime(year, 12, 31, 23, 59, 59)
+            
+            transport_query = transport_query.filter(
+                TransportSegment.departure_datetime >= start_date,
+                TransportSegment.departure_datetime <= end_date
+            )
+            accommodation_query = accommodation_query.filter(
+                Accommodation.check_in_date >= start_date.date(),
+                Accommodation.check_in_date <= end_date.date()
+            )
+            tour_query = tour_query.filter(
+                TourActivity.start_datetime >= start_date,
+                TourActivity.start_datetime <= end_date
+            )
+            cruise_query = cruise_query.filter(
+                Cruise.departure_datetime >= start_date,
+                Cruise.departure_datetime <= end_date
+            )
+        
+        # Get all bookings
+        transports = transport_query.all()
+        accommodations = accommodation_query.all()
+        tours = tour_query.all()
+        cruises = cruise_query.all()
+        
+        # Category breakdown
+        category_costs = {
+            'flights': sum(t.cost or 0 for t in transports if t.segment_type == 'flight'),
+            'trains': sum(t.cost or 0 for t in transports if t.segment_type == 'train'),
+            'other_transport': sum(t.cost or 0 for t in transports if t.segment_type not in ['flight', 'train']),
+            'hotels': sum(a.cost or 0 for a in accommodations),
+            'tours': sum(t.cost or 0 for t in tours),
+            'cruises': sum(c.cost or 0 for c in cruises)
+        }
+        
+        # Monthly spending
+        monthly_spending = defaultdict(lambda: defaultdict(float))
+        
+        for transport in transports:
+            if transport.departure_datetime and transport.cost:
+                month = transport.departure_datetime.strftime('%Y-%m')
+                monthly_spending[month]['transport'] += transport.cost
+        
+        for accommodation in accommodations:
+            if accommodation.check_in_date and accommodation.cost:
+                month = accommodation.check_in_date.strftime('%Y-%m')
+                monthly_spending[month]['accommodation'] += accommodation.cost
+        
+        for tour in tours:
+            if tour.start_datetime and tour.cost:
+                month = tour.start_datetime.strftime('%Y-%m')
+                monthly_spending[month]['tours'] += tour.cost
+        
+        # Most expensive items
+        all_items = []
+        
+        for t in transports:
+            if t.cost:
+                all_items.append({
+                    'type': 'Transport',
+                    'description': f"{t.segment_type}: {t.departure_location} → {t.arrival_location}",
+                    'date': t.departure_datetime.isoformat() if t.departure_datetime else None,
+                    'cost': t.cost
+                })
+        
+        for a in accommodations:
+            if a.cost:
+                all_items.append({
+                    'type': 'Hotel',
+                    'description': f"{a.property_name} in {a.city}",
+                    'date': a.check_in_date.isoformat() if a.check_in_date else None,
+                    'cost': a.cost
+                })
+        
+        for tour in tours:
+            if tour.cost:
+                all_items.append({
+                    'type': 'Tour',
+                    'description': tour.activity_name,
+                    'date': tour.start_datetime.isoformat() if tour.start_datetime else None,
+                    'cost': tour.cost
+                })
+        
+        # Sort by cost
+        most_expensive = sorted(all_items, key=lambda x: x['cost'], reverse=True)[:20]
+        
+        # Cost by destination (from trips)
+        trips = db.query(Trip).all()
+        destination_costs = defaultdict(float)
+        for trip in trips:
+            if trip.destination and trip.total_cost:
+                if not year or (trip.start_date and trip.start_date.year == year):
+                    destination_costs[trip.destination] += trip.total_cost
+        
+        top_expensive_destinations = sorted(
+            destination_costs.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:10]
+        
+        total_cost = sum(category_costs.values())
+        
+        return {
+            'summary': {
+                'total_cost': round(total_cost, 2),
+                'average_per_trip': round(total_cost / len(trips), 2) if trips else 0,
+                'most_expensive_category': max(category_costs.items(), key=lambda x: x[1])[0] if category_costs else None
+            },
+            'category_breakdown': category_costs,
+            'monthly_spending': {k: dict(v) for k, v in monthly_spending.items()},
+            'most_expensive_items': most_expensive,
+            'top_expensive_destinations': [
+                {'destination': dest, 'total_cost': round(cost, 2)} 
+                for dest, cost in top_expensive_destinations
+            ],
+            'cost_distribution': {
+                'under_100': len([i for i in all_items if i['cost'] < 100]),
+                '100_500': len([i for i in all_items if 100 <= i['cost'] < 500]),
+                '500_1000': len([i for i in all_items if 500 <= i['cost'] < 1000]),
+                '1000_5000': len([i for i in all_items if 1000 <= i['cost'] < 5000]),
+                'over_5000': len([i for i in all_items if i['cost'] >= 5000])
+            }
         }
         
     except Exception as e:

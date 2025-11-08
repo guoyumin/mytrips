@@ -94,6 +94,9 @@ class EmailImportApp {
             case 'calendar-view':
                 this.showCalendarView();
                 break;
+            case 'statistics':
+                this.showStatisticsSection();
+                break;
             case 'full-pipeline':
                 this.showFullPipelineSection();
                 break;
@@ -114,6 +117,7 @@ class EmailImportApp {
         document.getElementById('my-trips-section').style.display = 'none';
         document.getElementById('trip-detail-section').style.display = 'none';
         document.getElementById('calendar-section').style.display = 'none';
+        document.getElementById('statistics-section').style.display = 'none';
         document.getElementById('full-pipeline-section').style.display = 'none';
         document.getElementById('progress-section').style.display = 'none';
         document.getElementById('stats').style.display = 'none';
@@ -1717,6 +1721,569 @@ class EmailImportApp {
         this.loadTimelineData();
     }
 
+    // Statistics methods
+    showStatisticsSection() {
+        document.getElementById('statistics-section').style.display = 'block';
+        this.loadStatistics();
+    }
+
+    async loadStatistics(year = null) {
+        try {
+            const url = year ? `/api/trips/statistics?year=${year}` : '/api/trips/statistics';
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (response.ok) {
+                this.displayStatistics(data);
+                this.populateYearFilter(data.available_years);
+            } else {
+                throw new Error('Failed to load statistics');
+            }
+        } catch (error) {
+            console.error('Error loading statistics:', error);
+            this.displayStatisticsError();
+        }
+    }
+
+    displayStatistics(data) {
+        const summary = data.summary;
+        
+        // Update summary cards
+        document.getElementById('total-flights').textContent = summary.total_flights;
+        document.getElementById('total-distance').textContent = `${summary.total_distance.toLocaleString()} km`;
+        document.getElementById('hotel-nights').textContent = summary.hotel_nights;
+        document.getElementById('countries-visited').textContent = summary.countries_visited;
+        document.getElementById('cities-visited').textContent = summary.cities_visited;
+        document.getElementById('train-distance').textContent = `${summary.train_distance.toLocaleString()} km`;
+        document.getElementById('total-cost').textContent = `$${summary.total_cost.toLocaleString()}`;
+        document.getElementById('total-trips').textContent = summary.total_trips;
+        
+        // Add click handlers to stat cards
+        this.addStatCardClickHandlers();
+        
+        // Display transport breakdown
+        this.displayTransportBreakdown(data.transport_breakdown);
+        
+        // Display top destinations
+        this.displayTopDestinations(data.top_destinations);
+        
+        // Display monthly distribution
+        this.displayMonthlyDistribution(data.monthly_distribution);
+    }
+
+    displayTransportBreakdown(breakdown) {
+        const container = document.getElementById('transport-breakdown');
+        
+        if (!breakdown || Object.keys(breakdown).length === 0) {
+            container.innerHTML = '<p class="no-data">No transport data available</p>';
+            return;
+        }
+        
+        let html = '<div class="transport-breakdown-grid">';
+        for (const [type, data] of Object.entries(breakdown)) {
+            const icon = this.getTransportIcon(type);
+            html += `
+                <div class="transport-type-card">
+                    <div class="transport-icon">${icon}</div>
+                    <div class="transport-type">${this.capitalizeFirst(type)}</div>
+                    <div class="transport-count">${data.count} trips</div>
+                    <div class="transport-distance">${data.distance.toLocaleString()} km</div>
+                </div>
+            `;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    displayTopDestinations(destinations) {
+        const container = document.getElementById('top-destinations');
+        
+        if (!destinations || destinations.length === 0) {
+            container.innerHTML = '<p class="no-data">No destination data available</p>';
+            return;
+        }
+        
+        let html = '<div class="destinations-list">';
+        destinations.forEach((dest, index) => {
+            html += `
+                <div class="destination-item">
+                    <span class="destination-rank">${index + 1}</span>
+                    <span class="destination-name">${dest.destination}</span>
+                    <span class="destination-count">${dest.count} trips</span>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    displayMonthlyDistribution(distribution) {
+        const container = document.getElementById('monthly-distribution');
+        
+        if (!distribution || Object.keys(distribution).length === 0) {
+            container.innerHTML = '<p class="no-data">No monthly data available</p>';
+            return;
+        }
+        
+        // Sort months chronologically
+        const sortedMonths = Object.entries(distribution).sort((a, b) => a[0].localeCompare(b[0]));
+        
+        let html = '<div class="monthly-chart">';
+        const maxTrips = Math.max(...sortedMonths.map(([_, count]) => count));
+        
+        sortedMonths.forEach(([month, count]) => {
+            const height = (count / maxTrips) * 100;
+            const [year, monthNum] = month.split('-');
+            const monthName = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'short' });
+            
+            html += `
+                <div class="month-bar-container">
+                    <div class="month-bar" style="height: ${height}%">
+                        <span class="month-count">${count}</span>
+                    </div>
+                    <div class="month-label">${monthName} ${year.slice(2)}</div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    populateYearFilter(years) {
+        const select = document.getElementById('stats-year-filter');
+        
+        // Clear existing options except "All Time"
+        select.innerHTML = '<option value="all">All Time</option>';
+        
+        // Add year options in descending order
+        years.sort((a, b) => b - a).forEach(year => {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            select.appendChild(option);
+        });
+    }
+
+    getTransportIcon(type) {
+        const icons = {
+            'flight': '✈️',
+            'train': '🚂',
+            'bus': '🚌',
+            'car': '🚗',
+            'cruise': '🚢',
+            'ferry': '⛴️'
+        };
+        return icons[type] || '🚀';
+    }
+
+    capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    displayStatisticsError() {
+        const content = document.getElementById('statistics-content');
+        content.innerHTML = `
+            <div class="statistics-error">
+                <h3>Error Loading Statistics</h3>
+                <p>Could not load travel statistics. Please try refreshing.</p>
+            </div>
+        `;
+    }
+
+    addStatCardClickHandlers() {
+        // Find all stat cards and add click handlers based on their content
+        const statCards = document.querySelectorAll('.stat-card');
+        statCards.forEach(card => {
+            const label = card.querySelector('.stat-label').textContent.toLowerCase();
+            
+            if (label.includes('flight')) {
+                card.style.cursor = 'pointer';
+                card.onclick = () => this.showFlightDetail();
+            } else if (label.includes('hotel')) {
+                card.style.cursor = 'pointer';
+                card.onclick = () => this.showHotelDetail();
+            } else if (label.includes('cost')) {
+                card.style.cursor = 'pointer';
+                card.onclick = () => this.showCostDetail();
+            } else if (label.includes('distance') && label.includes('total')) {
+                card.style.cursor = 'pointer';
+                card.onclick = () => this.showFlightDetail(); // Total distance links to flights
+            }
+        });
+    }
+
+    async showFlightDetail() {
+        try {
+            const yearFilter = document.getElementById('stats-year-filter').value;
+            const url = yearFilter === 'all' 
+                ? '/api/trips/statistics/flights' 
+                : `/api/trips/statistics/flights?year=${yearFilter}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (response.ok) {
+                this.displayFlightDetail(data);
+            } else {
+                throw new Error('Failed to load flight details');
+            }
+        } catch (error) {
+            console.error('Error loading flight details:', error);
+            alert('Failed to load flight details');
+        }
+    }
+
+    displayFlightDetail(data) {
+        const modal = document.getElementById('stats-detail-modal');
+        const title = document.getElementById('stats-detail-title');
+        const content = document.getElementById('stats-detail-content');
+        
+        title.textContent = '✈️ Flight Statistics Detail';
+        
+        let html = `
+            <div class="detail-summary">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Total Flights</span>
+                        <span class="summary-value">${data.summary.total_flights}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total Distance</span>
+                        <span class="summary-value">${data.summary.total_distance.toLocaleString()} km</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Average Distance</span>
+                        <span class="summary-value">${data.summary.average_distance.toLocaleString()} km</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Airlines Used</span>
+                        <span class="summary-value">${data.summary.airlines_used}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>✈️ Airlines Breakdown</h3>
+                <div class="airlines-grid">`;
+        
+        // Sort airlines by flight count
+        const sortedAirlines = Object.entries(data.airline_breakdown)
+            .sort((a, b) => b[1].count - a[1].count);
+        
+        sortedAirlines.forEach(([airline, stats]) => {
+            html += `
+                <div class="airline-card">
+                    <div class="airline-name">${airline}</div>
+                    <div class="airline-stats">
+                        <span>${stats.count} flights</span>
+                        <span>${stats.distance.toLocaleString()} km</span>
+                    </div>
+                </div>`;
+        });
+        
+        html += `
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>🛫 Top Routes</h3>
+                <div class="routes-list">`;
+        
+        data.top_routes.forEach((route, index) => {
+            html += `
+                <div class="route-item">
+                    <span class="route-rank">${index + 1}</span>
+                    <span class="route-name">${route.route}</span>
+                    <span class="route-count">${route.count} times</span>
+                </div>`;
+        });
+        
+        html += `
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>📅 Recent Flights</h3>
+                <div class="flights-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Flight</th>
+                                <th>Route</th>
+                                <th>Distance</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+        
+        data.recent_flights.forEach(flight => {
+            const date = new Date(flight.date).toLocaleDateString();
+            html += `
+                <tr>
+                    <td>${date}</td>
+                    <td>${flight.flight_number}</td>
+                    <td>${flight.route}</td>
+                    <td>${flight.distance.toLocaleString()} km</td>
+                    <td>$${flight.cost.toFixed(2)}</td>
+                </tr>`;
+        });
+        
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+        
+        content.innerHTML = html;
+        modal.style.display = 'block';
+    }
+
+    async showHotelDetail() {
+        try {
+            const yearFilter = document.getElementById('stats-year-filter').value;
+            const url = yearFilter === 'all' 
+                ? '/api/trips/statistics/hotels' 
+                : `/api/trips/statistics/hotels?year=${yearFilter}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (response.ok) {
+                this.displayHotelDetail(data);
+            } else {
+                throw new Error('Failed to load hotel details');
+            }
+        } catch (error) {
+            console.error('Error loading hotel details:', error);
+            alert('Failed to load hotel details');
+        }
+    }
+
+    displayHotelDetail(data) {
+        const modal = document.getElementById('stats-detail-modal');
+        const title = document.getElementById('stats-detail-title');
+        const content = document.getElementById('stats-detail-content');
+        
+        title.textContent = '🏨 Hotel Statistics Detail';
+        
+        let html = `
+            <div class="detail-summary">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Total Stays</span>
+                        <span class="summary-value">${data.summary.total_stays}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total Nights</span>
+                        <span class="summary-value">${data.summary.total_nights}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Average Cost/Night</span>
+                        <span class="summary-value">$${data.summary.average_cost_per_night.toFixed(2)}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Unique Cities</span>
+                        <span class="summary-value">${data.summary.unique_cities}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>🌍 Top Cities by Nights</h3>
+                <div class="cities-list">`;
+        
+        data.top_cities.forEach((city, index) => {
+            html += `
+                <div class="city-item">
+                    <span class="city-rank">${index + 1}</span>
+                    <span class="city-name">${city.city}</span>
+                    <span class="city-nights">${city.nights} nights</span>
+                </div>`;
+        });
+        
+        html += `
+                </div>
+            </div>`;
+        
+        if (data.favorite_properties.length > 0) {
+            html += `
+            <div class="detail-section">
+                <h3>⭐ Favorite Properties</h3>
+                <div class="properties-list">`;
+            
+            data.favorite_properties.forEach(prop => {
+                html += `
+                    <div class="property-item">
+                        <span class="property-name">${prop.property}</span>
+                        <span class="property-stays">${prop.stays} stays</span>
+                    </div>`;
+            });
+            
+            html += `
+                </div>
+            </div>`;
+        }
+        
+        html += `
+            <div class="detail-section">
+                <h3>📅 Recent Stays</h3>
+                <div class="hotels-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Check-in</th>
+                                <th>Property</th>
+                                <th>City</th>
+                                <th>Nights</th>
+                                <th>Cost/Night</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+        
+        data.recent_stays.forEach(hotel => {
+            const checkIn = new Date(hotel.check_in).toLocaleDateString();
+            html += `
+                <tr>
+                    <td>${checkIn}</td>
+                    <td>${hotel.property_name}</td>
+                    <td>${hotel.city}, ${hotel.country}</td>
+                    <td>${hotel.nights}</td>
+                    <td>$${hotel.cost_per_night.toFixed(2)}</td>
+                </tr>`;
+        });
+        
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+        
+        content.innerHTML = html;
+        modal.style.display = 'block';
+    }
+
+    async showCostDetail() {
+        try {
+            const yearFilter = document.getElementById('stats-year-filter').value;
+            const url = yearFilter === 'all' 
+                ? '/api/trips/statistics/costs' 
+                : `/api/trips/statistics/costs?year=${yearFilter}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (response.ok) {
+                this.displayCostDetail(data);
+            } else {
+                throw new Error('Failed to load cost details');
+            }
+        } catch (error) {
+            console.error('Error loading cost details:', error);
+            alert('Failed to load cost details');
+        }
+    }
+
+    displayCostDetail(data) {
+        const modal = document.getElementById('stats-detail-modal');
+        const title = document.getElementById('stats-detail-title');
+        const content = document.getElementById('stats-detail-content');
+        
+        title.textContent = '💰 Cost Statistics Detail';
+        
+        let html = `
+            <div class="detail-summary">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Total Spent</span>
+                        <span class="summary-value">$${data.summary.total_cost.toLocaleString()}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Average per Trip</span>
+                        <span class="summary-value">$${data.summary.average_per_trip.toFixed(2)}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Biggest Category</span>
+                        <span class="summary-value">${this.capitalizeFirst(data.summary.most_expensive_category || 'N/A')}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>📊 Spending by Category</h3>
+                <div class="category-breakdown">`;
+        
+        const categories = [
+            { name: 'Flights', value: data.category_breakdown.flights, icon: '✈️' },
+            { name: 'Hotels', value: data.category_breakdown.hotels, icon: '🏨' },
+            { name: 'Trains', value: data.category_breakdown.trains, icon: '🚂' },
+            { name: 'Tours', value: data.category_breakdown.tours, icon: '🎫' },
+            { name: 'Cruises', value: data.category_breakdown.cruises, icon: '🚢' },
+            { name: 'Other Transport', value: data.category_breakdown.other_transport, icon: '🚌' }
+        ].sort((a, b) => b.value - a.value);
+        
+        const maxValue = Math.max(...categories.map(c => c.value));
+        
+        categories.forEach(cat => {
+            const percentage = maxValue > 0 ? (cat.value / maxValue) * 100 : 0;
+            html += `
+                <div class="category-row">
+                    <span class="category-icon">${cat.icon}</span>
+                    <span class="category-name">${cat.name}</span>
+                    <div class="category-bar-container">
+                        <div class="category-bar" style="width: ${percentage}%"></div>
+                    </div>
+                    <span class="category-value">$${cat.value.toLocaleString()}</span>
+                </div>`;
+        });
+        
+        html += `
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>💸 Most Expensive Destinations</h3>
+                <div class="destinations-cost-list">`;
+        
+        data.top_expensive_destinations.forEach((dest, index) => {
+            html += `
+                <div class="dest-cost-item">
+                    <span class="dest-rank">${index + 1}</span>
+                    <span class="dest-name">${dest.destination}</span>
+                    <span class="dest-cost">$${dest.total_cost.toLocaleString()}</span>
+                </div>`;
+        });
+        
+        html += `
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>🏆 Most Expensive Items</h3>
+                <div class="expensive-items-list">`;
+        
+        data.most_expensive_items.slice(0, 10).forEach((item, index) => {
+            const date = new Date(item.date).toLocaleDateString();
+            html += `
+                <div class="expensive-item">
+                    <span class="item-rank">${index + 1}</span>
+                    <div class="item-details">
+                        <span class="item-type">${item.type}</span>
+                        <span class="item-desc">${item.description}</span>
+                        <span class="item-date">${date}</span>
+                    </div>
+                    <span class="item-cost">$${item.cost.toFixed(2)}</span>
+                </div>`;
+        });
+        
+        html += `
+                </div>
+            </div>`;
+        
+        content.innerHTML = html;
+        modal.style.display = 'block';
+    }
+
     async loadTimelineData() {
         try {
             const response = await fetch('/api/trips/timeline');
@@ -2776,6 +3343,21 @@ function refreshTrips() {
 
 function refreshTimeline() {
     app.loadTimelineData();
+}
+
+function refreshStatistics() {
+    app.loadStatistics();
+}
+
+function updateStatistics() {
+    const yearFilter = document.getElementById('stats-year-filter').value;
+    const year = yearFilter === 'all' ? null : parseInt(yearFilter);
+    app.loadStatistics(year);
+}
+
+function closeStatsDetail() {
+    const modal = document.getElementById('stats-detail-modal');
+    modal.style.display = 'none';
 }
 
 function viewBookingInfo(emailId) {
