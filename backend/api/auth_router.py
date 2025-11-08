@@ -6,6 +6,8 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import os
 import json
+from backend.lib.gmail_client import GmailClient
+from backend.lib.config_manager import config_manager
 
 router = APIRouter()
 
@@ -60,11 +62,24 @@ async def callback(request: Request):
 
 @router.get("/status")
 async def auth_status():
+    """
+    Check Gmail authentication status
+
+    Returns:
+        {
+            "authenticated": bool,
+            "error": str or None
+        }
+    """
     try:
-        if os.path.exists('../config/token.json'):
-            with open('../config/token.json', 'r') as token_file:
-                token_data = json.load(token_file)
-                return {"authenticated": True}
-        return {"authenticated": False}
-    except:
-        return {"authenticated": False}
+        credentials_path = config_manager.get_gmail_credentials_path()
+        token_path = config_manager.get_gmail_token_path()
+
+        # Create a temporary GmailClient to check auth status
+        gmail_client = GmailClient(credentials_path, token_path)
+        return gmail_client.get_auth_status()
+    except Exception as e:
+        return {
+            "authenticated": False,
+            "error": str(e)
+        }

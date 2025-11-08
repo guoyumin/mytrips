@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 
 class GmailClient:
     """Gmail API 客户端"""
-    
+
     # Gmail API 访问范围
     SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
-    
+
     def __init__(self, credentials_path: str, token_path: str):
         """
         初始化 Gmail 客户端
-        
+
         Args:
             credentials_path: OAuth2 凭据文件路径
             token_path: 访问令牌存储路径
@@ -34,62 +34,106 @@ class GmailClient:
         self.credentials_path = credentials_path
         self.token_path = token_path
         self.service = None
+        self.authenticated = False
+        self.auth_error = None
         self._authenticate()
     
     def _authenticate(self):
         """处理 OAuth2 认证流程"""
-        creds = None
-        
-        # 加载已保存的令牌
-        if os.path.exists(self.token_path):
-            try:
-                # 尝试 JSON 格式
-                if self.token_path.endswith('.json'):
-                    with open(self.token_path, 'r') as token:
-                        token_data = json.load(token)
-                        creds = Credentials.from_authorized_user_info(token_data, self.SCOPES)
-                else:
-                    # 尝试 pickle 格式
-                    with open(self.token_path, 'rb') as token:
-                        creds = pickle.load(token)
-            except (json.JSONDecodeError, UnicodeDecodeError):
-                # 如果JSON解析失败，尝试pickle格式
+        try:
+            creds = None
+
+            # 加载已保存的令牌
+            if os.path.exists(self.token_path):
                 try:
-                    with open(self.token_path, 'rb') as token:
-                        creds = pickle.load(token)
-                except:
-                    creds = None
-        
-        # 如果没有有效凭据，需要用户登录
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    self.credentials_path, self.SCOPES)
-                creds = flow.run_local_server(port=0)
-            
-            # 保存凭据供下次使用 - 保存为JSON格式
-            if self.token_path.endswith('.json'):
-                with open(self.token_path, 'w') as token:
-                    token.write(creds.to_json())
-            else:
-                with open(self.token_path, 'wb') as token:
-                    pickle.dump(creds, token)
-        
-        self.service = build('gmail', 'v1', credentials=creds)
-    
+                    # 尝试 JSON 格式
+                    if self.token_path.endswith('.json'):
+                        with open(self.token_path, 'r') as token:
+                            token_data = json.load(token)
+                            creds = Credentials.from_authorized_user_info(token_data, self.SCOPES)
+                    else:
+                        # 尝试 pickle 格式
+                        with open(self.token_path, 'rb') as token:
+                            creds = pickle.load(token)
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    # 如果JSON解析失败，尝试pickle格式
+                    try:
+                        with open(self.token_path, 'rb') as token:
+                            creds = pickle.load(token)
+                    except:
+                        creds = None
+
+            # 如果没有有效凭据，需要用户登录
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    try:
+                        creds.refresh(Request())
+                    except Exception as e:
+                        # Token refresh failed - user needs to re-authenticate
+                        logger.warning(f"Token refresh failed: {e}")
+                        self.authenticated = False
+                        self.auth_error = f"Token expired or revoked. Please re-authenticate."
+                        return
+                else:
+                    # No valid credentials - need user to authenticate via web flow
+                    logger.info("No valid credentials found. User authentication required.")
+                    self.authenticated = False
+                    self.auth_error = "Authentication required. Please authorize via web interface."
+                    return
+
+                # 保存凭据供下次使用 - 保存为JSON格式
+                if self.token_path.endswith('.json'):
+                    with open(self.token_path, 'w') as token:
+                        token.write(creds.to_json())
+                else:
+                    with open(self.token_path, 'wb') as token:
+                        pickle.dump(creds, token)
+
+            self.service = build('gmail', 'v1', credentials=creds)
+            self.authenticated = True
+            self.auth_error = None
+            logger.info("Gmail authentication successful")
+
+        except Exception as e:
+            logger.error(f"Gmail authentication failed: {e}")
+            self.authenticated = False
+            self.auth_error = str(e)
+            self.service = None
+
+    def is_authenticated(self) -> bool:
+        """检查是否已成功认证"""
+        return self.authenticated
+
+    def get_auth_status(self) -> Dict[str, any]:
+        """
+        获取认证状态详情
+
+        Returns:
+            包含认证状态和错误信息的字典
+        """
+        return {
+            'authenticated': self.authenticated,
+            'error': self.auth_error
+        }
+
+    def _require_authentication(self):
+        """检查认证状态，未认证时抛出异常"""
+        if not self.authenticated:
+            error_msg = self.auth_error or "Gmail authentication required"
+            raise Exception(error_msg)
+
     def list_messages(self, query: str = '', max_results: int = 100) -> List[Dict[str, str]]:
         """
         列出符合查询条件的邮件
-        
+
         Args:
             query: Gmail 搜索查询语句
             max_results: 最大返回结果数
-            
+
         Returns:
             邮件 ID 和线程 ID 列表
         """
+        self._require_authentication()
         try:
             results = []
             page_token = None
@@ -117,13 +161,14 @@ class GmailClient:
     def list_messages_all(self, query: str = '') -> List[Dict[str, str]]:
         """
         获取所有符合查询条件的邮件（不设置数量限制）
-        
+
         Args:
             query: Gmail 搜索查询语句
-            
+
         Returns:
             所有匹配的邮件 ID 和线程 ID 列表
         """
+        self._require_authentication()
         try:
             results = []
             page_token = None
@@ -151,14 +196,15 @@ class GmailClient:
     def get_message(self, message_id: str, format: str = 'full') -> Dict[str, Any]:
         """
         获取邮件详情
-        
+
         Args:
             message_id: 邮件 ID
             format: 返回格式 ('full', 'metadata', 'minimal')
-            
+
         Returns:
             邮件详细信息
         """
+        self._require_authentication()
         try:
             message = self.service.users().messages().get(
                 userId='me',
@@ -193,14 +239,15 @@ class GmailClient:
     def get_attachment(self, message_id: str, attachment_id: str) -> Optional[bytes]:
         """
         下载邮件附件
-        
+
         Args:
             message_id: 邮件 ID
             attachment_id: 附件 ID
-            
+
         Returns:
             附件的二进制数据
         """
+        self._require_authentication()
         try:
             attachment = self.service.users().messages().attachments().get(
                 userId='me',
@@ -218,27 +265,29 @@ class GmailClient:
             logger.error(f"Failed to download attachment: {error}")
             return None
     
-    def search_emails_by_date_range_paginated(self, start_date: datetime, end_date: datetime, 
-                                              page_token: Optional[str] = None, 
+    def search_emails_by_date_range_paginated(self, start_date: datetime, end_date: datetime,
+                                              page_token: Optional[str] = None,
                                               max_results: int = 100) -> Dict[str, any]:
         """
         搜索指定日期范围内的邮件（分页版本）
-        
+
         Args:
             start_date: 开始日期 (inclusive)
             end_date: 结束日期 (inclusive)
             page_token: 分页token，用于获取下一页
             max_results: 每页最大结果数
-            
+
         Returns:
             包含邮件列表和下一页token的字典
         """
+        self._require_authentication()
+
         after_date = start_date.strftime('%Y/%m/%d')
         before_date = (end_date + timedelta(days=1)).strftime('%Y/%m/%d')
         query = f'after:{after_date} before:{before_date}'
-        
+
         logger.info(f"Searching emails with query: {query}, page_token: {page_token}")
-        
+
         try:
             response = self.service.users().messages().list(
                 userId='me',
