@@ -1,5 +1,5 @@
 {
-  "base_url": "http://yumin-home.local:11434",
+  "base_url": "http://homepc:11434",
   "model": "gemma3:12b",
   "model_mapping": {
     "fast": "gemma3:4b",
@@ -33,6 +33,6 @@
       "gemma3:4b": "Fast, efficient model suitable for most tasks",
       "gemma3:12b": "More powerful model for complex reasoning tasks"
     },
-    "server_info": "Ollama server running on yumin-home.local with Gemma 3 models"
+    "server_info": "Ollama server running on homepc with Gemma 3 models"
   }
 }

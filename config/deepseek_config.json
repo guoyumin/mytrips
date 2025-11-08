@@ -1,5 +1,5 @@
 {
-  "base_url": "http://yumin-home.local:11434",
+  "base_url": "http://homepc:11434",
   "model": "deepseek-r1:14b",
   "model_mapping": {
     "fast": "deepseek-r1:7b",
@@ -33,6 +33,6 @@
       "deepseek-r1:7b": "Fast, efficient DeepSeek model suitable for most tasks",
       "deepseek-r1:14b": "More powerful DeepSeek model for complex reasoning tasks"
     },
-    "server_info": "Ollama server running on yumin-home.local with DeepSeek R1 models"
+    "server_info": "Ollama server running on homepc with DeepSeek R1 models"
   }
 }
