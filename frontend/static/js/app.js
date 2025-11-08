@@ -25,7 +25,15 @@ class EmailImportApp {
 
     init() {
         console.log('MyTrips Email Import App initialized');
-        
+
+        // Check for authentication success
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('auth') === 'success') {
+            alert('✅ Gmail authentication successful!\n\nYou can now import your emails.');
+            // Clear the URL parameter
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
         // Force layout fix
         setTimeout(() => {
             const mainContent = document.querySelector('.main-content');
@@ -36,7 +44,7 @@ class EmailImportApp {
                 mainContent.style.height = 'calc(100vh - 120px)';
             }
         }, 100);
-        
+
         // Check initial cache stats
         this.loadCacheStats();
         // Initialize sidebar navigation
@@ -177,6 +185,23 @@ class EmailImportApp {
             return;
         }
 
+        // Check authentication status first
+        const authStatus = await checkGmailAuth();
+        if (!authStatus.authenticated) {
+            // Show authentication required modal
+            const errorMsg = authStatus.error || 'Gmail authentication required to import emails.';
+            const confirmLogin = confirm(
+                `❌ ${errorMsg}\n\n` +
+                'Would you like to authenticate with Gmail now?\n\n' +
+                'Click "OK" to start the authentication process, or "Cancel" to go back.'
+            );
+
+            if (confirmLogin) {
+                await startGmailLogin();
+            }
+            return;
+        }
+
         this.isImporting = true;
         this.updateUIForImporting(true);
 
@@ -186,30 +211,30 @@ class EmailImportApp {
             const endDateInput = document.getElementById('endDate');
             const startDate = startDateInput.value;
             const endDate = endDateInput.value;
-            
+
             let endpoint, body, statusMessage;
-            
+
             if (startDate && endDate) {
                 // Use date range endpoint
                 endpoint = '/api/emails/import/date-range';
-                body = JSON.stringify({ 
+                body = JSON.stringify({
                     start_date: startDate,
-                    end_date: endDate 
+                    end_date: endDate
                 });
                 statusMessage = `Starting import for ${startDate} to ${endDate}...`;
             } else {
                 // Fall back to days-based import
                 const timeRange = document.getElementById('timeRange').value;
                 const days = parseInt(timeRange) || 30; // Default to 30 days
-                
+
                 endpoint = '/api/emails/import/days';
                 body = JSON.stringify({ days: days });
                 statusMessage = `Starting import for ${this.getTimeRangeLabel(days)}...`;
             }
-            
+
             // Update status to show selected range
             this.displayStatus(statusMessage, 'loading');
-            
+
             // Start import
             const response = await fetch(endpoint, {
                 method: 'POST',
@@ -240,7 +265,20 @@ class EmailImportApp {
             this.startProgressMonitoring();
 
         } catch (error) {
-            this.displayError(error.message);
+            // Check if error is auth-related
+            if (error.message && error.message.toLowerCase().includes('auth')) {
+                const confirmLogin = confirm(
+                    `❌ Authentication Error: ${error.message}\n\n` +
+                    'Would you like to re-authenticate with Gmail now?'
+                );
+
+                if (confirmLogin) {
+                    await startGmailLogin();
+                }
+            } else {
+                this.displayError(error.message);
+            }
+
             this.isImporting = false;
             this.updateUIForImporting(false);
             this.stopProgressMonitoring();
@@ -3417,23 +3455,82 @@ function updatePipelineDateRangeFromQuickSelect() {
 // Pipeline functions
 let pipelineProgressInterval = null;
 
+// Check Gmail authentication status
+async function checkGmailAuth() {
+    try {
+        const response = await fetch('/api/auth/status');
+        const status = await response.json();
+        return status;
+    } catch (error) {
+        console.error('Error checking auth status:', error);
+        return { authenticated: false, error: 'Failed to check authentication status' };
+    }
+}
+
+// Trigger Gmail OAuth login
+async function startGmailLogin() {
+    try {
+        const response = await fetch('/api/auth/login');
+        const data = await response.json();
+
+        if (data.auth_url) {
+            // Open OAuth URL in a new window
+            const width = 600;
+            const height = 700;
+            const left = (window.screen.width - width) / 2;
+            const top = (window.screen.height - height) / 2;
+
+            window.open(
+                data.auth_url,
+                'Gmail Authentication',
+                `width=${width},height=${height},left=${left},top=${top}`
+            );
+
+            // Show a message to user
+            alert('Please complete the authentication in the popup window.\n\nAfter authorizing, close the popup and try starting the pipeline again.');
+        } else {
+            throw new Error('Failed to get authentication URL');
+        }
+    } catch (error) {
+        console.error('Error starting login:', error);
+        alert('Failed to initiate Gmail login: ' + error.message);
+    }
+}
+
 async function startFullPipeline() {
     const startDate = document.getElementById('pipelineStartDate').value;
     const endDate = document.getElementById('pipelineEndDate').value;
-    
+
     if (!startDate || !endDate) {
         alert('Please select a date range');
         return;
     }
-    
+
+    // Check authentication status first
+    const authStatus = await checkGmailAuth();
+    if (!authStatus.authenticated) {
+        // Show authentication required modal
+        const errorMsg = authStatus.error || 'Gmail authentication required to import emails.';
+        const confirmLogin = confirm(
+            `❌ ${errorMsg}\n\n` +
+            'Would you like to authenticate with Gmail now?\n\n' +
+            'Click "OK" to start the authentication process, or "Cancel" to go back.'
+        );
+
+        if (confirmLogin) {
+            await startGmailLogin();
+        }
+        return;
+    }
+
     try {
         // Disable start button, show stop button
         document.getElementById('startPipelineBtn').style.display = 'none';
         document.getElementById('stopPipelineBtn').style.display = 'inline-flex';
-        
+
         // Show progress section
         document.getElementById('pipeline-progress-section').style.display = 'block';
-        
+
         // Start pipeline
         const response = await fetch('/api/pipeline/start', {
             method: 'POST',
@@ -3447,9 +3544,9 @@ async function startFullPipeline() {
                 }
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.started) {
             document.getElementById('pipelineMessage').textContent = result.message;
             // Start monitoring progress
@@ -3457,10 +3554,24 @@ async function startFullPipeline() {
         } else {
             throw new Error(result.message || 'Failed to start pipeline');
         }
-        
+
     } catch (error) {
         console.error('Error starting pipeline:', error);
-        alert('Failed to start pipeline: ' + error.message);
+
+        // Check if error is auth-related
+        if (error.message && error.message.toLowerCase().includes('auth')) {
+            const confirmLogin = confirm(
+                `❌ Authentication Error: ${error.message}\n\n` +
+                'Would you like to re-authenticate with Gmail now?'
+            );
+
+            if (confirmLogin) {
+                await startGmailLogin();
+            }
+        } else {
+            alert('Failed to start pipeline: ' + error.message);
+        }
+
         resetPipelineUI();
     }
 }
