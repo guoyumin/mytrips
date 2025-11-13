@@ -36,7 +36,10 @@ class GmailClient:
         self.service = None
         self.authenticated = False
         self.auth_error = None
+        self.label_cache = {}  # Cache for label ID to name mapping
         self._authenticate()
+        if self.authenticated:
+            self._load_labels()
     
     def _authenticate(self):
         """处理 OAuth2 认证流程"""
@@ -99,6 +102,31 @@ class GmailClient:
             self.authenticated = False
             self.auth_error = str(e)
             self.service = None
+
+    def _load_labels(self):
+        """Load all Gmail labels and create ID to name mapping"""
+        try:
+            results = self.service.users().labels().list(userId='me').execute()
+            labels = results.get('labels', [])
+
+            # Create mapping from label ID to label name
+            for label in labels:
+                label_id = label['id']
+                label_name = label['name']
+                self.label_cache[label_id] = label_name
+
+            logger.info(f"Loaded {len(self.label_cache)} Gmail labels")
+
+            # Log user-defined labels (non-system labels)
+            user_labels = [name for lid, name in self.label_cache.items()
+                          if not lid.startswith('CATEGORY_') and lid not in
+                          ['INBOX', 'SENT', 'DRAFT', 'SPAM', 'TRASH', 'UNREAD', 'STARRED', 'IMPORTANT']]
+            if user_labels:
+                logger.info(f"User-defined labels: {', '.join(user_labels[:10])}")
+
+        except Exception as e:
+            logger.warning(f"Failed to load Gmail labels: {e}")
+            self.label_cache = {}
 
     def is_authenticated(self) -> bool:
         """检查是否已成功认证"""
@@ -224,7 +252,7 @@ class GmailClient:
             message_id: 邮件 ID
 
         Returns:
-            包含 Subject, From, Date, labelIds 等的字典
+            包含 Subject, From, Date, label_names 等的字典
         """
         message = self.get_message(message_id, format='metadata')
         headers = {}
@@ -234,10 +262,21 @@ class GmailClient:
             if name in ['subject', 'from', 'to', 'date']:
                 headers[name] = header['value']
 
-        # Add Gmail label IDs
+        # Convert label IDs to label names
         label_ids = message.get('labelIds', [])
         if label_ids:
-            headers['labelIds'] = label_ids
+            # Map label IDs to names, filtering out system labels that are not useful
+            label_names = []
+            for label_id in label_ids:
+                # Skip common system labels that don't add value
+                if label_id in ['INBOX', 'SENT', 'UNREAD', 'IMPORTANT']:
+                    continue
+                # Get label name from cache, fallback to ID if not found
+                label_name = self.label_cache.get(label_id, label_id)
+                label_names.append(label_name)
+
+            if label_names:
+                headers['label_names'] = label_names
 
         return headers
     

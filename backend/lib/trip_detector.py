@@ -198,7 +198,7 @@ CRITICAL: You MUST respond with ONLY valid JSON. Do NOT include any thinking pro
 The traveler lives in Zurich, so trips typically start and end there.
 {existing_trips_text}
 
-GMAIL LABEL GROUPING (HIGHEST PRIORITY):
+GMAIL LABEL GROUPING AND NAMING (HIGHEST PRIORITY):
 - Each email has Gmail Labels that the user manually assigned
 - Emails with the SAME Gmail label naturally belong to the SAME trip
 - Gmail labels are the PRIMARY and STRONGEST signal for trip boundaries
@@ -206,7 +206,19 @@ GMAIL LABEL GROUPING (HIGHEST PRIORITY):
 - Use labels as the FIRST criteria for grouping, then verify with dates and locations
 - If emails have different labels, they are likely different trips (unless dates/locations strongly suggest otherwise)
 - The label grouping should override other heuristics when there is a conflict
-- Example: If 5 emails all have label "Trip/Paris2024", they should form ONE trip regardless of small gaps in dates
+- Example: If 5 emails all have label "trips/paris2024", they should form ONE trip regardless of small gaps in dates
+
+TRIP NAMING FROM LABELS (CRITICAL):
+- Label names often contain the trip destination (e.g., "trips/hongkong", "trips/paris2024", "travel/japan")
+- When a label name contains destination information, USE IT to name the trip
+- Extract the destination from label names and use it as the trip name
+- Examples:
+  * Label "trips/hongkong" → Trip name should be "Trip to Hong Kong"
+  * Label "trips/paris2024" → Trip name should be "Trip to Paris"
+  * Label "travel/japan" → Trip name should be "Trip to Japan"
+  * Label "business/singapore" → Trip name should be "Trip to Singapore"
+- If multiple emails share a trip label, that label's destination should be the primary destination for the trip
+- The label-derived trip name should take precedence over destinations inferred from bookings
 
 For each trip, identify:
 1. Trip boundaries (departure from and return to Zurich)

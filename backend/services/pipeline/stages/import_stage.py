@@ -173,9 +173,9 @@ class ImportStage(BasePipelineStage):
                     except:
                         email_date = datetime.now()
 
-                    # Get and serialize labels
-                    label_ids = email_data.get('labelIds', [])
-                    labels_json = json.dumps(label_ids) if label_ids else None
+                    # Get and serialize label names (not IDs)
+                    label_names = email_data.get('label_names', [])
+                    labels_json = json.dumps(label_names) if label_names else None
 
                     # Create email record
                     email = Email(
@@ -184,7 +184,7 @@ class ImportStage(BasePipelineStage):
                         sender=email_data.get('from', 'Unknown'),
                         date=date_str,
                         timestamp=email_date,
-                        labels=labels_json
+                        labels=labels_json  # Now stores label names like "trips/hongkong"
                     )
                     
                     db.add(email)
