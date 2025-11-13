@@ -62,12 +62,7 @@ class ConfigManager:
         """获取Gmail token文件路径"""
         relative_path = self._config['gmail']['token_path']
         return self.get_absolute_path(relative_path)
-    
-    def get_gemini_config_path(self) -> str:
-        """获取Gemini配置文件路径"""
-        relative_path = self._config['gemini']['config_path']
-        return self.get_absolute_path(relative_path)
-    
+
     def get_batch_size(self) -> int:
         """获取批处理大小"""
         return self._config.get('settings', {}).get('batch_size', 20)

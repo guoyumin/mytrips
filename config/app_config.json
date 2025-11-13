@@ -6,9 +6,6 @@
     "credentials_path": "config/credentials.json",
     "token_path": "config/token.json"
   },
-  "gemini": {
-    "config_path": "config/gemini_config.json"
-  },
   "settings": {
     "batch_size": 20,
     "log_level": "INFO"
