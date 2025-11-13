@@ -34,8 +34,8 @@ class TripDetectionService:
         
         # Define fallback order for trip detection
         self.provider_fallback_order = [
-            ('gemini', 'fast'),
-            ('openai', 'fast')
+            ('openai', 'fast'),
+            ('gemini', 'fast')
             
         ]
         
@@ -272,7 +272,8 @@ class TripDetectionService:
                 self.detection_progress['message'] = f'Processing batch {batch_num} (size: {current_batch_size}, with {len(all_trips)} existing trips)'
                 
                 # Always pass ALL current trips (existing from database + newly detected)
-                previous_trips = all_trips.copy() if all_trips else None
+                # IMPORTANT: Pass empty list [] instead of None when there are no trips
+                previous_trips = all_trips.copy() if all_trips else []
                 
                 logger.info(f"Batch {batch_num}: Processing {len(batch_emails)} emails (batch size: {current_batch_size})")
                 
