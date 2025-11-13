@@ -318,14 +318,11 @@ class TripDetectionService:
                             logger.debug(f"Batch {batch_num}: previous_trips[0] type: {type(previous_trips[0]) if previous_trips else 'N/A'}")
                         
                         batch_trips = self.trip_detector.detect_trips(email_data, previous_trips)
-                        
-                        # Check if detection actually succeeded 
+
+                        # Check if detection actually succeeded
                         if batch_trips is None:
                             raise Exception("Trip detection returned None - likely an AI API error")
-                        
-                        # Initialize all_trips to prevent undefined variable
-                        all_trips = []
-                        
+
                         # Success! Validate and update trips
                         if batch_trips:
                             # Debug logging for batch_trips
@@ -353,8 +350,8 @@ class TripDetectionService:
                         else:
                             logger.warning(f"Batch {batch_num}: No trips returned from AI provider")
                             # Don't clear existing trips or mark emails as completed if we got no results
-                            # This might be a temporary failure
-                        
+                            # This might be a temporary failure - keep all_trips unchanged
+
                         # Only proceed with saving if we actually got trips back
                         if batch_trips is not None:
                             # Save trips after each successful batch to prevent data loss
@@ -496,7 +493,7 @@ class TripDetectionService:
         try:
             # Create repository instance
             trip_repository = TripRepository(db)
-            
+
             # Convert all trip dictionaries to Trip domain objects
             trip_objects = []
             for trip_data in trips:
@@ -509,11 +506,17 @@ class TripDetectionService:
                     logger.debug(f"Failed trip data: {json.dumps(trip_data, indent=2, default=str)[:500]}...")
                     # Continue with other trips
                     continue
-            
+
+            # SAFETY CHECK: Only replace if we have valid trips to save
+            # This prevents data loss when a batch fails to generate trips
+            if not trip_objects:
+                logger.warning("No valid trip objects to save - skipping database replacement to prevent data loss")
+                return
+
             # Use repository to replace all trips
             saved_count = trip_repository.replace_all_trips(trip_objects)
             logger.info(f"Successfully replaced all trips. Saved {saved_count} trips to database")
-            
+
         except Exception as e:
             logger.error(f"Failed to replace trips in database: {e}")
             raise
