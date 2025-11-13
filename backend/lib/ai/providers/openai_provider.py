@@ -47,15 +47,24 @@ class OpenAIProvider(AIProviderInterface):
     def generate_content(self, prompt: str) -> Dict:
         """Generate content using OpenAI GPT and return response with token usage"""
         try:
-            response = self.client.chat.completions.create(
-                model=self.model_version,
-                messages=[
+            # GPT-5 models don't support custom temperature, only default value (1)
+            # Check if model is GPT-5
+            is_gpt5 = self.model_version.startswith('gpt-5')
+
+            # Build request parameters
+            request_params = {
+                "model": self.model_version,
+                "messages": [
                     {"role": "system", "content": "You are a helpful assistant for travel booking analysis."},
                     {"role": "user", "content": prompt}
-                ],
-                temperature=0.1
-                # Don't limit max_tokens - let the model use what it needs
-            )
+                ]
+            }
+
+            # Only set temperature for non-GPT-5 models
+            if not is_gpt5:
+                request_params["temperature"] = 0.1
+
+            response = self.client.chat.completions.create(**request_params)
             
             # Extract content and usage info
             content = response.choices[0].message.content
