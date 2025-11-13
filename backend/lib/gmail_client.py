@@ -218,22 +218,27 @@ class GmailClient:
     
     def get_message_headers(self, message_id: str) -> Dict[str, str]:
         """
-        获取邮件头信息
-        
+        获取邮件头信息和标签
+
         Args:
             message_id: 邮件 ID
-            
+
         Returns:
-            包含 Subject, From, Date 等的字典
+            包含 Subject, From, Date, labelIds 等的字典
         """
         message = self.get_message(message_id, format='metadata')
         headers = {}
-        
+
         for header in message.get('payload', {}).get('headers', []):
             name = header['name'].lower()
             if name in ['subject', 'from', 'to', 'date']:
                 headers[name] = header['value']
-        
+
+        # Add Gmail label IDs
+        label_ids = message.get('labelIds', [])
+        if label_ids:
+            headers['labelIds'] = label_ids
+
         return headers
     
     def get_attachment(self, message_id: str, attachment_id: str) -> Optional[bytes]:

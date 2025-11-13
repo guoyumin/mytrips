@@ -1,6 +1,7 @@
 """
 Import Stage for Email Pipeline
 """
+import json
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -171,14 +172,19 @@ class ImportStage(BasePipelineStage):
                         email_date = parsedate_to_datetime(date_str)
                     except:
                         email_date = datetime.now()
-                    
+
+                    # Get and serialize labels
+                    label_ids = email_data.get('labelIds', [])
+                    labels_json = json.dumps(label_ids) if label_ids else None
+
                     # Create email record
                     email = Email(
                         email_id=email_data['email_id'],
                         subject=email_data.get('subject', 'No Subject'),
                         sender=email_data.get('from', 'Unknown'),
                         date=date_str,
-                        timestamp=email_date
+                        timestamp=email_date,
+                        labels=labels_json
                     )
                     
                     db.add(email)

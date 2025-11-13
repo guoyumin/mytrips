@@ -117,13 +117,23 @@ class TripDetector:
         """Create comprehensive prompt for trip detection"""
         # Sort emails by date for better context
         sorted_emails = sorted(emails, key=lambda x: x.get('date', ''))
-        
+
         # Build email list for prompt using extracted booking information
         email_list = []
         for i, email in enumerate(sorted_emails):
             booking_info = email.get('extracted_booking_info', {})
             booking_summary = json.dumps(booking_info, indent=2) if booking_info else "No booking information extracted"
-            
+
+            # Parse Gmail labels from JSON string
+            labels = []
+            labels_json = email.get('labels')
+            if labels_json:
+                try:
+                    labels = json.loads(labels_json) if isinstance(labels_json, str) else labels_json
+                except:
+                    labels = []
+            labels_text = ', '.join(labels) if labels else 'None'
+
             email_summary = f"""
 Email {i+1}:
 - ID: {email.get('email_id', 'unknown')}
@@ -131,6 +141,7 @@ Email {i+1}:
 - Subject: {email.get('subject', 'unknown')}
 - From: {email.get('sender', 'unknown')}
 - Type: {email.get('classification', 'unknown')}
+- Gmail Labels: {labels_text}
 - Extracted Booking Information:
 {booking_summary}
 """
@@ -186,6 +197,16 @@ CRITICAL: You MUST respond with ONLY valid JSON. Do NOT include any thinking pro
 
 The traveler lives in Zurich, so trips typically start and end there.
 {existing_trips_text}
+
+GMAIL LABEL GROUPING (HIGHEST PRIORITY):
+- Each email has Gmail Labels that the user manually assigned
+- Emails with the SAME Gmail label naturally belong to the SAME trip
+- Gmail labels are the PRIMARY and STRONGEST signal for trip boundaries
+- When multiple emails share a common label, they MUST be grouped into a single trip
+- Use labels as the FIRST criteria for grouping, then verify with dates and locations
+- If emails have different labels, they are likely different trips (unless dates/locations strongly suggest otherwise)
+- The label grouping should override other heuristics when there is a conflict
+- Example: If 5 emails all have label "Trip/Paris2024", they should form ONE trip regardless of small gaps in dates
 
 For each trip, identify:
 1. Trip boundaries (departure from and return to Zurich)

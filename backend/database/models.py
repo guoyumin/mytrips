@@ -24,7 +24,10 @@ class Email(Base):
     # 分类信息
     is_classified = Column(Boolean, default=False, index=True)  # 是否已分类
     classification = Column(String(50), nullable=True, index=True)  # 分类结果
-    
+
+    # Gmail labels (JSON format: ["Label1", "Label2"])
+    labels = Column(Text, nullable=True)  # Gmail标签列表，JSON格式
+
     # 邮件内容（为下一步内容提取准备）
     content = Column(Text, nullable=True)  # 邮件正文内容
     
