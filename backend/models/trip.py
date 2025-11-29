@@ -426,8 +426,8 @@ class Trip(BaseModel):
                         segment_type=seg_data.get('segment_type', ''),
                         departure_location=seg_data.get('departure_location', ''),
                         arrival_location=seg_data.get('arrival_location', ''),
-                        departure_datetime=datetime.fromisoformat(seg_data['departure_datetime']),
-                        arrival_datetime=datetime.fromisoformat(seg_data['arrival_datetime']),
+                        departure_datetime=datetime.fromisoformat(seg_data['departure_datetime']) if isinstance(seg_data['departure_datetime'], str) else seg_data['departure_datetime'],
+                        arrival_datetime=datetime.fromisoformat(seg_data['arrival_datetime']) if isinstance(seg_data['arrival_datetime'], str) else seg_data['arrival_datetime'],
                         carrier_name=seg_data.get('carrier_name'),
                         segment_number=seg_data.get('segment_number'),
                         distance_km=seg_data.get('distance_km'),
@@ -449,8 +449,8 @@ class Trip(BaseModel):
                 try:
                     accommodation = Accommodation(
                         property_name=acc_data.get('property_name', ''),
-                        check_in_date=datetime.fromisoformat(acc_data['check_in_date']),
-                        check_out_date=datetime.fromisoformat(acc_data['check_out_date']),
+                        check_in_date=datetime.fromisoformat(acc_data['check_in_date']) if isinstance(acc_data['check_in_date'], str) else acc_data['check_in_date'],
+                        check_out_date=datetime.fromisoformat(acc_data['check_out_date']) if isinstance(acc_data['check_out_date'], str) else acc_data['check_out_date'],
                         address=acc_data.get('address'),
                         city=acc_data.get('city'),
                         country=acc_data.get('country'),
@@ -471,8 +471,8 @@ class Trip(BaseModel):
                 try:
                     activity = TourActivity(
                         activity_name=act_data.get('activity_name', ''),
-                        start_datetime=datetime.fromisoformat(act_data['start_datetime']),
-                        end_datetime=datetime.fromisoformat(act_data['end_datetime']) if act_data.get('end_datetime') else None,
+                        start_datetime=datetime.fromisoformat(act_data['start_datetime']) if isinstance(act_data['start_datetime'], str) else act_data['start_datetime'],
+                        end_datetime=(datetime.fromisoformat(act_data['end_datetime']) if isinstance(act_data['end_datetime'], str) else act_data['end_datetime']) if act_data.get('end_datetime') else None,
                         description=act_data.get('description'),
                         location=act_data.get('location'),
                         city=act_data.get('city'),
@@ -494,8 +494,8 @@ class Trip(BaseModel):
                     cruise = Cruise(
                         cruise_line=cruise_data.get('cruise_line', ''),
                         ship_name=cruise_data.get('ship_name'),
-                        departure_datetime=datetime.fromisoformat(cruise_data['departure_datetime']),
-                        arrival_datetime=datetime.fromisoformat(cruise_data['arrival_datetime']),
+                        departure_datetime=datetime.fromisoformat(cruise_data['departure_datetime']) if isinstance(cruise_data['departure_datetime'], str) else cruise_data['departure_datetime'],
+                        arrival_datetime=datetime.fromisoformat(cruise_data['arrival_datetime']) if isinstance(cruise_data['arrival_datetime'], str) else cruise_data['arrival_datetime'],
                         itinerary=cruise_data.get('itinerary', []),
                         cost=cruise_data.get('cost') or 0.0,
                         booking_platform=cruise_data.get('booking_platform'),

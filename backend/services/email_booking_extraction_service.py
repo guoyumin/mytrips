@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from backend.database.config import SessionLocal
 from backend.database.models import Email, EmailContent
+from backend.lib.config_manager import config_manager
 from backend.lib.ai.ai_provider_with_fallback import AIProviderWithFallback
 from backend.lib.booking_extractor import BookingExtractor
 from backend.constants import TRAVEL_CATEGORIES
@@ -205,8 +206,8 @@ class EmailBookingExtractionService:
             
             self.extraction_progress['message'] = f'Found {len(emails)} emails to extract booking information'
             
-            # Process emails in smaller batches for booking extraction (10 emails per batch)
-            batch_size = 10
+            # Process emails in smaller batches for booking extraction
+            batch_size = config_manager.get_booking_extraction_batch_size()
             total_batches = (len(emails) + batch_size - 1) // batch_size
             self.extraction_progress['total_batches'] = total_batches
             

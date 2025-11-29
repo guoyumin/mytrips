@@ -84,13 +84,16 @@ class EmailClassifier:
         for i, email in enumerate(emails):
             subject = email.get('subject', '')[:100]  # 限制长度
             sender = email.get('from', '')[:50]
-            email_list.append(f"{i+1}. From: {sender} | Subject: {subject}")
+            labels = email.get('labels', '[]')
+            email_list.append(f"{i+1}. From: {sender} | Subject: {subject} | Labels: {labels}")
         
         emails_text = "\n".join(email_list)
         
         prompt = f"""Classify these {len(emails)} emails as travel-related or not.
 
 IMPORTANT: Only classify emails that contain ACTUAL ITINERARY INFORMATION (booking confirmations, tickets, reservations with specific dates/times/locations) as travel categories. Marketing emails from travel companies should be classified as 'marketing'.
+
+STRONG SIGNAL: If the 'Labels' field contains "Trip" or any label starting with "Trip/" (e.g., "Trip/Japan", "Trip/2024"), this is a VERY STRONG indicator that the email is travel-related. However, still verify it contains actual booking info and is not just a newsletter filed there by mistake.
 
 Categories:
 - flight: Flight booking confirmations, boarding passes, e-tickets (with flight numbers/times)

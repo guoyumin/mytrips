@@ -7,7 +7,12 @@
     "token_path": "config/token.json"
   },
   "settings": {
-    "batch_size": 20,
+    "batch_size": 50,
+    "batch_sizes": {
+      "classification": 50,
+      "booking_extraction": 20,
+      "trip_detection": 10
+    },
     "log_level": "INFO"
   }
 }

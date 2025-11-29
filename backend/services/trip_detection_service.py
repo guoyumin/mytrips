@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from backend.database.config import SessionLocal
+
+from backend.lib.config_manager import config_manager
 from backend.database.models import (
     Email, EmailContent, EmailTransportSegment, EmailAccommodation,
     EmailTourActivity, EmailCruise
@@ -34,9 +36,8 @@ class TripDetectionService:
         
         # Define fallback order for trip detection
         self.provider_fallback_order = [
-            ('openai', 'fast'),
+            ('gemini', 'powerful'),
             ('gemini', 'fast')
-            
         ]
         
         try:
@@ -237,17 +238,10 @@ class TripDetectionService:
             # Log initial email count
             logger.info(f"Total booking emails found (excluding non-booking emails): {len(emails)}")
             
-            # Calculate cost estimation
-            # Rough estimate: 1000 input tokens and 500 output tokens per email
-            estimated_input_tokens = len(emails) * 1000
-            estimated_output_tokens = len(emails) * 500
-            cost_estimate = self.ai_provider.estimate_cost(estimated_input_tokens, estimated_output_tokens)
-            self.detection_progress['cost_estimate'] = cost_estimate
-            
-            self.detection_progress['message'] = f'Found {len(emails)} travel emails to analyze (Est. cost: ${cost_estimate["estimated_cost_usd"]:.4f})'
+            self.detection_progress['message'] = f'Found {len(emails)} travel emails to analyze'
             
             # Fixed batch size for provider fallback strategy
-            batch_size = 10  # Process in moderate batches
+            batch_size = config_manager.get_trip_detection_batch_size()  # Process in moderate batches
             total_batches = (len(emails) + batch_size - 1) // batch_size  # Calculate total number of batches
             self.detection_progress['total_batches'] = total_batches
             

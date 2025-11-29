@@ -144,7 +144,8 @@ class ClassificationMicroService(BaseMicroService):
             emails_data.append({
                 'email_id': email.email_id,
                 'subject': email.subject or '',
-                'from': email.sender or ''
+                'from': email.sender or '',
+                'labels': email.labels or '[]'
             })
         
         return emails_data

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class DeepSeekProvider(AIProviderInterface):
     """DeepSeek implementation of AI Provider Interface for local models via Ollama"""
-    
+     
     def __init__(self, model_version: str = None):
         # Load config first to get default model if not specified
         self.config = self._load_config()

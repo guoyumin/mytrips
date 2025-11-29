@@ -9,6 +9,37 @@ from backend.lib.ai.ai_provider_interface import AIProviderInterface
 
 logger = logging.getLogger(__name__)
 
+# Setup dedicated AI interaction logger
+ai_logger = logging.getLogger('ai_interaction')
+ai_logger.setLevel(logging.INFO)
+# Prevent propagation to root logger to avoid duplicating in server.log
+ai_logger.propagate = False
+
+def setup_ai_logger():
+    """Ensure AI logger is correctly configured"""
+    try:
+        # Check if we already have the file handler
+        has_file_handler = any(isinstance(h, logging.FileHandler) and 'ai_interaction.log' in h.baseFilename for h in ai_logger.handlers)
+        
+        if not has_file_handler:
+            # Use absolute path to ensure logs go to the correct project root logs directory
+            # Project root is /Users/guoyumin/Workspace/Mytrips
+            log_dir = '/Users/guoyumin/Workspace/Mytrips/logs'
+            import os
+            os.makedirs(log_dir, exist_ok=True)
+            
+            log_file = os.path.join(log_dir, 'ai_interaction.log')
+            file_handler = logging.FileHandler(log_file)
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            file_handler.setFormatter(formatter)
+            ai_logger.addHandler(file_handler)
+            logger.info(f"AI interaction logger setup successfully at {log_file}")
+    except Exception as e:
+        logger.error(f"Failed to setup AI interaction logger: {e}")
+
+# Run setup immediately
+setup_ai_logger()
+
 
 class TripDetector:
     """Core trip detection logic using AI providers"""
@@ -46,22 +77,28 @@ class TripDetector:
             logger.info(f"Calling AI model for trip detection: {model_info.get('provider', 'Unknown')} - {model_info['model_name']}")
             logger.info(f"Sending AI request - Length: {prompt_length:,} characters, Booking emails: {len(emails)}, Existing trips: {len(existing_trips or [])}")
             
+            # Log full prompt to AI logger
+            ai_logger.info("="*80)
+            ai_logger.info(f"NEW TRIP DETECTION REQUEST - {datetime.now().isoformat()}")
+            ai_logger.info("="*80)
+            ai_logger.info(f"PROMPT:\n{prompt}")
+            
             # Call AI provider and get full response with token usage
             ai_response = self.ai_provider.generate_content(prompt)
             
-            # Extract response text and token information
+            # Extract response text
             response_text = ai_response['content']
-            input_tokens = ai_response['input_tokens']
-            output_tokens = ai_response['output_tokens']
-            total_tokens = ai_response['total_tokens']
-            estimated_cost = ai_response['estimated_cost_usd']
             
             # Log response details for diagnostics
             response_length = len(response_text)
             logger.info(f"Received AI response - Length: {response_length:,} characters")
-            logger.info(f"Token usage - Input: {input_tokens:,}, Output: {output_tokens:,}, Total: {total_tokens:,}")
-            logger.info(f"Estimated cost: ${estimated_cost:.4f} USD")
             
+            # Log full response to AI logger
+            ai_logger.info("-" * 80)
+            ai_logger.info("AI RESPONSE:")
+            ai_logger.info("-" * 80)
+            ai_logger.info(f"{response_text}")
+            ai_logger.info("="*80 + "\n\n")
             
             # Log full response for diagnosis (using DEBUG level to reduce log noise)
             logger.debug(f"Full AI response: {response_text}")
@@ -84,6 +121,8 @@ class TripDetector:
             logger.error(f"Context - Booking emails: {len(emails)}, Existing trips: {len(existing_trips or [])}")
             if hasattr(e, '__class__'):
                 logger.error(f"Exception type: {e.__class__.__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             
             # Check if this is a critical AI API error that should stop processing
             if "500" in error_msg or "internal error" in error_msg.lower() or "quota" in error_msg.lower():
@@ -95,8 +134,10 @@ class TripDetector:
                 logger.error("AI response parsing error - returning None to trigger fallback")
                 return None
                 
-            # Return existing trips for non-critical errors
-            return existing_trips or []
+            # For any other errors, also return None to indicate failure
+            # We should not assume "no trips found" if an error occurred
+            logger.error("Generic error during trip detection - returning None to trigger fallback")
+            return None
     
     def _format_email_ids_safely(self, segments: List[Dict]) -> str:
         """Safely format email IDs from transport segments"""

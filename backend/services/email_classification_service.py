@@ -25,16 +25,14 @@ class EmailClassificationService:
         # Define provider order for first-tier (local model) classification
         # Using local models for fast initial screening
         self.first_tier_providers = [
-            ('deepseek', 'powerful'),
-            ('gemma3', 'powerful')
+            ('gemini', 'fast')
         ]
         
         # Define provider order for second-tier (cloud model) classification
         # Using more powerful models for accurate travel detection
         self.second_tier_providers = [
             ('gemini', 'fast'),      # Use Gemini for better accuracy
-            ('openai', 'fast'),      # Fallback to OpenAI
-            ('claude', 'fast')       # Final fallback
+            ('openai', 'fast')       # Fallback to OpenAI
         ]
         
         # Try to initialize email classifiers
@@ -122,15 +120,10 @@ class EmailClassificationService:
                 'skipped_count': 0,
                 'current_batch': 0,
                 'total_batches': 0,
-                'batch_size': config_manager.get_batch_size(),
+                'batch_size': config_manager.get_classification_batch_size(),
                 'finished': False,
                 'error': None,
-                'start_time': datetime.now(),
-                'estimated_cost': None,
-                'second_tier_verified': 0,
-                'second_tier_changes': 0,
-                'second_tier_cost': 0.0,
-                'second_tier_tokens': {'input': 0, 'output': 0, 'total': 0}
+                'start_time': datetime.now()
             }
         
             # Start classification thread
@@ -212,13 +205,7 @@ class EmailClassificationService:
             
             logger.info(f"Processing {len(unclassified_emails)} emails in {total_batches} batches of {batch_size} each")
             
-            # Initialize actual cost tracking
-            self.classification_progress['actual_cost'] = 0.0
-            self.classification_progress['total_tokens'] = {
-                'input': 0,
-                'output': 0,
-                'total': 0
-            }
+
             
             # Process in batches
             all_results = []
@@ -254,12 +241,7 @@ class EmailClassificationService:
                     classifications = batch_result.get('classifications', [])
                     
                     # Update cost tracking if available
-                    if batch_result.get('cost_info'):
-                        cost_info = batch_result['cost_info']
-                        self.classification_progress['actual_cost'] += cost_info.get('estimated_cost_usd', 0.0)
-                        self.classification_progress['total_tokens']['input'] += cost_info.get('input_tokens', 0)
-                        self.classification_progress['total_tokens']['output'] += cost_info.get('output_tokens', 0)
-                        self.classification_progress['total_tokens']['total'] += cost_info.get('total_tokens', 0)
+
                     
                     # Perform second-tier verification on travel emails
                     if self.second_tier_micro and classifications:
@@ -315,14 +297,7 @@ class EmailClassificationService:
                 logger.error(f"Classification errors: {total_errors}")
                 
             # Log final cost if available
-            if self.classification_progress.get('actual_cost'):
-                total_cost = self.classification_progress['actual_cost']
-                second_tier_cost = self.classification_progress.get('second_tier_cost', 0.0)
-                first_tier_cost = total_cost - second_tier_cost
-                logger.info(f"Classification completed: {successful_count} successful, {failed_count} failed.")
-                logger.info(f"Cost breakdown - First tier: ${first_tier_cost:.4f}, Second tier: ${second_tier_cost:.4f}, Total: ${total_cost:.4f}")
-            else:
-                logger.info(f"Classification completed: {successful_count} successful, {failed_count} failed")
+            logger.info(f"Classification completed: {successful_count} successful, {failed_count} failed")
             
             if failed_count > 0:
                 logger.info(f"Found {failed_count} failed classifications - keeping as unclassified for retry")
@@ -380,10 +355,7 @@ class EmailClassificationService:
             )
             
             # Update cost tracking
-            if cost_info := second_tier_result.get('cost_info'):
-                self.classification_progress['actual_cost'] += cost_info.get('estimated_cost_usd', 0.0)
-                self.classification_progress.setdefault('second_tier_cost', 0.0)
-                self.classification_progress['second_tier_cost'] += cost_info.get('estimated_cost_usd', 0.0)
+
             
             # Map second-tier results
             second_tier_map = {c['email_id']: c['classification'] 

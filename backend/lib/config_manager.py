@@ -67,6 +67,18 @@ class ConfigManager:
         """获取批处理大小"""
         return self._config.get('settings', {}).get('batch_size', 20)
     
+    def get_classification_batch_size(self) -> int:
+        """获取邮件分类批处理大小"""
+        return self._config.get('settings', {}).get('batch_sizes', {}).get('classification', 50)
+
+    def get_booking_extraction_batch_size(self) -> int:
+        """获取预订提取批处理大小"""
+        return self._config.get('settings', {}).get('batch_sizes', {}).get('booking_extraction', 10)
+
+    def get_trip_detection_batch_size(self) -> int:
+        """获取行程检测批处理大小"""
+        return self._config.get('settings', {}).get('batch_sizes', {}).get('trip_detection', 10)
+    
     def get_save_interval(self) -> int:
         """获取保存间隔"""
         return self._config.get('settings', {}).get('save_interval', 10)

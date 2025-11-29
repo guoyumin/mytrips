@@ -161,10 +161,12 @@ class AIProviderWithFallback(AIProviderInterface):
         info = self._current_provider.get_model_info()
         
         # Add fallback information
+        current_config = self.provider_configs[self._current_index] if 0 <= self._current_index < len(self.provider_configs) else ("Unknown", "Unknown")
+        
         info["fallback_info"] = {
             "current_index": self._current_index,
             "total_providers": len(self.provider_configs),
-            "current_config": self.provider_configs[self._current_index],
+            "current_config": current_config,
             "all_configs": self.provider_configs
         }
         

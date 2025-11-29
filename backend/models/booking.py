@@ -118,13 +118,25 @@ class BookingInfo(BaseModel):
         
         # Check transport segments have required fields
         for segment in self.transport_segments:
-            if not all([
-                segment.get('departure_location'),
-                segment.get('arrival_location'),
-                segment.get('departure_datetime'),
-                segment.get('arrival_datetime')
-            ]):
-                return False
+            segment_type = (segment.get('segment_type') or '').lower()
+            
+            # For car rentals, we only strictly require pick-up info
+            # Drop-off info might be missing in some confirmation emails
+            if segment_type in ['car', 'car_rental']:
+                if not all([
+                    segment.get('departure_location'),
+                    segment.get('departure_datetime')
+                ]):
+                    return False
+            else:
+                # For flights, trains, etc., we need both departure and arrival
+                if not all([
+                    segment.get('departure_location'),
+                    segment.get('arrival_location'),
+                    segment.get('departure_datetime'),
+                    segment.get('arrival_datetime')
+                ]):
+                    return False
         
         # Check accommodations have required fields
         for acc in self.accommodations:
@@ -383,6 +395,44 @@ class BookingInfo(BaseModel):
         
         return data
     
+    @staticmethod
+    def _extract_cost_value(value: Any) -> Optional[float]:
+        """
+        Extract numeric cost value from various formats.
+        Handles strings like "35,000 pts", "100 EUR", "Included", etc.
+        """
+        if value is None:
+            return 0.0
+            
+        if isinstance(value, (int, float)):
+            return float(value)
+        
+        if isinstance(value, dict):
+            return None
+            
+        if not isinstance(value, str):
+            return None
+            
+        # Handle "Included", "Free", etc.
+        if value.lower() in ['included', 'free', 'complimentary']:
+            return 0.0
+            
+        # Remove currency symbols and text
+        # Keep digits, dots, and negative signs
+        # Remove commas (thousands separator)
+        clean_val = value.replace(',', '')
+        
+        # Extract the first number found
+        import re
+        match = re.search(r'-?\d*\.?\d+', clean_val)
+        if match:
+            try:
+                return float(match.group())
+            except ValueError:
+                return None
+                
+        return None
+    
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'BookingInfo':
         """Create BookingInfo from dictionary"""
@@ -419,22 +469,13 @@ class BookingInfo(BaseModel):
                 if isinstance(breakdown, dict):
                     cleaned_breakdown = {}
                     for key, value in breakdown.items():
-                        # Only keep numeric values
-                        if value is None:
-                            cleaned_breakdown[key] = 0.0
-                        elif isinstance(value, (int, float)):
-                            cleaned_breakdown[key] = float(value)
-                        elif isinstance(value, dict):
-                            # Skip complex nested structures
-                            logger.warning(f"Skipping complex cost_breakdown entry '{key}': {value}")
-                            continue
+                        # Use helper to extract numeric value
+                        cleaned_value = cls._extract_cost_value(value)
+                        if cleaned_value is not None:
+                            cleaned_breakdown[key] = cleaned_value
                         else:
-                            # Try to convert to float
-                            try:
-                                cleaned_breakdown[key] = float(value)
-                            except (ValueError, TypeError):
-                                logger.warning(f"Skipping non-numeric cost_breakdown entry '{key}': {value}")
-                                continue
+                            logger.warning(f"Skipping non-numeric cost_breakdown entry '{key}': {value}")
+                            
                     cost_data['cost_breakdown'] = cleaned_breakdown
             # Ensure total_cost is not None
             if cost_data.get('total_cost') is None:

@@ -47,7 +47,15 @@ class GeminiProvider(AIProviderInterface):
     def generate_content(self, prompt: str) -> Dict:
         """Generate content using Gemini and return response with token usage"""
         try:
-            response = self.model.generate_content(prompt)
+            # Get timeout from config, default to 60 seconds
+            timeout = self.config.get('timeout', 60)
+            
+            # Use request_options to set timeout
+            from google.api_core import retry
+            response = self.model.generate_content(
+                prompt,
+                request_options={'timeout': timeout}
+            )
             
             # Extract content
             content = response.text if hasattr(response, 'text') else str(response)
@@ -68,7 +76,7 @@ class GeminiProvider(AIProviderInterface):
                 output_tokens = len(content) // 4
                 total_tokens = input_tokens + output_tokens
             
-            # Calculate cost
+            # Calculate cost (disabled)
             cost_info = self.estimate_cost(input_tokens, output_tokens)
             
             return {
@@ -76,7 +84,7 @@ class GeminiProvider(AIProviderInterface):
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "total_tokens": total_tokens,
-                "estimated_cost_usd": cost_info["estimated_cost_usd"]
+                "estimated_cost_usd": 0.0
             }
         except Exception as e:
             logger.error(f"Gemini generate_content error: {e}")
@@ -93,51 +101,15 @@ class GeminiProvider(AIProviderInterface):
         }
     
     def estimate_cost(self, input_tokens: int, output_tokens: int) -> Dict:
-        """Calculate Gemini API cost based on token counts"""
-        # Get pricing from config
-        pricing_config = self.config.get('pricing', {})
-        
-        # Find matching pricing for the model
-        model_pricing_info = None
-        for model_key, price_info in pricing_config.items():
-            if model_key in self.model_version.lower():
-                model_pricing_info = price_info
-                break
-        
-        # Default to Gemini 1.5 Flash pricing if model not found
-        if not model_pricing_info:
-            logger.warning(f"Unknown model {self.model_version}, using Gemini 1.5 Flash pricing")
-            model_pricing_info = pricing_config.get('gemini-1.5-flash', {
-                'input_per_1m': 0.075, 'output_per_1m': 0.30
-            })
-        
-        # Check if we need to use long context pricing
-        use_long_context = False
-        if 'long_context_threshold' in model_pricing_info and input_tokens > model_pricing_info['long_context_threshold']:
-            use_long_context = True
-            logger.info(f"Using long context pricing for {input_tokens} tokens")
-        
-        # Get appropriate pricing
-        if use_long_context and 'input_per_1m_long' in model_pricing_info:
-            input_price = model_pricing_info['input_per_1m_long']
-            output_price = model_pricing_info['output_per_1m_long']
-        else:
-            input_price = model_pricing_info['input_per_1m']
-            output_price = model_pricing_info['output_per_1m']
-        
-        # Calculate cost (pricing is per 1M tokens)
-        input_cost = (input_tokens / 1_000_000) * input_price
-        output_cost = (output_tokens / 1_000_000) * output_price
-        total_cost = input_cost + output_cost
-        
+        """Calculate Gemini API cost (disabled)"""
         return {
-            "estimated_cost_usd": total_cost,
-            "input_cost_usd": input_cost,
-            "output_cost_usd": output_cost,
+            "estimated_cost_usd": 0.0,
+            "input_cost_usd": 0.0,
+            "output_cost_usd": 0.0,
             "model_pricing": {
-                'input': input_price,
-                'output': output_price,
-                'long_context': use_long_context
+                'input': 0.0,
+                'output': 0.0,
+                'long_context': False
             }
         }
     
