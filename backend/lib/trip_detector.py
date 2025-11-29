@@ -64,10 +64,13 @@ class TripDetector:
                 logger.info("No emails to process")
                 return existing_trips or []
             
-            logger.info(f"Processing {len(emails)} booking emails with {len(existing_trips or [])} existing trips")
+            # Filter existing trips to only include relevant ones (time-based)
+            relevant_trips, ignored_trips = self._filter_relevant_trips(emails, existing_trips)
             
-            # Create AI prompt
-            prompt = self._create_trip_detection_prompt(emails, existing_trips)
+            logger.info(f"Processing {len(emails)} booking emails with {len(relevant_trips)} relevant existing trips (ignored {len(ignored_trips)} older/future trips)")
+            
+            # Create AI prompt with minimized trip data
+            prompt = self._create_trip_detection_prompt(emails, relevant_trips)
             
             # Log request details for diagnostics
             prompt_length = len(prompt)
@@ -75,7 +78,7 @@ class TripDetector:
             # Log AI model being used
             model_info = self.ai_provider.get_model_info()
             logger.info(f"Calling AI model for trip detection: {model_info.get('provider', 'Unknown')} - {model_info['model_name']}")
-            logger.info(f"Sending AI request - Length: {prompt_length:,} characters, Booking emails: {len(emails)}, Existing trips: {len(existing_trips or [])}")
+            logger.info(f"Sending AI request - Length: {prompt_length:,} characters, Booking emails: {len(emails)}, Relevant trips: {len(relevant_trips)}")
             
             # Log full prompt to AI logger
             ai_logger.info("="*80)
@@ -104,11 +107,16 @@ class TripDetector:
             logger.debug(f"Full AI response: {response_text}")
             
             # Parse response
-            trips = self._parse_ai_response(response_text, emails)
+            detected_trips = self._parse_ai_response(response_text, emails)
             
-            if trips:
-                logger.info(f"Successfully detected {len(trips)} trips")
-                return trips
+            if detected_trips:
+                logger.info(f"Successfully detected {len(detected_trips)} trips from AI")
+                
+                # Merge with ignored trips to preserve full history
+                all_trips = detected_trips + ignored_trips
+                logger.info(f"Total trips after merging: {len(all_trips)}")
+                
+                return all_trips
             else:
                 logger.warning("No trips detected from AI response")
                 return existing_trips or []
@@ -138,6 +146,106 @@ class TripDetector:
             # We should not assume "no trips found" if an error occurred
             logger.error("Generic error during trip detection - returning None to trigger fallback")
             return None
+
+    def _filter_relevant_trips(self, emails: List[Dict], existing_trips: List[Dict]) -> tuple[List[Dict], List[Dict]]:
+        """
+        Filter existing trips to only include those relevant to the current email batch.
+        Relevance is determined by time proximity.
+        
+        Returns:
+            tuple: (relevant_trips, ignored_trips)
+        """
+        if not existing_trips:
+            return [], []
+            
+        if not emails:
+            return existing_trips, []
+            
+        try:
+            # Find date range of emails
+            email_dates = []
+            for email in emails:
+                date_str = email.get('date')
+                if date_str:
+                    try:
+                        # Handle various date formats if needed, but assuming ISO or standard format
+                        # Simple string comparison works for ISO dates, but safer to parse
+                        if 'T' in date_str:
+                            dt = datetime.fromisoformat(date_str)
+                        else:
+                            # Fallback or simple string parsing
+                            dt = datetime.fromisoformat(date_str)
+                        email_dates.append(dt)
+                    except:
+                        pass
+            
+            if not email_dates:
+                # If no valid dates found, return all trips to be safe
+                return existing_trips, []
+                
+            min_date = min(email_dates)
+            max_date = max(email_dates)
+            
+            # Define buffer (e.g., +/- 45 days to catch related trips or long trips)
+            from datetime import timedelta
+            buffer = timedelta(days=45)
+            search_start = min_date - buffer
+            search_end = max_date + buffer
+            
+            relevant = []
+            ignored = []
+            
+            for trip in existing_trips:
+                try:
+                    start_str = trip.get('start_date')
+                    end_str = trip.get('end_date')
+                    
+                    if not start_str or not end_str:
+                        # Keep trips with missing dates just in case
+                        relevant.append(trip)
+                        continue
+                        
+                    trip_start = datetime.fromisoformat(str(start_str))
+                    trip_end = datetime.fromisoformat(str(end_str))
+                    
+                    # Check overlap
+                    # Trip overlaps with [search_start, search_end] if:
+                    # trip_start <= search_end AND trip_end >= search_start
+                    if trip_start <= search_end and trip_end >= search_start:
+                        relevant.append(trip)
+                    else:
+                        ignored.append(trip)
+                except:
+                    # On error parsing trip dates, keep it safe
+                    relevant.append(trip)
+                    
+            return relevant, ignored
+            
+        except Exception as e:
+            logger.warning(f"Error filtering relevant trips: {e}. Using all trips.")
+            return existing_trips, []
+
+    def _minimize_trip_for_prompt(self, trip: Dict) -> Dict:
+        """
+        Create a minimized version of the trip dictionary for the AI prompt.
+        Removes unnecessary fields to save tokens.
+        """
+        minimized = trip.copy()
+        
+        # Remove fields not needed for context
+        fields_to_remove = ['ai_analysis', 'created_at', 'updated_at', 'id']
+        for field in fields_to_remove:
+            minimized.pop(field, None)
+            
+        # Minimize segments
+        if 'transport_segments' in minimized:
+            for seg in minimized['transport_segments']:
+                # Remove detailed distance info if present, AI can infer or we don't need it for context
+                seg.pop('distance_km', None)
+                seg.pop('distance_type', None)
+                seg.pop('duration_minutes', None)
+        
+        return minimized
     
     def _format_email_ids_safely(self, segments: List[Dict]) -> str:
         """Safely format email IDs from transport segments"""
@@ -219,7 +327,7 @@ EXISTING TRIPS SUMMARY:
 {"".join(existing_trips_summary)}
 
 COMPLETE EXISTING TRIPS DATA (MUST be included in your response with all details):
-{json.dumps(existing_trips, indent=2, default=str)}
+{json.dumps([self._minimize_trip_for_prompt(t) for t in existing_trips], indent=2, default=str)}
 
 When updating existing trips with new bookings:
 - Add new segments/accommodations/activities to the appropriate existing trip
