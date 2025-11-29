@@ -12,6 +12,7 @@ from backend.services.pipeline.stages.import_stage import ImportStage
 from backend.services.pipeline.stages.classification_stage import ClassificationStage
 from backend.services.pipeline.stages.content_stage import ContentExtractionStage
 from backend.services.pipeline.stages.booking_stage import BookingExtractionStage
+from backend.services.pipeline.stages.trip_detection_stage import TripDetectionStage
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,9 @@ class EmailPipelineServiceV2:
             self.import_stage = ImportStage(batch_size=100)
             self.classification_stage = ClassificationStage(batch_size=20)
             self.content_stage = ContentExtractionStage(batch_size=10)
+
             self.booking_stage = BookingExtractionStage(batch_size=10)
+            self.trip_detection_stage = TripDetectionStage(batch_size=10)
             
             # Threading control
             self._stop_flag = threading.Event()
@@ -113,7 +116,9 @@ class EmailPipelineServiceV2:
             self.import_stage.stop()
             self.classification_stage.stop()
             self.content_stage.stop()
+
             self.booking_stage.stop()
+            self.trip_detection_stage.stop()
             
             # Update state
             self.state_manager.stop_pipeline('Pipeline stop requested')
@@ -135,7 +140,9 @@ class EmailPipelineServiceV2:
             ('import', self.import_stage),
             ('classification', self.classification_stage),
             ('content', self.content_stage),
-            ('booking', self.booking_stage)
+
+            ('booking', self.booking_stage),
+            ('trip_detection', self.trip_detection_stage)
         ]:
             stage_progress = stage.get_progress()
             self.state_manager.update_stage_from_progress(stage_name, stage_progress)
@@ -205,10 +212,22 @@ class EmailPipelineServiceV2:
                 concurrent.futures.wait(futures)
                 
                 # Check if all completed successfully
+
                 success = all(not future.exception() for future in futures)
                 
                 if success and not self._stop_flag.is_set():
-                    self.state_manager.stop_pipeline('Pipeline completed successfully')
+                    # Run Trip Detection Stage sequentially after parallel stages
+                    logger.info("Parallel stages completed. Starting Trip Detection stage...")
+                    self.state_manager.set_current_stage('trip_detection')
+                    
+                    # Run detection in the same thread (since we are already in a background thread)
+                    self.trip_detection_stage.run_detection(date_range)
+                    
+                    if not self._stop_flag.is_set():
+                        self.state_manager.stop_pipeline('Pipeline completed successfully')
+                    else:
+                        self.state_manager.stop_pipeline('Pipeline stopped by user')
+                
                 elif self._stop_flag.is_set():
                     self.state_manager.stop_pipeline('Pipeline stopped by user')
                 else:
@@ -228,7 +247,9 @@ class EmailPipelineServiceV2:
                 ('import', self.import_stage),
                 ('classification', self.classification_stage),
                 ('content', self.content_stage),
-                ('booking', self.booking_stage)
+
+                ('booking', self.booking_stage),
+                ('trip_detection', self.trip_detection_stage)
             ]:
                 progress = stage.get_progress()
                 self.state_manager.update_stage_from_progress(stage_name, progress)

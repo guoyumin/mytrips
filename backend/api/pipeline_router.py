@@ -85,6 +85,7 @@ async def get_pipeline_status() -> Dict:
             'content_extracted': total_content_extracted,
             'bookings_extracted': total_bookings_extracted,
             'bookings_found': total_bookings_found,
+            'trips_found': stages.get('trip_detection', {}).get('trips_found', 0),
             'has_errors': len(progress.get('errors', [])) > 0
         }
         

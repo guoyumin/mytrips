@@ -481,8 +481,6 @@ button:disabled {
 }
 
 .emails-list {
-    max-height: 600px;
-    overflow-y: auto;
     padding: 0 30px 30px 30px;
 }
 

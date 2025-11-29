@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,25 +8,28 @@
     <link rel="stylesheet" href="/static/css/app.css?v=12">
     <style>
         /* Emergency CSS fix for layout */
-        .main-content { 
-            display: flex !important; 
-            flex-direction: row !important; 
+        .main-content {
+            display: flex !important;
+            flex-direction: row !important;
             height: calc(100vh - 120px) !important;
         }
-        .sidebar { 
-            width: 250px !important; 
-            flex-shrink: 0 !important; 
+
+        .sidebar {
+            width: 250px !important;
+            flex-shrink: 0 !important;
             background: white !important;
             border-right: 1px solid #ddd !important;
         }
-        .content-panel { 
-            flex: 1 !important; 
+
+        .content-panel {
+            flex: 1 !important;
             background: #fafbfc !important;
             padding: 30px !important;
             overflow-y: auto !important;
         }
     </style>
 </head>
+
 <body>
     <div class="app-container">
         <!-- Header -->
@@ -38,48 +42,16 @@
         <div class="main-content">
             <!-- Left Sidebar -->
             <nav class="sidebar">
-                <div class="function-group" data-function="import">
+                <div class="function-group active" data-function="import">
                     <h3>📥 Import Emails</h3>
-                </div>
-
-                <div class="function-group" data-function="classify">
-                    <h3>🤖 Classify Emails</h3>
-                </div>
-
-                <div class="function-group" data-function="extract">
-                    <h3>📄 Extract Content</h3>
                 </div>
 
                 <div class="function-group" data-function="travel">
                     <h3>✈️ Travel Emails</h3>
                 </div>
 
-                <div class="function-group active" data-function="status">
-                    <h3>📊 Status</h3>
-                </div>
-
-                <div class="function-group" data-function="booking-extraction">
-                    <h3>🔍 Extract Bookings</h3>
-                </div>
-
-                <div class="function-group" data-function="trip-detection">
-                    <h3>🗺️ Trip Detection</h3>
-                </div>
-
                 <div class="function-group" data-function="my-trips">
                     <h3>✈️ My Trips</h3>
-                </div>
-
-                <div class="function-group" data-function="calendar-view">
-                    <h3>📅 Calendar View</h3>
-                </div>
-
-                <div class="function-group" data-function="statistics">
-                    <h3>📊 Statistics</h3>
-                </div>
-
-                <div class="function-group" data-function="full-pipeline">
-                    <h3>🚀 Full Pipeline</h3>
                 </div>
             </nav>
 
@@ -116,50 +88,101 @@
 
                 <!-- Import Emails Section -->
                 <div id="import-section" class="function-section">
-                    <h2>📥 Import Emails</h2>
-                    <p>Import emails from Gmail to build your travel history database.</p>
-                    
+                    <h2>📥 Import & Process Emails</h2>
+                    <p>Import emails from Gmail and process them through the complete pipeline: Classification → Content
+                        Extraction → Booking Extraction → Trip Detection</p>
+
                     <div class="control-group">
                         <!-- Date Range Selection -->
                         <div class="date-range-section">
-                            <h3>Date Range Import</h3>
+                            <h3>Date Range Selection</h3>
                             <div class="date-range-inputs">
                                 <div class="date-input-group">
-                                    <label for="startDate">Start Date:</label>
-                                    <input type="date" id="startDate" name="startDate">
+                                    <label for="pipelineStartDate">Start Date:</label>
+                                    <input type="date" id="pipelineStartDate" name="pipelineStartDate">
                                 </div>
                                 <div class="date-input-group">
-                                    <label for="endDate">End Date:</label>
-                                    <input type="date" id="endDate" name="endDate">
+                                    <label for="pipelineEndDate">End Date:</label>
+                                    <input type="date" id="pipelineEndDate" name="pipelineEndDate">
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Quick Selection -->
                         <div class="quick-select-section">
                             <h3>Quick Select</h3>
                             <div class="time-range-selector">
-                                <label for="timeRange">Import Range:</label>
-                                <select id="timeRange" onchange="updateDateRangeFromQuickSelect()">
+                                <label for="pipelineTimeRange">Process Range:</label>
+                                <select id="pipelineTimeRange" onchange="updatePipelineDateRangeFromQuickSelect()">
                                     <option value="">Custom date range</option>
-                                    <option value="1">Last 1 day</option>
-                                    <option value="3">Last 3 days</option>
-                                    <option value="10">Last 10 days</option>
+                                    <option value="7">Last week</option>
                                     <option value="30" selected>Last month</option>
                                     <option value="90">Last 3 months</option>
                                     <option value="180">Last 6 months</option>
-                                    <option value="365">Last 1 year</option>
-                                    <option value="730">Last 2 years</option>
-                                    <option value="1095">Last 3 years</option>
+                                    <option value="365">Last year</option>
                                 </select>
                             </div>
                         </div>
-                        
+
                         <div class="button-group">
-                            <button id="importBtn" onclick="importEmails()">Import Emails</button>
-                            <button id="stopBtn" onclick="stopImport()" class="stop-btn" style="display:none;">Stop Import</button>
-                            <button onclick="viewCacheStats()" class="secondary-btn">View Stats</button>
+                            <button id="startPipelineBtn" onclick="startFullPipeline()" class="action-btn primary">
+                                <span>🚀 Start Import & Process</span>
+                            </button>
+                            <button id="stopPipelineBtn" onclick="stopFullPipeline()" class="action-btn danger"
+                                style="display:none;">
+                                <span>⏹️ Stop Pipeline</span>
+                            </button>
                         </div>
+                    </div>
+
+                    <!-- Pipeline Progress -->
+                    <div id="pipeline-progress-section" style="display:none; margin-top: 20px;">
+                        <h3>Pipeline Progress</h3>
+                        <div class="pipeline-stages">
+                            <div class="stage-progress">
+                                <h4>📥 Import Emails</h4>
+                                <div class="progress">
+                                    <div id="importProgressBar" class="progress-bar"></div>
+                                </div>
+                                <div id="importStats" class="stage-stats"></div>
+                            </div>
+                            <div class="stage-progress">
+                                <h4>🏷️ Classification</h4>
+                                <div class="progress">
+                                    <div id="classificationProgressBar" class="progress-bar"></div>
+                                </div>
+                                <div id="classificationStats" class="stage-stats"></div>
+                            </div>
+                            <div class="stage-progress">
+                                <h4>📄 Content Extraction</h4>
+                                <div class="progress">
+                                    <div id="contentProgressBar" class="progress-bar"></div>
+                                </div>
+                                <div id="contentStats" class="stage-stats"></div>
+                            </div>
+                            <div class="stage-progress">
+                                <h4>🔍 Booking Extraction</h4>
+                                <div class="progress">
+                                    <div id="bookingProgressBar" class="progress-bar"></div>
+                                </div>
+                                <div id="bookingStats" class="stage-stats"></div>
+                            </div>
+                            <div class="stage-progress">
+                                <h4>🗺️ Trip Detection</h4>
+                                <div class="progress">
+                                    <div id="tripDetectionProgressBar" class="progress-bar"></div>
+                                </div>
+                                <div id="tripDetectionStats" class="stage-stats"></div>
+                            </div>
+                        </div>
+                        <div id="pipelineOverallProgress" class="overall-progress" style="margin-top: 20px;">
+                            <h3>Overall Progress: <span id="overallProgressPercent">0%</span></h3>
+                            <div class="progress">
+                                <div id="overallProgressBar" class="progress-bar"></div>
+                            </div>
+                        </div>
+                        <div id="pipelineMessage" class="status-message"></div>
+                        <div id="pipelineErrors" class="error-message" style="display:none;"></div>
                     </div>
                 </div>
 
@@ -167,14 +190,17 @@
                 <div id="classify-section" class="function-section" style="display:none;">
                     <h2>🤖 Classify Emails</h2>
                     <p>Use AI to categorize emails by travel type (flight, hotel, car rental, etc.)</p>
-                    
+
                     <div class="control-group">
                         <div class="button-group">
-                            <button id="classifyBtn" onclick="testClassification()" class="classify-btn">Classify Emails</button>
-                            <button id="stopClassifyBtn" onclick="stopClassification()" class="stop-btn" style="display:none;">Stop Classification</button>
+                            <button id="classifyBtn" onclick="testClassification()" class="classify-btn">Classify
+                                Emails</button>
+                            <button id="stopClassifyBtn" onclick="stopClassification()" class="stop-btn"
+                                style="display:none;">Stop Classification</button>
                         </div>
                         <div class="info-text">
-                            <small>Uses AI to categorize emails by travel type. This process may take a few minutes depending on the number of emails.</small>
+                            <small>Uses AI to categorize emails by travel type. This process may take a few minutes
+                                depending on the number of emails.</small>
                         </div>
                     </div>
                 </div>
@@ -183,14 +209,17 @@
                 <div id="extract-section" class="function-section" style="display:none;">
                     <h2>📄 Extract Content</h2>
                     <p>Extract full content and attachments from travel-classified emails.</p>
-                    
+
                     <div class="control-group">
                         <div class="button-group">
-                            <button id="extractBtn" onclick="extractTravelContent()" class="extract-btn">Extract Travel Content</button>
-                            <button id="stopExtractBtn" onclick="stopExtraction()" class="stop-btn" style="display:none;">Stop Extraction</button>
+                            <button id="extractBtn" onclick="extractTravelContent()" class="extract-btn">Extract Travel
+                                Content</button>
+                            <button id="stopExtractBtn" onclick="stopExtraction()" class="stop-btn"
+                                style="display:none;">Stop Extraction</button>
                         </div>
                         <div class="info-text">
-                            <small>Extract full content and attachments from travel emails. This will download email content and attachments for offline analysis.</small>
+                            <small>Extract full content and attachments from travel emails. This will download email
+                                content and attachments for offline analysis.</small>
                         </div>
                     </div>
                 </div>
@@ -226,7 +255,8 @@
                         <div class="search-row">
                             <div class="search-group">
                                 <label for="searchText">Search:</label>
-                                <input type="text" id="searchText" placeholder="Search by subject or email ID..." onkeyup="filterTravelEmails()">
+                                <input type="text" id="searchText" placeholder="Search by subject or email ID..."
+                                    onkeyup="filterTravelEmails()">
                             </div>
                         </div>
                     </div>
@@ -254,14 +284,17 @@
                 <div id="booking-extraction-section" class="function-section" style="display:none;">
                     <h2>🔍 Extract Booking Information</h2>
                     <p>Step 1: Extract detailed booking information from individual travel emails using AI analysis.</p>
-                    
+
                     <div class="control-group">
                         <div class="button-group">
-                            <button id="extractBookingsBtn" onclick="extractBookings()" class="primary-btn">Extract Bookings</button>
-                            <button id="stopBookingExtractionBtn" onclick="stopBookingExtraction()" class="stop-btn" style="display:none;">Stop Extraction</button>
+                            <button id="extractBookingsBtn" onclick="extractBookings()" class="primary-btn">Extract
+                                Bookings</button>
+                            <button id="stopBookingExtractionBtn" onclick="stopBookingExtraction()" class="stop-btn"
+                                style="display:none;">Stop Extraction</button>
                         </div>
                         <div class="info-text">
-                            <small>This step analyzes individual emails to extract structured booking information. This is required before trip detection can run.</small>
+                            <small>This step analyzes individual emails to extract structured booking information. This
+                                is required before trip detection can run.</small>
                         </div>
                     </div>
                 </div>
@@ -270,14 +303,18 @@
                 <div id="trip-detection-section" class="function-section" style="display:none;">
                     <h2>🗺️ Trip Detection</h2>
                     <p>Step 2: Analyze extracted booking information to automatically detect and organize trips.</p>
-                    
+
                     <div class="control-group">
                         <div class="button-group">
-                            <button id="detectTripsBtn" onclick="detectTrips()" class="primary-btn">Detect Trips</button>
-                            <button id="stopDetectionBtn" onclick="stopTripDetection()" class="stop-btn" style="display:none;">Stop Detection</button>
+                            <button id="detectTripsBtn" onclick="detectTrips()" class="primary-btn">Detect
+                                Trips</button>
+                            <button id="stopDetectionBtn" onclick="stopTripDetection()" class="stop-btn"
+                                style="display:none;">Stop Detection</button>
                         </div>
                         <div class="info-text">
-                            <small>AI will analyze extracted booking information to identify trips, group related bookings, and handle changes/cancellations. Requires booking extraction to be completed first.</small>
+                            <small>AI will analyze extracted booking information to identify trips, group related
+                                bookings, and handle changes/cancellations. Requires booking extraction to be completed
+                                first.</small>
                         </div>
                     </div>
                 </div>
@@ -340,7 +377,7 @@
                             <button onclick="refreshStatistics()" class="refresh-btn">🔄 Refresh</button>
                         </div>
                     </div>
-                    
+
                     <div id="statistics-content">
                         <!-- Overall Summary -->
                         <div class="stats-summary">
@@ -385,7 +422,7 @@
                                 <div class="stat-label">Total Trips</div>
                             </div>
                         </div>
-                        
+
                         <!-- Detailed Statistics -->
                         <div class="stats-details">
                             <!-- Transport Breakdown -->
@@ -395,7 +432,7 @@
                                     <!-- Will be populated dynamically -->
                                 </div>
                             </div>
-                            
+
                             <!-- Top Destinations -->
                             <div class="stats-section">
                                 <h3>📍 Top Destinations</h3>
@@ -403,7 +440,7 @@
                                     <!-- Will be populated dynamically -->
                                 </div>
                             </div>
-                            
+
                             <!-- Monthly Distribution -->
                             <div class="stats-section">
                                 <h3>📅 Monthly Distribution</h3>
@@ -415,94 +452,7 @@
                     </div>
                 </div>
 
-                <!-- Full Pipeline Section -->
-                <div id="full-pipeline-section" class="function-section" style="display:none;">
-                    <h2>🚀 Process Full Pipeline</h2>
-                    <p>Import emails and process them through the complete pipeline: Classification → Content Extraction → Booking Extraction</p>
-                    
-                    <div class="control-group">
-                        <!-- Date Range Selection -->
-                        <div class="date-range-section">
-                            <h3>Date Range Selection</h3>
-                            <div class="date-range-inputs">
-                                <div class="date-input-group">
-                                    <label for="pipelineStartDate">Start Date:</label>
-                                    <input type="date" id="pipelineStartDate" name="pipelineStartDate">
-                                </div>
-                                <div class="date-input-group">
-                                    <label for="pipelineEndDate">End Date:</label>
-                                    <input type="date" id="pipelineEndDate" name="pipelineEndDate">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Quick Selection -->
-                        <div class="quick-select-section">
-                            <h3>Quick Select</h3>
-                            <div class="time-range-selector">
-                                <label for="pipelineTimeRange">Process Range:</label>
-                                <select id="pipelineTimeRange" onchange="updatePipelineDateRangeFromQuickSelect()">
-                                    <option value="">Custom date range</option>
-                                    <option value="7">Last week</option>
-                                    <option value="30" selected>Last month</option>
-                                    <option value="90">Last 3 months</option>
-                                    <option value="180">Last 6 months</option>
-                                    <option value="365">Last year</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <button id="startPipelineBtn" onclick="startFullPipeline()" class="action-btn primary">
-                            <span>🚀 Start Full Pipeline</span>
-                        </button>
-                        <button id="stopPipelineBtn" onclick="stopFullPipeline()" class="action-btn danger" style="display:none;">
-                            <span>⏹️ Stop Pipeline</span>
-                        </button>
-                    </div>
-                    
-                    <!-- Pipeline Progress -->
-                    <div id="pipeline-progress-section" style="display:none; margin-top: 20px;">
-                        <h3>Pipeline Progress</h3>
-                        <div class="pipeline-stages">
-                            <div class="stage-progress">
-                                <h4>📥 Import Emails</h4>
-                                <div class="progress">
-                                    <div id="importProgressBar" class="progress-bar"></div>
-                                </div>
-                                <div id="importStats" class="stage-stats"></div>
-                            </div>
-                            <div class="stage-progress">
-                                <h4>🏷️ Classification</h4>
-                                <div class="progress">
-                                    <div id="classificationProgressBar" class="progress-bar"></div>
-                                </div>
-                                <div id="classificationStats" class="stage-stats"></div>
-                            </div>
-                            <div class="stage-progress">
-                                <h4>📄 Content Extraction</h4>
-                                <div class="progress">
-                                    <div id="contentProgressBar" class="progress-bar"></div>
-                                </div>
-                                <div id="contentStats" class="stage-stats"></div>
-                            </div>
-                            <div class="stage-progress">
-                                <h4>🔍 Booking Extraction</h4>
-                                <div class="progress">
-                                    <div id="bookingProgressBar" class="progress-bar"></div>
-                                </div>
-                                <div id="bookingStats" class="stage-stats"></div>
-                            </div>
-                        </div>
-                        <div id="pipelineOverallProgress" class="overall-progress" style="margin-top: 20px;">
-                            <h3>Overall Progress: <span id="overallProgressPercent">0%</span></h3>
-                            <div class="progress">
-                                <div id="overallProgressBar" class="progress-bar"></div>
-                            </div>
-                        </div>
-                        <div id="pipelineMessage" class="status-message"></div>
-                        <div id="pipelineErrors" class="error-message" style="display:none;"></div>
-                    </div>
-                </div>
+
             </main>
         </div>
     </div>
@@ -522,4 +472,5 @@
 
     <script src="/static/js/app.js?v=28"></script>
 </body>
+
 </html>

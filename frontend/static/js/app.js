@@ -17,7 +17,7 @@ class EmailImportApp {
         this.allTravelEmails = []; // Store all travel emails for filtering
         this.isLoadingTravelEmails = false; // Prevent duplicate loading
         this.currentPage = 1;
-        this.pageSize = 50;
+        this.pageSize = 20;
         this.totalEmails = 0;
         this.totalPages = 0;
         this.init();
@@ -50,7 +50,7 @@ class EmailImportApp {
         // Initialize sidebar navigation
         this.initSidebar();
         // Show default section
-        this.switchFunction('status');
+        this.switchFunction('import');
     }
 
     initSidebar() {
@@ -74,7 +74,7 @@ class EmailImportApp {
         this.hideAllSections();
 
         // Show relevant content
-        switch(functionName) {
+        switch (functionName) {
             case 'import':
                 this.showImportSection();
                 break;
@@ -109,7 +109,7 @@ class EmailImportApp {
                 this.showFullPipelineSection();
                 break;
         }
-        
+
         this.currentSection = functionName;
     }
 
@@ -126,7 +126,7 @@ class EmailImportApp {
         document.getElementById('trip-detail-section').style.display = 'none';
         document.getElementById('calendar-section').style.display = 'none';
         document.getElementById('statistics-section').style.display = 'none';
-        document.getElementById('full-pipeline-section').style.display = 'none';
+
         document.getElementById('progress-section').style.display = 'none';
         document.getElementById('stats').style.display = 'none';
     }
@@ -149,7 +149,7 @@ class EmailImportApp {
         const bookingFilterEl = document.getElementById('bookingFilter');
         const tripDetectionFilterEl = document.getElementById('tripDetectionFilter');
         const searchTextEl = document.getElementById('searchText');
-        
+
         if (bookingFilterEl) {
             bookingFilterEl.value = 'all';
         }
@@ -325,10 +325,10 @@ class EmailImportApp {
 
             if (response.ok && stats.total_emails > 0) {
                 document.getElementById('totalCached').textContent = stats.total_emails;
-                
+
                 if (stats.date_range) {
                     document.getElementById('dateRange').style.display = 'block';
-                    document.getElementById('dateRangeText').textContent = 
+                    document.getElementById('dateRangeText').textContent =
                         `${stats.date_range.oldest} to ${stats.date_range.newest}`;
                 }
             }
@@ -359,16 +359,16 @@ class EmailImportApp {
 
             if (response.ok) {
                 this.displayProgress(data);
-                
+
                 // Check if finished
                 if (data.finished) {
                     this.isImporting = false;
                     this.stopProgressMonitoring();
-                    
+
                     if (data.final_results) {
                         this.displayResults(data.final_results);
                     }
-                    
+
                     this.updateUIForImporting(false);
                 }
             }
@@ -414,7 +414,7 @@ class EmailImportApp {
             importBtn.disabled = true;
             importBtn.textContent = 'Importing...';
             stopBtn.style.display = 'inline-block';
-            
+
             // Hide other sections and show progress
             this.hideAllSections();
             progressSection.style.display = 'block';
@@ -422,7 +422,7 @@ class EmailImportApp {
             importBtn.disabled = false;
             importBtn.textContent = 'Import Emails';
             stopBtn.style.display = 'none';
-            
+
             setTimeout(() => {
                 if (this.currentSection === 'import') {
                     progressSection.style.display = 'none';
@@ -442,7 +442,7 @@ class EmailImportApp {
         if (data.progress !== undefined) {
             progressBar.style.width = data.progress + '%';
             progressCount.textContent = `${data.processed || 0}/${data.total || 0}`;
-            
+
             this.displayStatus(
                 `Processing emails... (${data.new_count || 0} new, ${data.skip_count || 0} skipped)`,
                 'loading'
@@ -460,7 +460,7 @@ class EmailImportApp {
         // Update date range
         if (results.date_range) {
             document.getElementById('dateRange').style.display = 'block';
-            document.getElementById('dateRangeText').textContent = 
+            document.getElementById('dateRangeText').textContent =
                 `${results.date_range.oldest} to ${results.date_range.newest}`;
         }
 
@@ -488,14 +488,14 @@ class EmailImportApp {
     displayError(message) {
         this.displayStatus(`❌ Error: ${message}`, 'error');
     }
-    
+
     getTimeRangeLabel(days) {
         const ranges = {
             1: 'last 1 day',
             3: 'last 3 days',
             10: 'last 10 days',
             30: 'last month',
-            90: 'last 3 months', 
+            90: 'last 3 months',
             180: 'last 6 months',
             365: 'last 1 year',
             730: 'last 2 years',
@@ -568,7 +568,7 @@ class EmailImportApp {
         if (window.globalClassificationInterval) {
             clearInterval(window.globalClassificationInterval);
         }
-        
+
         window.globalClassificationInterval = setInterval(async () => {
             await this.updateClassificationProgress();
         }, 2000);
@@ -594,17 +594,17 @@ class EmailImportApp {
 
             if (response.ok) {
                 this.displayClassificationProgress(data);
-                
+
                 if (data.finished) {
                     this.isClassifying = false;
                     this.stopClassificationMonitoring();
-                    
+
                     // Display completion message
                     this.displayStatus(
                         `✅ ${data.message || 'Classification completed!'}`,
                         'success'
                     );
-                    
+
                     this.updateUIForClassification(false);
                 }
             }
@@ -622,7 +622,7 @@ class EmailImportApp {
             classifyBtn.disabled = true;
             classifyBtn.textContent = 'Classifying...';
             stopClassifyBtn.style.display = 'inline-block';
-            
+
             // Hide other sections and show progress
             this.hideAllSections();
             progressSection.style.display = 'block';
@@ -630,7 +630,7 @@ class EmailImportApp {
             classifyBtn.disabled = false;
             classifyBtn.textContent = 'Classify Emails';
             stopClassifyBtn.style.display = 'none';
-            
+
             setTimeout(() => {
                 if (this.currentSection === 'classify') {
                     progressSection.style.display = 'none';
@@ -649,20 +649,20 @@ class EmailImportApp {
         if (data.progress !== undefined) {
             progressBar.style.width = data.progress + '%';
             progressCount.textContent = `${data.processed || 0}/${data.total || 0}`;
-            
+
             let statusText = `🤖 AI classifying emails...`;
-            
+
             // Show batch progress if available
             if (data.current_batch && data.total_batches) {
                 statusText += ` Batch ${data.current_batch}/${data.total_batches}`;
             }
-            
+
             statusText += ` (${data.classified_count || 0} processed)`;
-            
+
             if (data.estimated_cost) {
                 statusText += ` • Est. cost: $${data.estimated_cost.toFixed(6)}`;
             }
-            
+
             this.displayStatus(statusText, 'loading');
         }
     }
@@ -677,10 +677,10 @@ class EmailImportApp {
         // Show additional info about test file
         setTimeout(() => {
             alert(`Classification test completed!\n\n` +
-                  `Total classified: ${results.total_classified}\n` +
-                  `Travel-related: ${results.travel_related}\n` +
-                  `Not travel-related: ${results.not_travel_related}\n\n` +
-                  `Results saved to: ${results.test_file.split('/').pop()}`);
+                `Total classified: ${results.total_classified}\n` +
+                `Travel-related: ${results.travel_related}\n` +
+                `Not travel-related: ${results.not_travel_related}\n\n` +
+                `Results saved to: ${results.test_file.split('/').pop()}`);
         }, 1000);
     }
 
@@ -753,7 +753,7 @@ class EmailImportApp {
         if (window.globalExtractionInterval) {
             clearInterval(window.globalExtractionInterval);
         }
-        
+
         window.globalExtractionInterval = setInterval(async () => {
             await this.updateExtractionProgress();
         }, 2000);
@@ -779,16 +779,16 @@ class EmailImportApp {
 
             if (response.ok) {
                 this.displayExtractionProgress(data);
-                
+
                 if (data.finished) {
                     this.isExtracting = false;
                     this.stopExtractionMonitoring();
-                    
+
                     this.displayStatus(
                         `✅ ${data.message || 'Content extraction completed!'}`,
                         'success'
                     );
-                    
+
                     this.updateUIForExtraction(false);
                 }
             }
@@ -806,7 +806,7 @@ class EmailImportApp {
             extractBtn.disabled = true;
             extractBtn.textContent = 'Extracting...';
             stopExtractBtn.style.display = 'inline-block';
-            
+
             // Hide other sections and show progress
             this.hideAllSections();
             progressSection.style.display = 'block';
@@ -814,7 +814,7 @@ class EmailImportApp {
             extractBtn.disabled = false;
             extractBtn.textContent = 'Extract Travel Content';
             stopExtractBtn.style.display = 'none';
-            
+
             setTimeout(() => {
                 if (this.currentSection === 'extract') {
                     progressSection.style.display = 'none';
@@ -833,22 +833,22 @@ class EmailImportApp {
         if (data.progress !== undefined) {
             progressBar.style.width = data.progress + '%';
             progressCount.textContent = `${data.current || 0}/${data.total || 0}`;
-            
+
             let statusText = `📄 Extracting travel email content...`;
-            
+
             if (data.message) {
                 statusText = `📄 ${data.message}`;
             }
-            
+
             if (data.extracted_count !== undefined) {
                 statusText += ` (${data.extracted_count} extracted, ${data.failed_count || 0} failed)`;
             }
-            
+
             // Add cost information if available  
             if (data.cost_estimate) {
                 statusText += ` | Est. cost: $${data.cost_estimate.estimated_cost_usd.toFixed(4)} (${data.cost_estimate.model})`;
             }
-            
+
             this.displayStatus(statusText, 'loading');
         }
     }
@@ -862,36 +862,36 @@ class EmailImportApp {
         }
 
         this.isLoadingTravelEmails = true;
-        
+
         try {
             // Get current filter values
             const bookingFilter = document.getElementById('bookingFilter')?.value || 'all';
             const tripDetectionFilter = document.getElementById('tripDetectionFilter')?.value || 'all';
             const searchText = document.getElementById('searchText')?.value || '';
-            
+
             // Calculate offset
             const offset = (page - 1) * this.pageSize;
-            
+
             // Build API URL based on filters
             let apiUrl = `/api/emails/list?classification=travel&limit=${this.pageSize}&offset=${offset}`;
-            
+
             // Add booking filter
             if (bookingFilter === 'booking_completed') {
                 apiUrl += '&booking_status=completed';
             } else if (bookingFilter === 'has_booking') {
                 apiUrl += '&booking_status=has_booking';
             }
-            
+
             // Add trip detection filter
             if (tripDetectionFilter !== 'all') {
                 apiUrl += `&trip_detection_status=${tripDetectionFilter}`;
             }
-            
+
             // Add search text
             if (searchText.trim()) {
                 apiUrl += `&search=${encodeURIComponent(searchText.trim())}`;
             }
-            
+
             console.log('Loading travel emails with URL:', apiUrl);
 
             // Get travel emails from the API
@@ -923,18 +923,18 @@ class EmailImportApp {
         const bookingFilter = document.getElementById('bookingFilter')?.value || 'all';
         const tripDetectionFilter = document.getElementById('tripDetectionFilter')?.value || 'all';
         const searchText = document.getElementById('searchText')?.value || '';
-        
+
         // Check if any server-side filters are active
-        const hasServerSideFilters = bookingFilter === 'booking_completed' || 
-                                   bookingFilter === 'has_booking' || 
-                                   tripDetectionFilter !== 'all' || 
-                                   searchText.trim() !== '';
-        
+        const hasServerSideFilters = bookingFilter === 'booking_completed' ||
+            bookingFilter === 'has_booking' ||
+            tripDetectionFilter !== 'all' ||
+            searchText.trim() !== '';
+
         // Only update allTravelEmails if we're not using server-side filters
         if (!hasServerSideFilters) {
             this.allTravelEmails = emails || [];
         }
-        
+
         if (!emails || emails.length === 0) {
             this.displayNoTravelEmails();
             return;
@@ -943,7 +943,7 @@ class EmailImportApp {
         // For server-side filtered emails, display directly
         // For client-side filters (only 'extracted'), apply filtering
         let displayEmails = emails;
-        
+
         if (!hasServerSideFilters && bookingFilter === 'extracted') {
             displayEmails = emails.filter(email => email.content_extracted);
         }
@@ -966,41 +966,41 @@ class EmailImportApp {
         const bookingFilterEl = document.getElementById('bookingFilter');
         const tripDetectionFilterEl = document.getElementById('tripDetectionFilter');
         const searchTextEl = document.getElementById('searchText');
-        
+
         if (!bookingFilterEl || !tripDetectionFilterEl || !searchTextEl) {
             console.error('Filter elements not found in DOM');
             return;
         }
-        
+
         const bookingFilter = bookingFilterEl.value;
         const tripDetectionFilter = tripDetectionFilterEl.value;
         const searchText = searchTextEl.value.toLowerCase().trim();
-        
+
         console.log('Applying filters:', { bookingFilter, tripDetectionFilter, searchText }, 'Current emails count:', this.allTravelEmails.length);
-        
+
         // For server-side filters, we need to reload data from API
-        if (bookingFilter === 'booking_completed' || bookingFilter === 'has_booking' || 
+        if (bookingFilter === 'booking_completed' || bookingFilter === 'has_booking' ||
             tripDetectionFilter !== 'all' || searchText !== '') {
             // Reset to page 1 when filters change
             this.currentPage = 1;
             this.loadTravelEmails(1);
             return;
         }
-        
+
         // Check if we need to reload all emails (when switching from server-side filters to client-side filters)
         // Check if allTravelEmails is empty or if it only contains filtered emails
-        if ((bookingFilter === 'all' || bookingFilter === 'extracted') && 
-            (this.allTravelEmails.length === 0 || 
-             (this.allTravelEmails.length > 0 && 
-              this.allTravelEmails.every(email => email.booking_extraction_status === 'completed')))) {
+        if ((bookingFilter === 'all' || bookingFilter === 'extracted') &&
+            (this.allTravelEmails.length === 0 ||
+                (this.allTravelEmails.length > 0 &&
+                    this.allTravelEmails.every(email => email.booking_extraction_status === 'completed')))) {
             console.log('Need to reload all emails for client-side filtering');
             this.loadTravelEmails();
             return;
         }
-        
+
         const emailsList = document.getElementById('travel-emails-list');
         let filteredEmails = this.allTravelEmails;
-        
+
         // Apply booking filter
         switch (bookingFilter) {
             case 'extracted':
@@ -1012,7 +1012,7 @@ class EmailImportApp {
                 filteredEmails = this.allTravelEmails;
                 break;
         }
-        
+
         if (filteredEmails.length === 0) {
             emailsList.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: #666;">
@@ -1040,58 +1040,58 @@ class EmailImportApp {
 
     updatePaginationControls() {
         const paginationControls = document.getElementById('pagination-controls');
-        
+
         if (this.totalPages <= 1) {
             paginationControls.style.display = 'none';
             return;
         }
-        
+
         paginationControls.style.display = 'block';
-        
+
         let html = `
             <div class="pagination-info">
                 Page ${this.currentPage} of ${this.totalPages} (${this.totalEmails.toLocaleString()} total emails)
             </div>
             <div class="pagination-buttons">
         `;
-        
+
         // Previous button
         if (this.currentPage > 1) {
             html += `<button onclick="app.goToPage(1)" class="pagination-btn first-btn">First</button>`;
             html += `<button onclick="app.goToPage(${this.currentPage - 1})" class="pagination-btn prev-btn">Previous</button>`;
         }
-        
+
         // Page numbers (show current and surrounding pages)
         const startPage = Math.max(1, this.currentPage - 2);
         const endPage = Math.min(this.totalPages, this.currentPage + 2);
-        
+
         if (startPage > 1) {
             html += `<button onclick="app.goToPage(1)" class="pagination-btn page-btn">1</button>`;
             if (startPage > 2) {
                 html += `<span class="pagination-dots">...</span>`;
             }
         }
-        
+
         for (let i = startPage; i <= endPage; i++) {
             const activeClass = i === this.currentPage ? ' active' : '';
             html += `<button onclick="app.goToPage(${i})" class="pagination-btn page-btn${activeClass}">${i}</button>`;
         }
-        
+
         if (endPage < this.totalPages) {
             if (endPage < this.totalPages - 1) {
                 html += `<span class="pagination-dots">...</span>`;
             }
             html += `<button onclick="app.goToPage(${this.totalPages})" class="pagination-btn page-btn">${this.totalPages}</button>`;
         }
-        
+
         // Next button
         if (this.currentPage < this.totalPages) {
             html += `<button onclick="app.goToPage(${this.currentPage + 1})" class="pagination-btn next-btn">Next</button>`;
             html += `<button onclick="app.goToPage(${this.totalPages})" class="pagination-btn last-btn">Last</button>`;
         }
-        
+
         html += `</div>`;
-        
+
         paginationControls.innerHTML = html;
     }
 
@@ -1104,17 +1104,17 @@ class EmailImportApp {
     createEmailItem(email) {
         // Format date
         const date = new Date(email.date || email.timestamp).toLocaleDateString();
-        
+
         // Determine if content is available (from EmailContent table)
         const hasContent = email.content_extracted || false;
         const hasAttachments = email.has_attachments || false;
         const hasBookingInfo = email.has_booking_info || false;
-        
+
         // Content link
-        const contentLink = hasContent 
+        const contentLink = hasContent
             ? `<a href="/api/content/${email.email_id}/view" target="_blank" class="action-link content-link">Content</a>`
             : `<span class="action-link content-link disabled">Content</span>`;
-            
+
         // Attachment link
         const attachmentLink = hasAttachments
             ? `<a href="/api/content/${email.email_id}/attachments" target="_blank" class="action-link attachment-link">Attachments</a>`
@@ -1130,7 +1130,7 @@ class EmailImportApp {
         let bookingSummaryHtml = '';
         if (email.booking_summary) {
             const summary = email.booking_summary;
-            
+
             // Handle non-booking emails
             if (summary.booking_type === null) {
                 const nonBookingIcons = {
@@ -1143,7 +1143,7 @@ class EmailImportApp {
                     'program_enrollment': '🎫'
                 };
                 const icon = nonBookingIcons[summary.non_booking_type] || '📄';
-                
+
                 bookingSummaryHtml = `
                     <div class="non-booking-summary">
                         <div class="non-booking-header">
@@ -1155,10 +1155,10 @@ class EmailImportApp {
             } else {
                 // Handle regular booking emails
                 const statusIcon = summary.status === 'confirmed' ? '✅' : summary.status === 'cancelled' ? '❌' : '⚠️';
-                const confirmations = summary.confirmation_numbers && summary.confirmation_numbers.length > 0 
-                    ? `Conf: ${summary.confirmation_numbers.join(', ')}` 
+                const confirmations = summary.confirmation_numbers && summary.confirmation_numbers.length > 0
+                    ? `Conf: ${summary.confirmation_numbers.join(', ')}`
                     : '';
-                
+
                 bookingSummaryHtml = `
                     <div class="booking-summary">
                         <div class="booking-header">
@@ -1225,7 +1225,7 @@ class EmailImportApp {
     async loadStatusData() {
         try {
             this.displayStatus('📊 Loading email statistics...', 'loading');
-            
+
             const response = await fetch('/api/emails/stats/detailed');
             const stats = await response.json();
 
@@ -1243,11 +1243,11 @@ class EmailImportApp {
 
     displayStatusData(stats) {
         const statusContent = document.getElementById('status-content');
-        
+
         // Create classification details HTML
         const classificationHTML = this.createClassificationStatsHTML(stats.classification_details);
         const travelStatsHTML = this.createTravelStatsHTML(stats.travel_summary.travel_categories);
-        
+
         statusContent.innerHTML = `
             <div class="status-overview">
                 <!-- Date Range (moved to top) -->
@@ -1396,12 +1396,12 @@ class EmailImportApp {
         };
 
         return Object.entries(classificationDetails)
-            .sort(([,a], [,b]) => b - a)
+            .sort(([, a], [, b]) => b - a)
             .map(([classification, count]) => {
                 const displayName = classificationNames[classification] || classification;
                 const isTravel = !['unclassified', 'not_travel_related'].includes(classification);
                 const cssClass = isTravel ? 'travel' : (classification === 'unclassified' ? 'unclassified' : 'non-travel');
-                
+
                 return `
                 <div class="classification-item ${cssClass}">
                     <span class="classification-count">${count}</span>
@@ -1414,7 +1414,7 @@ class EmailImportApp {
     createTravelStatsHTML(travelCategories) {
         const categoryNames = {
             'flight': '✈️ Flight',
-            'hotel': '🏨 Hotel', 
+            'hotel': '🏨 Hotel',
             'car_rental': '🚗 Car Rental',
             'train': '🚂 Train',
             'cruise': '🚢 Cruise',
@@ -1427,7 +1427,7 @@ class EmailImportApp {
 
         return Object.entries(travelCategories)
             .filter(([, count]) => count > 0)
-            .sort(([,a], [,b]) => b - a)
+            .sort(([, a], [, b]) => b - a)
             .map(([category, count]) => {
                 const displayName = categoryNames[category] || category;
                 return `
@@ -1467,7 +1467,7 @@ class EmailImportApp {
 
     displayGeminiUsage(data) {
         const usageContent = document.getElementById('gemini-usage-content');
-        
+
         let html = `
             <div class="usage-summary">
                 <h3>📊 Current Usage Summary</h3>
@@ -1643,7 +1643,7 @@ class EmailImportApp {
         if (window.globalBookingExtractionInterval) {
             clearInterval(window.globalBookingExtractionInterval);
         }
-        
+
         window.globalBookingExtractionInterval = setInterval(async () => {
             await this.updateBookingExtractionProgress();
         }, 2000);
@@ -1669,16 +1669,16 @@ class EmailImportApp {
 
             if (response.ok) {
                 this.displayBookingExtractionProgress(data);
-                
+
                 if (data.finished) {
                     this.isExtractingBookings = false;
                     this.stopBookingExtractionMonitoring();
-                    
+
                     this.displayStatus(
                         `✅ ${data.message || 'Booking extraction completed!'}`,
                         'success'
                     );
-                    
+
                     this.updateUIForBookingExtraction(false);
                 }
             }
@@ -1696,7 +1696,7 @@ class EmailImportApp {
             extractBtn.disabled = true;
             extractBtn.textContent = 'Extracting...';
             stopBtn.style.display = 'inline-block';
-            
+
             // Hide other sections and show progress
             this.hideAllSections();
             progressSection.style.display = 'block';
@@ -1704,7 +1704,7 @@ class EmailImportApp {
             extractBtn.disabled = false;
             extractBtn.textContent = 'Extract Bookings';
             stopBtn.style.display = 'none';
-            
+
             setTimeout(() => {
                 if (this.currentSection === 'booking-extraction') {
                     progressSection.style.display = 'none';
@@ -1723,22 +1723,22 @@ class EmailImportApp {
         if (data.progress !== undefined) {
             progressBar.style.width = data.progress + '%';
             progressCount.textContent = `${data.processed_emails || 0}/${data.total_emails || 0} emails`;
-            
+
             let statusText = `🔍 Extracting booking information...`;
-            
+
             if (data.current_batch && data.total_batches) {
                 statusText += ` Batch ${data.current_batch}/${data.total_batches}`;
             }
-            
+
             if (data.extracted_count !== undefined) {
                 statusText += ` (${data.extracted_count} extracted, ${data.failed_count || 0} failed)`;
             }
-            
+
             // Add cost information if available  
             if (data.cost_estimate) {
                 statusText += ` | Est. cost: $${data.cost_estimate.estimated_cost_usd.toFixed(4)} (${data.cost_estimate.model})`;
             }
-            
+
             this.displayStatus(statusText, 'loading');
         }
     }
@@ -1785,7 +1785,7 @@ class EmailImportApp {
 
     displayStatistics(data) {
         const summary = data.summary;
-        
+
         // Update summary cards
         document.getElementById('total-flights').textContent = summary.total_flights;
         document.getElementById('total-distance').textContent = `${summary.total_distance.toLocaleString()} km`;
@@ -1795,28 +1795,28 @@ class EmailImportApp {
         document.getElementById('train-distance').textContent = `${summary.train_distance.toLocaleString()} km`;
         document.getElementById('total-cost').textContent = `$${summary.total_cost.toLocaleString()}`;
         document.getElementById('total-trips').textContent = summary.total_trips;
-        
+
         // Add click handlers to stat cards
         this.addStatCardClickHandlers();
-        
+
         // Display transport breakdown
         this.displayTransportBreakdown(data.transport_breakdown);
-        
+
         // Display top destinations
         this.displayTopDestinations(data.top_destinations);
-        
+
         // Display monthly distribution
         this.displayMonthlyDistribution(data.monthly_distribution);
     }
 
     displayTransportBreakdown(breakdown) {
         const container = document.getElementById('transport-breakdown');
-        
+
         if (!breakdown || Object.keys(breakdown).length === 0) {
             container.innerHTML = '<p class="no-data">No transport data available</p>';
             return;
         }
-        
+
         let html = '<div class="transport-breakdown-grid">';
         for (const [type, data] of Object.entries(breakdown)) {
             const icon = this.getTransportIcon(type);
@@ -1835,12 +1835,12 @@ class EmailImportApp {
 
     displayTopDestinations(destinations) {
         const container = document.getElementById('top-destinations');
-        
+
         if (!destinations || destinations.length === 0) {
             container.innerHTML = '<p class="no-data">No destination data available</p>';
             return;
         }
-        
+
         let html = '<div class="destinations-list">';
         destinations.forEach((dest, index) => {
             html += `
@@ -1857,23 +1857,23 @@ class EmailImportApp {
 
     displayMonthlyDistribution(distribution) {
         const container = document.getElementById('monthly-distribution');
-        
+
         if (!distribution || Object.keys(distribution).length === 0) {
             container.innerHTML = '<p class="no-data">No monthly data available</p>';
             return;
         }
-        
+
         // Sort months chronologically
         const sortedMonths = Object.entries(distribution).sort((a, b) => a[0].localeCompare(b[0]));
-        
+
         let html = '<div class="monthly-chart">';
         const maxTrips = Math.max(...sortedMonths.map(([_, count]) => count));
-        
+
         sortedMonths.forEach(([month, count]) => {
             const height = (count / maxTrips) * 100;
             const [year, monthNum] = month.split('-');
             const monthName = new Date(year, monthNum - 1).toLocaleDateString('en-US', { month: 'short' });
-            
+
             html += `
                 <div class="month-bar-container">
                     <div class="month-bar" style="height: ${height}%">
@@ -1889,10 +1889,10 @@ class EmailImportApp {
 
     populateYearFilter(years) {
         const select = document.getElementById('stats-year-filter');
-        
+
         // Clear existing options except "All Time"
         select.innerHTML = '<option value="all">All Time</option>';
-        
+
         // Add year options in descending order
         years.sort((a, b) => b - a).forEach(year => {
             const option = document.createElement('option');
@@ -1933,7 +1933,7 @@ class EmailImportApp {
         const statCards = document.querySelectorAll('.stat-card');
         statCards.forEach(card => {
             const label = card.querySelector('.stat-label').textContent.toLowerCase();
-            
+
             if (label.includes('flight')) {
                 card.style.cursor = 'pointer';
                 card.onclick = () => this.showFlightDetail();
@@ -1953,13 +1953,13 @@ class EmailImportApp {
     async showFlightDetail() {
         try {
             const yearFilter = document.getElementById('stats-year-filter').value;
-            const url = yearFilter === 'all' 
-                ? '/api/trips/statistics/flights' 
+            const url = yearFilter === 'all'
+                ? '/api/trips/statistics/flights'
                 : `/api/trips/statistics/flights?year=${yearFilter}`;
-            
+
             const response = await fetch(url);
             const data = await response.json();
-            
+
             if (response.ok) {
                 this.displayFlightDetail(data);
             } else {
@@ -1975,9 +1975,9 @@ class EmailImportApp {
         const modal = document.getElementById('stats-detail-modal');
         const title = document.getElementById('stats-detail-title');
         const content = document.getElementById('stats-detail-content');
-        
+
         title.textContent = '✈️ Flight Statistics Detail';
-        
+
         let html = `
             <div class="detail-summary">
                 <div class="summary-grid">
@@ -2003,11 +2003,11 @@ class EmailImportApp {
             <div class="detail-section">
                 <h3>✈️ Airlines Breakdown</h3>
                 <div class="airlines-grid">`;
-        
+
         // Sort airlines by flight count
         const sortedAirlines = Object.entries(data.airline_breakdown)
             .sort((a, b) => b[1].count - a[1].count);
-        
+
         sortedAirlines.forEach(([airline, stats]) => {
             html += `
                 <div class="airline-card">
@@ -2018,7 +2018,7 @@ class EmailImportApp {
                     </div>
                 </div>`;
         });
-        
+
         html += `
                 </div>
             </div>
@@ -2026,7 +2026,7 @@ class EmailImportApp {
             <div class="detail-section">
                 <h3>🛫 Top Routes</h3>
                 <div class="routes-list">`;
-        
+
         data.top_routes.forEach((route, index) => {
             html += `
                 <div class="route-item">
@@ -2035,7 +2035,7 @@ class EmailImportApp {
                     <span class="route-count">${route.count} times</span>
                 </div>`;
         });
-        
+
         html += `
                 </div>
             </div>
@@ -2054,7 +2054,7 @@ class EmailImportApp {
                             </tr>
                         </thead>
                         <tbody>`;
-        
+
         data.recent_flights.forEach(flight => {
             const date = new Date(flight.date).toLocaleDateString();
             html += `
@@ -2066,13 +2066,13 @@ class EmailImportApp {
                     <td>$${flight.cost.toFixed(2)}</td>
                 </tr>`;
         });
-        
+
         html += `
                         </tbody>
                     </table>
                 </div>
             </div>`;
-        
+
         content.innerHTML = html;
         modal.style.display = 'block';
     }
@@ -2080,13 +2080,13 @@ class EmailImportApp {
     async showHotelDetail() {
         try {
             const yearFilter = document.getElementById('stats-year-filter').value;
-            const url = yearFilter === 'all' 
-                ? '/api/trips/statistics/hotels' 
+            const url = yearFilter === 'all'
+                ? '/api/trips/statistics/hotels'
                 : `/api/trips/statistics/hotels?year=${yearFilter}`;
-            
+
             const response = await fetch(url);
             const data = await response.json();
-            
+
             if (response.ok) {
                 this.displayHotelDetail(data);
             } else {
@@ -2102,9 +2102,9 @@ class EmailImportApp {
         const modal = document.getElementById('stats-detail-modal');
         const title = document.getElementById('stats-detail-title');
         const content = document.getElementById('stats-detail-content');
-        
+
         title.textContent = '🏨 Hotel Statistics Detail';
-        
+
         let html = `
             <div class="detail-summary">
                 <div class="summary-grid">
@@ -2130,7 +2130,7 @@ class EmailImportApp {
             <div class="detail-section">
                 <h3>🌍 Top Cities by Nights</h3>
                 <div class="cities-list">`;
-        
+
         data.top_cities.forEach((city, index) => {
             html += `
                 <div class="city-item">
@@ -2139,17 +2139,17 @@ class EmailImportApp {
                     <span class="city-nights">${city.nights} nights</span>
                 </div>`;
         });
-        
+
         html += `
                 </div>
             </div>`;
-        
+
         if (data.favorite_properties.length > 0) {
             html += `
             <div class="detail-section">
                 <h3>⭐ Favorite Properties</h3>
                 <div class="properties-list">`;
-            
+
             data.favorite_properties.forEach(prop => {
                 html += `
                     <div class="property-item">
@@ -2157,12 +2157,12 @@ class EmailImportApp {
                         <span class="property-stays">${prop.stays} stays</span>
                     </div>`;
             });
-            
+
             html += `
                 </div>
             </div>`;
         }
-        
+
         html += `
             <div class="detail-section">
                 <h3>📅 Recent Stays</h3>
@@ -2178,7 +2178,7 @@ class EmailImportApp {
                             </tr>
                         </thead>
                         <tbody>`;
-        
+
         data.recent_stays.forEach(hotel => {
             const checkIn = new Date(hotel.check_in).toLocaleDateString();
             html += `
@@ -2190,13 +2190,13 @@ class EmailImportApp {
                     <td>$${hotel.cost_per_night.toFixed(2)}</td>
                 </tr>`;
         });
-        
+
         html += `
                         </tbody>
                     </table>
                 </div>
             </div>`;
-        
+
         content.innerHTML = html;
         modal.style.display = 'block';
     }
@@ -2204,13 +2204,13 @@ class EmailImportApp {
     async showCostDetail() {
         try {
             const yearFilter = document.getElementById('stats-year-filter').value;
-            const url = yearFilter === 'all' 
-                ? '/api/trips/statistics/costs' 
+            const url = yearFilter === 'all'
+                ? '/api/trips/statistics/costs'
                 : `/api/trips/statistics/costs?year=${yearFilter}`;
-            
+
             const response = await fetch(url);
             const data = await response.json();
-            
+
             if (response.ok) {
                 this.displayCostDetail(data);
             } else {
@@ -2226,9 +2226,9 @@ class EmailImportApp {
         const modal = document.getElementById('stats-detail-modal');
         const title = document.getElementById('stats-detail-title');
         const content = document.getElementById('stats-detail-content');
-        
+
         title.textContent = '💰 Cost Statistics Detail';
-        
+
         let html = `
             <div class="detail-summary">
                 <div class="summary-grid">
@@ -2250,7 +2250,7 @@ class EmailImportApp {
             <div class="detail-section">
                 <h3>📊 Spending by Category</h3>
                 <div class="category-breakdown">`;
-        
+
         const categories = [
             { name: 'Flights', value: data.category_breakdown.flights, icon: '✈️' },
             { name: 'Hotels', value: data.category_breakdown.hotels, icon: '🏨' },
@@ -2259,9 +2259,9 @@ class EmailImportApp {
             { name: 'Cruises', value: data.category_breakdown.cruises, icon: '🚢' },
             { name: 'Other Transport', value: data.category_breakdown.other_transport, icon: '🚌' }
         ].sort((a, b) => b.value - a.value);
-        
+
         const maxValue = Math.max(...categories.map(c => c.value));
-        
+
         categories.forEach(cat => {
             const percentage = maxValue > 0 ? (cat.value / maxValue) * 100 : 0;
             html += `
@@ -2274,7 +2274,7 @@ class EmailImportApp {
                     <span class="category-value">$${cat.value.toLocaleString()}</span>
                 </div>`;
         });
-        
+
         html += `
                 </div>
             </div>
@@ -2282,7 +2282,7 @@ class EmailImportApp {
             <div class="detail-section">
                 <h3>💸 Most Expensive Destinations</h3>
                 <div class="destinations-cost-list">`;
-        
+
         data.top_expensive_destinations.forEach((dest, index) => {
             html += `
                 <div class="dest-cost-item">
@@ -2291,7 +2291,7 @@ class EmailImportApp {
                     <span class="dest-cost">$${dest.total_cost.toLocaleString()}</span>
                 </div>`;
         });
-        
+
         html += `
                 </div>
             </div>
@@ -2299,7 +2299,7 @@ class EmailImportApp {
             <div class="detail-section">
                 <h3>🏆 Most Expensive Items</h3>
                 <div class="expensive-items-list">`;
-        
+
         data.most_expensive_items.slice(0, 10).forEach((item, index) => {
             const date = new Date(item.date).toLocaleDateString();
             html += `
@@ -2313,11 +2313,11 @@ class EmailImportApp {
                     <span class="item-cost">$${item.cost.toFixed(2)}</span>
                 </div>`;
         });
-        
+
         html += `
                 </div>
             </div>`;
-        
+
         content.innerHTML = html;
         modal.style.display = 'block';
     }
@@ -2331,7 +2331,7 @@ class EmailImportApp {
                 // Store trips data for later use
                 this.timelineTrips = data.trips || {};
                 this.timelineActivities = data.activities || [];
-                
+
                 this.renderTimeline(this.timelineActivities);
                 this.renderYearMonthNav(this.timelineActivities);
             } else {
@@ -2345,7 +2345,7 @@ class EmailImportApp {
 
     renderTimeline(activities) {
         const timelineContent = document.getElementById('timeline-content');
-        
+
         if (!activities || activities.length === 0) {
             timelineContent.innerHTML = `
                 <div class="timeline-connector"></div>
@@ -2359,13 +2359,13 @@ class EmailImportApp {
 
         // Group activities by date
         const groupedActivities = this.groupActivitiesByDate(activities);
-        
+
         // Clear existing content but keep the connector
         timelineContent.innerHTML = '<div class="timeline-connector"></div>';
-        
+
         // Generate trip colors
         const tripColors = this.generateTripColors();
-        
+
         // Render each date group
         Object.entries(groupedActivities).forEach(([date, dayActivities]) => {
             const dateElement = document.createElement('div');
@@ -2373,17 +2373,17 @@ class EmailImportApp {
             dateElement.id = `date-${date.replace(/\s/g, '-')}`;
             dateElement.textContent = this.formatTimelineDate(date);
             timelineContent.appendChild(dateElement);
-            
+
             // Group activities by trip for this date
             const tripGroups = this.groupActivitiesByTrip(dayActivities);
-            
+
             // Render activities grouped by trip
             tripGroups.forEach(group => {
                 if (group.activities.length > 0) {
                     // Create trip group container
                     const tripGroup = document.createElement('div');
                     tripGroup.className = 'trip-group';
-                    
+
                     // Add trip header if it's a trip
                     if (group.tripId && this.timelineTrips[group.tripId]) {
                         const trip = this.timelineTrips[group.tripId];
@@ -2396,7 +2396,7 @@ class EmailImportApp {
                         `;
                         tripGroup.appendChild(tripHeader);
                     }
-                    
+
                     // Add activities container with background color
                     const activitiesContainer = document.createElement('div');
                     activitiesContainer.className = 'trip-activities';
@@ -2404,12 +2404,12 @@ class EmailImportApp {
                         activitiesContainer.style.backgroundColor = `${tripColors[group.tripId]}20` || '#f9f9f9';
                         activitiesContainer.style.borderLeft = `3px solid ${tripColors[group.tripId] || '#ccc'}`;
                     }
-                    
+
                     group.activities.forEach(activity => {
                         const activityElement = this.createTimelineItem(activity);
                         activitiesContainer.appendChild(activityElement);
                     });
-                    
+
                     tripGroup.appendChild(activitiesContainer);
                     timelineContent.appendChild(tripGroup);
                 }
@@ -2419,7 +2419,7 @@ class EmailImportApp {
 
     groupActivitiesByDate(activities) {
         const grouped = {};
-        
+
         activities.forEach(activity => {
             const date = new Date(activity.datetime).toDateString();
             if (!grouped[date]) {
@@ -2427,19 +2427,19 @@ class EmailImportApp {
             }
             grouped[date].push(activity);
         });
-        
+
         // Sort by time within each date (descending order)
         Object.keys(grouped).forEach(date => {
             grouped[date].sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
         });
-        
+
         // Return grouped object with dates in order (activities are already sorted desc)
         const sortedGrouped = {};
         const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
         sortedDates.forEach(date => {
             sortedGrouped[date] = grouped[date];
         });
-        
+
         return sortedGrouped;
     }
 
@@ -2452,25 +2452,25 @@ class EmailImportApp {
     createTimelineItem(activity) {
         const item = document.createElement('div');
         item.className = 'timeline-item';
-        
+
         // Create icon
         const icon = document.createElement('div');
         icon.className = `timeline-icon ${activity.type}`;
         icon.innerHTML = this.getActivityIcon(activity.type);
-        
+
         // Create content
         const content = document.createElement('div');
         content.className = 'timeline-content-item';
-        
+
         // Time and primary info
         const timeInfo = document.createElement('div');
         timeInfo.className = 'timeline-time';
-        const time = new Date(activity.datetime).toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
+        const time = new Date(activity.datetime).toLocaleTimeString('en-US', {
+            hour: 'numeric',
             minute: '2-digit',
-            hour12: true 
+            hour12: true
         });
-        
+
         if (activity.type === 'flight') {
             timeInfo.innerHTML = `
                 <span class="activity-time">${time}</span>
@@ -2479,21 +2479,21 @@ class EmailImportApp {
         } else {
             timeInfo.innerHTML = `<span class="activity-time">${time}</span>`;
         }
-        
+
         // Activity details
         const details = document.createElement('div');
         details.className = 'timeline-details';
         details.innerHTML = this.getActivityDetails(activity);
-        
+
         content.appendChild(timeInfo);
         content.appendChild(details);
-        
+
         item.appendChild(icon);
         item.appendChild(content);
-        
+
         // Add click handler
         item.addEventListener('click', () => this.showActivityDetails(activity));
-        
+
         return item;
     }
 
@@ -2518,21 +2518,21 @@ class EmailImportApp {
                     <div class="activity-route">${activity.departure_location || 'Unknown'} → ${activity.arrival_location || 'Unknown'}</div>
                     ${activity.arrival_datetime ? `<div class="activity-arrival">Arrive ${this.formatArrivalTime(activity.arrival_datetime)}</div>` : ''}
                 `;
-            
+
             case 'hotel':
                 return `
                     <div class="activity-title">${activity.property_name || 'Hotel'}</div>
                     <div class="activity-subtitle">${activity.check_type === 'check_in' ? 'Check in' : 'Check out'} ${this.formatCheckTime(activity.datetime)}</div>
                     <div class="activity-location">${activity.address || activity.city || 'Location unknown'}</div>
                 `;
-            
+
             case 'tour':
                 return `
                     <div class="activity-title">${activity.activity_name || 'Tour/Activity'}</div>
                     <div class="activity-subtitle">Confirmation: ${activity.confirmation_number || 'N/A'}</div>
                     <div class="activity-location">${activity.location || activity.city || ''}</div>
                 `;
-            
+
             default:
                 return `
                     <div class="activity-title">${activity.name || activity.type}</div>
@@ -2543,40 +2543,40 @@ class EmailImportApp {
 
     formatArrivalTime(datetime) {
         const date = new Date(datetime);
-        const time = date.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
+        const time = date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
             minute: '2-digit',
-            hour12: true 
+            hour12: true
         });
-        
+
         // Check if arrival is on a different date
         const arrivalDate = date.toDateString();
         const today = new Date().toDateString();
-        
+
         if (arrivalDate !== today) {
             const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             return `${dateStr} ${time}`;
         }
-        
+
         return time;
     }
 
     formatCheckTime(datetime) {
         const date = new Date(datetime);
-        return date.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
+        return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
             minute: '2-digit',
-            hour12: true 
+            hour12: true
         });
     }
 
     groupActivitiesByTrip(activities) {
         const groups = [];
         const tripMap = new Map();
-        
+
         activities.forEach(activity => {
             const tripId = activity.trip_id;
-            
+
             if (tripId) {
                 if (!tripMap.has(tripId)) {
                     tripMap.set(tripId, []);
@@ -2590,7 +2590,7 @@ class EmailImportApp {
                 });
             }
         });
-        
+
         // Convert map to array
         tripMap.forEach((activities, tripId) => {
             groups.push({
@@ -2598,7 +2598,7 @@ class EmailImportApp {
                 activities: activities
             });
         });
-        
+
         return groups;
     }
 
@@ -2608,48 +2608,48 @@ class EmailImportApp {
             '#1abc9c', '#34495e', '#e67e22', '#16a085', '#27ae60',
             '#2980b9', '#8e44ad', '#2c3e50', '#f1c40f', '#c0392b'
         ];
-        
+
         const tripColors = {};
         let colorIndex = 0;
-        
+
         Object.keys(this.timelineTrips).forEach(tripId => {
             tripColors[tripId] = colors[colorIndex % colors.length];
             colorIndex++;
         });
-        
+
         return tripColors;
     }
 
     renderYearMonthNav(activities) {
         const selector = document.getElementById('year-month-selector');
-        
+
         if (!activities || activities.length === 0) {
             selector.innerHTML = '<div class="no-dates">No dates to display</div>';
             return;
         }
-        
+
         // Extract unique years and months
         const yearMonths = {};
         activities.forEach(activity => {
             const date = new Date(activity.datetime);
             const year = date.getFullYear();
             const month = date.getMonth();
-            
+
             if (!yearMonths[year]) {
                 yearMonths[year] = new Set();
             }
             yearMonths[year].add(month);
         });
-        
+
         // Sort years in descending order (newest first)
         const sortedYears = Object.keys(yearMonths).sort((a, b) => b - a);
-        
+
         selector.innerHTML = '';
-        
+
         sortedYears.forEach((year, index) => {
             const yearDiv = document.createElement('div');
             yearDiv.className = 'year-section';
-            
+
             const yearHeader = document.createElement('div');
             yearHeader.className = 'year-header';
             yearHeader.innerHTML = `
@@ -2657,14 +2657,14 @@ class EmailImportApp {
                 <span class="year-label">${year}</span>
             `;
             yearHeader.addEventListener('click', () => this.toggleYearSection(yearDiv));
-            
+
             const monthList = document.createElement('div');
             monthList.className = 'month-list';
-            
+
             // Sort months in descending order (newest first)
             const months = Array.from(yearMonths[year]).sort((a, b) => b - a);
             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            
+
             months.forEach(monthIndex => {
                 const monthDiv = document.createElement('div');
                 monthDiv.className = 'month-item';
@@ -2672,11 +2672,11 @@ class EmailImportApp {
                 monthDiv.addEventListener('click', () => this.scrollToMonth(year, monthIndex));
                 monthList.appendChild(monthDiv);
             });
-            
+
             yearDiv.appendChild(yearHeader);
             yearDiv.appendChild(monthList);
             selector.appendChild(yearDiv);
-            
+
             // Collapse all years except the first (most recent)
             if (index > 0) {
                 yearDiv.classList.add('collapsed');
@@ -2697,13 +2697,13 @@ class EmailImportApp {
             const date = new Date(activity.datetime);
             return date.getFullYear() === parseInt(year) && date.getMonth() === parseInt(month);
         });
-        
+
         if (activities.length > 0) {
             // Find the first activity's date
             const firstDate = new Date(activities[0].datetime).toDateString();
             const targetId = `date-${firstDate.replace(/\s/g, '-')}`;
             const targetElement = document.getElementById(targetId);
-            
+
             if (targetElement) {
                 targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 // Highlight briefly
@@ -2739,11 +2739,11 @@ class EmailImportApp {
         try {
             const statsResponse = await fetch('/api/emails/stats/detailed');
             const stats = await statsResponse.json();
-            
+
             if (statsResponse.ok && stats.booking_extraction) {
                 const bookingsPending = stats.booking_extraction.pending || 0;
                 const bookingsCompleted = stats.booking_extraction.completed || 0;
-                
+
                 // If there are pending bookings and no completed ones, suggest running booking extraction first
                 if (bookingsPending > 0 && bookingsCompleted === 0) {
                     const proceed = confirm(
@@ -2751,7 +2751,7 @@ class EmailImportApp {
                         `For best results, it's recommended to run "Extract Bookings" before trip detection.\n\n` +
                         `Do you want to proceed with trip detection anyway?`
                     );
-                    
+
                     if (!proceed) {
                         return;
                     }
@@ -2822,7 +2822,7 @@ class EmailImportApp {
         if (window.globalDetectionInterval) {
             clearInterval(window.globalDetectionInterval);
         }
-        
+
         window.globalDetectionInterval = setInterval(async () => {
             await this.updateDetectionProgress();
         }, 2000);
@@ -2848,18 +2848,18 @@ class EmailImportApp {
 
             if (response.ok) {
                 this.displayDetectionProgress(data);
-                
+
                 if (data.finished) {
                     this.isDetectingTrips = false;
                     this.stopDetectionMonitoring();
-                    
+
                     this.displayStatus(
                         `✅ ${data.message || 'Trip detection completed!'}`,
                         'success'
                     );
-                    
+
                     this.updateUIForTripDetection(false);
-                    
+
                     // Automatically switch to My Trips view
                     setTimeout(() => {
                         this.switchFunction('my-trips');
@@ -2880,7 +2880,7 @@ class EmailImportApp {
             detectBtn.disabled = true;
             detectBtn.textContent = 'Detecting...';
             stopBtn.style.display = 'inline-block';
-            
+
             // Hide other sections and show progress
             this.hideAllSections();
             progressSection.style.display = 'block';
@@ -2888,7 +2888,7 @@ class EmailImportApp {
             detectBtn.disabled = false;
             detectBtn.textContent = 'Detect Trips';
             stopBtn.style.display = 'none';
-            
+
             setTimeout(() => {
                 if (this.currentSection === 'trip-detection') {
                     progressSection.style.display = 'none';
@@ -2907,22 +2907,22 @@ class EmailImportApp {
         if (data.progress !== undefined) {
             progressBar.style.width = data.progress + '%';
             progressCount.textContent = `${data.processed_emails || 0}/${data.total_emails || 0} emails`;
-            
+
             let statusText = `🗺️ Analyzing travel emails...`;
-            
+
             if (data.current_batch && data.total_batches) {
                 statusText += ` Batch ${data.current_batch}/${data.total_batches}`;
             }
-            
+
             if (data.trips_found !== undefined) {
                 statusText += ` (${data.trips_found} trips found)`;
             }
-            
+
             // Add cost information if available
             if (data.cost_estimate) {
                 statusText += ` | Est. cost: $${data.cost_estimate.estimated_cost_usd.toFixed(4)} (${data.cost_estimate.model})`;
             }
-            
+
             this.displayStatus(statusText, 'loading');
         }
     }
@@ -2946,7 +2946,7 @@ class EmailImportApp {
 
     displayTrips(trips) {
         const tripsList = document.getElementById('trips-list');
-        
+
         if (!trips || trips.length === 0) {
             this.displayNoTrips();
             return;
@@ -2969,10 +2969,10 @@ class EmailImportApp {
         const startDate = new Date(trip.start_date).toLocaleDateString();
         const endDate = new Date(trip.end_date).toLocaleDateString();
         const citiesText = trip.cities_visited.join(' → ');
-        
+
         const statusIcon = trip.has_cancellations ? '⚠️' : '✅';
         const statusText = trip.has_cancellations ? 'Has cancellations' : 'All confirmed';
-        
+
         return `
             <div class="trip-item" onclick="viewTripDetails(${trip.id})">
                 <div class="trip-header">
@@ -2997,7 +2997,7 @@ class EmailImportApp {
 
     async viewTripDetails(tripId) {
         this.currentTripId = tripId;
-        
+
         try {
             const response = await fetch(`/api/trips/${tripId}`);
             const trip = await response.json();
@@ -3017,13 +3017,13 @@ class EmailImportApp {
         // Hide trips list and show detail view
         this.hideAllSections();
         document.getElementById('trip-detail-section').style.display = 'block';
-        
+
         // Update title
         document.getElementById('trip-detail-title').textContent = trip.name;
-        
+
         // Build detail content
         const content = document.getElementById('trip-detail-content');
-        
+
         content.innerHTML = `
             <div class="trip-overview">
                 <div class="trip-info-grid">
@@ -3056,9 +3056,9 @@ class EmailImportApp {
         if (!bookings || bookings.length === 0) {
             return '';
         }
-        
+
         const bookingItems = bookings.map(booking => {
-            switch(type) {
+            switch (type) {
                 case 'transport':
                     return this.createTransportItem(booking);
                 case 'accommodation':
@@ -3071,7 +3071,7 @@ class EmailImportApp {
                     return '';
             }
         }).join('');
-        
+
         return `
             <div class="booking-section">
                 <h3>${title}</h3>
@@ -3085,7 +3085,7 @@ class EmailImportApp {
     createTransportItem(segment) {
         const statusClass = segment.status === 'cancelled' ? 'cancelled' : '';
         const statusIcon = segment.status === 'cancelled' ? '❌' : segment.is_latest_version ? '✅' : '⚠️';
-        
+
         // Format distance information
         let distanceInfo = '';
         if (segment.distance_km) {
@@ -3093,7 +3093,7 @@ class EmailImportApp {
             const distanceIcon = segment.distance_type === 'actual' ? '📏' : '📐';
             distanceInfo = `<p>${distanceIcon} ${segment.distance_km.toFixed(0)} km (${distanceType})</p>`;
         }
-        
+
         return `
             <div class="booking-item ${statusClass}">
                 <div class="booking-header">
@@ -3113,7 +3113,7 @@ class EmailImportApp {
     createAccommodationItem(accommodation) {
         const statusClass = accommodation.status === 'cancelled' ? 'cancelled' : '';
         const statusIcon = accommodation.status === 'cancelled' ? '❌' : accommodation.is_latest_version ? '✅' : '⚠️';
-        
+
         return `
             <div class="booking-item ${statusClass}">
                 <div class="booking-header">
@@ -3132,7 +3132,7 @@ class EmailImportApp {
     createTourItem(tour) {
         const statusClass = tour.status === 'cancelled' ? 'cancelled' : '';
         const statusIcon = tour.status === 'cancelled' ? '❌' : tour.is_latest_version ? '✅' : '⚠️';
-        
+
         return `
             <div class="booking-item ${statusClass}">
                 <div class="booking-header">
@@ -3151,7 +3151,7 @@ class EmailImportApp {
     createCruiseItem(cruise) {
         const statusClass = cruise.status === 'cancelled' ? 'cancelled' : '';
         const statusIcon = cruise.status === 'cancelled' ? '❌' : cruise.is_latest_version ? '✅' : '⚠️';
-        
+
         return `
             <div class="booking-item ${statusClass}">
                 <div class="booking-header">
@@ -3195,7 +3195,7 @@ class EmailImportApp {
     showBookingInfoModal(data) {
         // Create modal content
         let bookingInfoHtml = '';
-        
+
         if (data.booking_info) {
             bookingInfoHtml = `
                 <div class="booking-info-display">
@@ -3215,7 +3215,7 @@ class EmailImportApp {
                 'failed': `❌ Booking extraction failed: ${data.booking_extraction_error || 'Unknown error'}`,
                 'completed': '⚠️ Booking extraction completed but no information was found'
             };
-            
+
             bookingInfoHtml = `
                 <div class="booking-status-message">
                     <p>${statusMessages[data.booking_extraction_status] || 'Unknown status'}</p>
@@ -3248,7 +3248,7 @@ class EmailImportApp {
 
         // Add modal to page
         document.body.appendChild(modal);
-        
+
         // Close modal when clicking outside
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
@@ -3411,19 +3411,19 @@ function updateDateRangeFromQuickSelect() {
     const timeRange = document.getElementById('timeRange').value;
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
-    
+
     if (!timeRange) {
         // Custom date range selected, clear dates
         startDateInput.value = '';
         endDateInput.value = '';
         return;
     }
-    
+
     const days = parseInt(timeRange);
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - days);
-    
+
     // Format dates as YYYY-MM-DD
     startDateInput.value = startDate.toISOString().split('T')[0];
     endDateInput.value = endDate.toISOString().split('T')[0];
@@ -3434,19 +3434,19 @@ function updatePipelineDateRangeFromQuickSelect() {
     const timeRange = document.getElementById('pipelineTimeRange').value;
     const startDateInput = document.getElementById('pipelineStartDate');
     const endDateInput = document.getElementById('pipelineEndDate');
-    
+
     if (!timeRange) {
         // Custom date range selected, clear dates
         startDateInput.value = '';
         endDateInput.value = '';
         return;
     }
-    
+
     const days = parseInt(timeRange);
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - days);
-    
+
     // Format dates as YYYY-MM-DD
     startDateInput.value = startDate.toISOString().split('T')[0];
     endDateInput.value = endDate.toISOString().split('T')[0];
@@ -3586,20 +3586,20 @@ async function stopFullPipeline() {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         console.log('Response status:', response.status);
         const result = await response.json();
         console.log('Response result:', result);
-        
+
         document.getElementById('pipelineMessage').textContent = result.message || 'Pipeline stopped';
-        
+
         // Reset UI if pipeline was actually stopped
         if (result.stopped) {
             setTimeout(() => {
                 resetPipelineUI();
             }, 2000);
         }
-        
+
     } catch (error) {
         console.error('Error stopping pipeline:', error);
         alert('Failed to stop pipeline: ' + error.message);
@@ -3611,10 +3611,10 @@ function monitorPipelineProgress() {
     if (pipelineProgressInterval) {
         clearInterval(pipelineProgressInterval);
     }
-    
+
     // Update progress immediately
     updatePipelineProgress();
-    
+
     // Then update every 2 seconds
     pipelineProgressInterval = setInterval(updatePipelineProgress, 2000);
 }
@@ -3626,58 +3626,66 @@ async function updatePipelineProgress() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const status = await response.json();
-        
+
         // Update overall progress
         const overallProgress = status.overall_progress || 0;
         document.getElementById('overallProgressPercent').textContent = `${overallProgress}%`;
         document.getElementById('overallProgressBar').style.width = `${overallProgress}%`;
-        
+
         // Update stage progress
         const stages = status.stages || {};
-        
+
         // Import stage
         if (stages.import) {
             const importProgress = stages.import.progress || 0;
             document.getElementById('importProgressBar').style.width = `${importProgress}%`;
-            document.getElementById('importStats').textContent = 
+            document.getElementById('importStats').textContent =
                 `Status: ${stages.import.status} | Processed: ${stages.import.processed} / ${stages.import.total}`;
         }
-        
+
         // Classification stage
         if (stages.classification) {
             const classProgress = stages.classification.progress || 0;
             document.getElementById('classificationProgressBar').style.width = `${classProgress}%`;
-            document.getElementById('classificationStats').textContent = 
+            document.getElementById('classificationStats').textContent =
                 `Status: ${stages.classification.status} | Processed: ${stages.classification.processed} / ${stages.classification.total} | Travel: ${stages.classification.travel_count || 0}`;
         }
-        
+
         // Content stage
         if (stages.content) {
             const contentProgress = stages.content.progress || 0;
             document.getElementById('contentProgressBar').style.width = `${contentProgress}%`;
-            document.getElementById('contentStats').textContent = 
+            document.getElementById('contentStats').textContent =
                 `Status: ${stages.content.status} | Processed: ${stages.content.processed} / ${stages.content.total}`;
         }
-        
+
         // Booking stage
         if (stages.booking) {
             const bookingProgress = stages.booking.progress || 0;
             document.getElementById('bookingProgressBar').style.width = `${bookingProgress}%`;
-            document.getElementById('bookingStats').textContent = 
+            document.getElementById('bookingStats').textContent =
                 `Status: ${stages.booking.status} | Processed: ${stages.booking.processed} / ${stages.booking.total} | Bookings Found: ${stages.booking.bookings_found || 0}`;
         }
-        
+
+        // Trip Detection stage
+        if (stages.trip_detection) {
+            const tripProgress = stages.trip_detection.progress || 0;
+            document.getElementById('tripDetectionProgressBar').style.width = `${tripProgress}%`;
+            document.getElementById('tripDetectionStats').textContent =
+                `Status: ${stages.trip_detection.status} | Processed: ${stages.trip_detection.processed} / ${stages.trip_detection.total} | Trips Found: ${stages.trip_detection.trips_found || 0}`;
+        }
+
         // Update message
         document.getElementById('pipelineMessage').textContent = status.message || '';
-        
+
         // Show errors if any
         if (status.errors && status.errors.length > 0) {
             const errorDiv = document.getElementById('pipelineErrors');
             errorDiv.style.display = 'block';
-            errorDiv.innerHTML = '<h4>Errors:</h4>' + 
+            errorDiv.innerHTML = '<h4>Errors:</h4>' +
                 status.errors.map(e => `<div>${e.stage}: ${e.error}</div>`).join('');
         }
-        
+
         // Check if pipeline is complete
         if (!status.is_running) {
             // Only reset UI if we have a clear completion or stop message
@@ -3685,7 +3693,7 @@ async function updatePipelineProgress() {
                 clearInterval(pipelineProgressInterval);
                 pipelineProgressInterval = null;
                 resetPipelineUI();
-                
+
                 // Show completion message
                 const summary = status.summary;
                 if (summary) {
@@ -3697,11 +3705,12 @@ async function updatePipelineProgress() {
                         <p>Content Extracted: ${summary.content_extracted}</p>
                         <p>Bookings Extracted: ${summary.bookings_extracted}</p>
                         <p>Total Bookings Found: ${summary.bookings_found}</p>
+                        <p>Trips Found: ${summary.trips_found || 0}</p>
                     `;
                 }
             }
         }
-        
+
     } catch (error) {
         console.error('Error updating pipeline progress:', error);
     }
@@ -3715,12 +3724,12 @@ function resetPipelineUI() {
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     app = new EmailImportApp();
-    
+
     // Add event listeners for date inputs
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
     const timeRangeSelect = document.getElementById('timeRange');
-    
+
     if (startDateInput && endDateInput) {
         // When user manually selects dates, clear the quick select
         startDateInput.addEventListener('change', () => {
@@ -3728,14 +3737,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 timeRangeSelect.value = '';
             }
         });
-        
+
         endDateInput.addEventListener('change', () => {
             if (startDateInput.value && endDateInput.value) {
                 timeRangeSelect.value = '';
             }
         });
     }
-    
+
     // Initialize date range based on default selection
     if (timeRangeSelect && timeRangeSelect.value) {
         updateDateRangeFromQuickSelect();
